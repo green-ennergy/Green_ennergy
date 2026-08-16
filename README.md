@@ -27,7 +27,7 @@ Do these steps once after cloning the repo.
 ### 1. Clone the project
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/SimO137/Green_Energy.git
 cd green_energy
 ```
 
