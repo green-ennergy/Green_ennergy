@@ -12,7 +12,7 @@ Local development runs entirely in Docker. You do **not** need PHP, Composer, No
 
 ## Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (with Compose)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - Git
 
 Make sure Docker Desktop is **running** before you start.
