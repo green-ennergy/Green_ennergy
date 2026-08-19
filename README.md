@@ -1,4 +1,4 @@
-# Green Energy — Dev Environment
+# Green Energy
 
 Local development runs entirely in Docker. You do **not** need PHP, Composer, Node, or PostgreSQL installed on your machine.
 
