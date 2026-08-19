@@ -67,7 +67,7 @@ cp backend/.env.development backend/.env
 From the repo root:
 
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
 First start takes a few minutes. The containers will:
@@ -76,11 +76,6 @@ First start takes a few minutes. The containers will:
 - install frontend dependencies (`npm install`)
 - start PostgreSQL, Nginx, PHP-FPM, and Vite
 
-Leave this terminal open, or add `-d` to run in the background:
-
-```bash
-docker compose up --build -d
-```
 
 ### 5. Generate the app key and run migrations
 
