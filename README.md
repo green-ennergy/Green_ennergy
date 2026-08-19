@@ -28,6 +28,7 @@ Do these steps once after cloning the repo.
 ```bash
 git clone https://github.com/SimO137/Green_Energy.git
 cd green_energy
+git checkout develop
 ```
 
 ### 2. Create the root `.env` file
