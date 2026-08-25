@@ -34,10 +34,10 @@ git checkout develop
 ### 2. Create the root `.env` file
 
 
-**Windows (PowerShell)**
+**Windows**
 
-```powershell
-Copy-Item .env.development .env
+```
+copy .env.development .env
 ```
 
 **macOS / Linux**
@@ -50,10 +50,10 @@ cp .env.development .env
 ### 3. Create the Laravel `.env` file
 
 
-**Windows (PowerShell)**
+**Windows**
 
-```powershell
-Copy-Item backend\.env.development backend\.env
+```
+backend\.env.development backend\.env
 ```
 
 **macOS / Linux**
