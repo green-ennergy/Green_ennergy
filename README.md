@@ -53,7 +53,7 @@ cp .env.development .env
 **Windows**
 
 ```
-backend\.env.development backend\.env
+copy  backend\.env.development backend\.env
 ```
 
 **macOS / Linux**
