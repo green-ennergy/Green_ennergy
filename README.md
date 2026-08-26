@@ -27,7 +27,7 @@ Do these steps once after cloning the repo.
 
 ```bash
 git clone https://github.com/green-ennergy/Green_ennergy.git
-cd green_energy
+cd green_ennergy
 git checkout develop
 ```
 
