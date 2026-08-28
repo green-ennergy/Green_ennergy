@@ -1,0 +1,45 @@
+FROM php:8.4-fpm-alpine
+
+WORKDIR /var/www
+
+RUN apk add --no-cache \
+    bash \
+    git \
+    unzip \
+    nginx \
+    supervisor \
+    postgresql-dev \
+    libzip-dev \
+    oniguruma-dev
+
+RUN docker-php-ext-install \
+    pdo_pgsql \
+    mbstring \
+    bcmath \
+    zip
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+COPY backend/ .
+
+RUN composer install \
+    --no-dev \
+    --no-interaction \
+    --prefer-dist \
+    --optimize-autoloader \
+    && mkdir -p \
+        storage/framework/cache \
+        storage/framework/sessions \
+        storage/framework/views \
+        storage/logs \
+        bootstrap/cache \
+        /run/nginx \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
+
+COPY docker/nginx/backend.prod.conf /etc/nginx/http.d/default.conf
+COPY docker/php/supervisord.conf /etc/supervisord.conf
+
+EXPOSE 8080
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
