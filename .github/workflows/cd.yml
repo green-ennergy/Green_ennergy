@@ -51,19 +51,19 @@ jobs:
         run: |
           az containerapp update \
             --name greenenergy-backend \
-            --resource-group Green_Energy \
+            --resource-group GreenEnergy \
             --image "$ACR_LOGIN_SERVER/greenenergy-backend:${{ github.sha }}"
 
       - name: Run Laravel migrations
         run: |
           az containerapp job update \
             --name greenenergy-backend \
-            --resource-group Green_Energy \
+            --resource-group GreenEnergy \
             --image "$ACR_LOGIN_SERVER/greenenergy-backend:${{ github.sha }}"
 
           az containerapp job start \
             --name greenenergy-migrate \
-            --resource-group Green_Energy
+            --resource-group GreenEnergy
 
       # =========================
       # Frontend
@@ -84,5 +84,5 @@ jobs:
         run: |
           az containerapp update \
             --name greenenergy \
-            --resource-group Green_Energy \
+            --resource-group GreenEnergy \
             --image "$ACR_LOGIN_SERVER/greenenergy:${{ github.sha }}"
