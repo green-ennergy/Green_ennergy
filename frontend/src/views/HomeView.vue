@@ -1,9 +1,12 @@
 <script setup>
+import TestimonialsSection from "../components/LandingPage/TestimonialsSection.vue"
+
 </script>
 
 <template>
 
-home
+    <TestimonialsSection/>
+
 </template>
 
 
