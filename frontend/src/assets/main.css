@@ -334,7 +334,7 @@ h4 {
 
 /* ─── Scroll-reveal (JS fallback — start hidden) ──────────── */
 .reveal {
-  opacity: 0;
+  /* opacity: 0; */
   transform: translateY(28px);
   transition:
     opacity 0.7s var(--ease-spring),
