@@ -1,12 +1,15 @@
 <script setup>
+import AboutSection from '@/components/LandingPage/AboutSection.vue';
+
 </script>
 
 <template>
-
-home
+  <AboutSection />
 </template>
 
 
 <style scoped >
-
+.home-view {
+  width: 100%;
+}
 </style>
