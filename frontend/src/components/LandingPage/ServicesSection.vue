@@ -1,0 +1,309 @@
+<template>
+  <section class="services-section" id="services">
+    <div class="container">
+      <div class="header text-center animate-fade-up">
+
+        <h2 class="section-title">Everything you need<br />for clean energy</h2>
+        <p class="section-subtitle-desc">From sourcing premium equipment to installation and lifetime maintenance — we've got you covered.</p>
+      </div>
+
+      <div class="services-grid">
+        <div
+          class="service-card"
+          v-for="(s, i) in services"
+          :key="s.title"
+          :class="[`service-card-${i}`, { 'featured-card': s.featured }, `animate-fade-up delay-${(i + 1) * 100}`]"
+        >
+          <div class="service-badge" v-if="s.featured">Most Popular</div>
+
+          <div class="service-icon-wrap">
+            <div class="service-icon" v-html="s.icon" aria-hidden="true"></div>
+          </div>
+
+          <h3 class="service-title">{{ s.title }}</h3>
+          <p class="service-desc">{{ s.desc }}</p>
+
+          <ul class="service-bullets">
+            <li v-for="b in s.bullets" :key="b">
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/>
+                <path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              {{ b }}
+            </li>
+          </ul>
+
+          <a href="#" class="service-link" :id="`service-learn-${i}`">
+            Learn more
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+
+          <div class="card-glow" aria-hidden="true"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<script setup>
+const services = [
+  {
+    title: 'Equipment Sales',
+    desc: 'Premium tier-1 solar panels, inverters, and battery storage systems from our trusted manufacturing partners.',
+    bullets: ['Tier-1 solar panels', 'Smart inverters', 'Battery storage', 'Competitive pricing'],
+    featured: false,
+    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+  },
+  {
+    title: 'Installation',
+    desc: 'Professional, permitted, and inspected installations by our certified in-house engineering team. Typically completed in 1-2 days.',
+    bullets: ['Certified engineers', '1-2 day install', 'Permit handling', 'Grid connection'],
+    featured: true,
+    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+  },
+  {
+    title: 'Maintenance',
+    desc: 'Ongoing monitoring, cleaning, and preventative maintenance to keep your system operating at peak performance year after year.',
+    bullets: ['24/7 monitoring', 'Annual cleaning', 'Performance reports', '25yr warranty support'],
+    featured: false,
+    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`,
+  },
+]
+</script>
+
+<style scoped>
+.services-section {
+  background-color: var(--light);
+  position: relative;
+  overflow: hidden;
+}
+
+.services-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(74,222,128,0.3), transparent);
+}
+
+.text-center { text-align: center; }
+
+.header {
+  margin-bottom: 4.5rem;
+}
+
+.section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.8px;
+  margin-bottom: 1rem;
+  line-height: 1.1;
+}
+
+.section-subtitle-desc {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  max-width: 680px;
+
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ─── Grid ──────────────────────────────────────────────── */
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.75rem;
+  align-items: start;
+}
+
+/* ─── Card ──────────────────────────────────────────────── */
+.service-card {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 2rem 2rem;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.35s var(--ease-spring), box-shadow 0.35s ease;
+}
+
+.service-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.1);
+}
+
+/* Featured/highlighted card */
+.featured-card {
+  background: linear-gradient(160deg, #020d07 0%, #0a1f10 100%);
+  border-color: rgba(74,222,128,0.25);
+  color: #f0fdf4;
+  transform: scale(1.03);
+}
+
+.featured-card:hover {
+  transform: scale(1.03) translateY(-8px);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.25), 0 0 0 1px rgba(74,222,128,0.3);
+}
+
+.featured-card .service-title,
+.featured-card .service-desc { color: #f0fdf4; }
+
+.featured-card .service-desc { color: rgba(240,253,244,0.65); }
+
+.featured-card .service-bullets { color: rgba(240,253,244,0.75); }
+
+.featured-card .service-bullets li svg { color: #4ade80; }
+
+.featured-card .service-link {
+  color: #4ade80;
+  border-color: rgba(74,222,128,0.4);
+}
+
+.featured-card .service-link:hover {
+  color: #a7f3d0;
+  border-color: #4ade80;
+}
+
+/* Featured badge */
+.service-badge {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: rgba(74,222,128,0.18);
+  color: #4ade80;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 99px;
+  border: 1px solid rgba(74,222,128,0.3);
+}
+
+/* Glow on hover */
+.card-glow {
+  position: absolute;
+  bottom: -60px;
+  right: -60px;
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(ellipse, rgba(74,222,128,0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s;
+}
+
+.service-card:hover .card-glow { opacity: 1; }
+
+/* ─── Icon ──────────────────────────────────────────────── */
+.service-icon-wrap { margin-bottom: 1.5rem; }
+
+.service-icon {
+  width: 60px;
+  height: 60px;
+  background: rgba(74,222,128,0.1);
+  color: #16a34a;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(74,222,128,0.18);
+  transition: background 0.3s, transform 0.3s, box-shadow 0.3s;
+}
+
+.featured-card .service-icon {
+  background: rgba(74,222,128,0.15);
+  color: #4ade80;
+  border-color: rgba(74,222,128,0.3);
+}
+
+.service-card:hover .service-icon {
+  background: #4ade80;
+  color: #052e16;
+  transform: scale(1.08) rotate(4deg);
+  box-shadow: 0 6px 20px rgba(74,222,128,0.4);
+}
+
+/* ─── Text ──────────────────────────────────────────────── */
+.service-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--text-main);
+}
+
+.service-desc {
+  color: var(--text-muted);
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+  flex-grow: 1;
+}
+
+/* ─── Bullets ───────────────────────────────────────────── */
+.service-bullets {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.service-bullets li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.service-bullets li svg {
+  color: #22c55e;
+  flex-shrink: 0;
+}
+
+/* ─── Link ──────────────────────────────────────────────── */
+.service-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: var(--text-main);
+  border-bottom: 2px solid rgba(74,222,128,0.4);
+  padding-bottom: 2px;
+  transition: color 0.2s, border-color 0.2s;
+  width: fit-content;
+}
+
+.service-link svg { transition: transform 0.2s; }
+
+.service-link:hover {
+  color: #16a34a;
+  border-color: #4ade80;
+}
+
+.service-link:hover svg { transform: translateX(4px); }
+
+@media (max-width: 992px) {
+  .services-grid { grid-template-columns: 1fr; }
+  .featured-card { transform: none; }
+  .featured-card:hover { transform: translateY(-8px); }
+}
+
+@media (min-width: 993px) and (max-width: 1100px) {
+  .service-card { padding: 2rem 1.5rem; }
+}
+</style>

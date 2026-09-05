@@ -8,6 +8,8 @@ import HowItWorksSection from '../components/LandingPage/HowItWorksSection.vue';
 import PartnersSection from '../components/LandingPage/PartnersSection.vue';
 import TestimonialsSection from '../components/LandingPage/TestimonialsSection.vue';
 import ProjectsSection from '../components/LandingPage/ProjectsSection.vue';
+import ServicesSection from '../components/LandingPage/ServicesSection.vue';
+import FaqSection from '../components/LandingPage/FaqSection.vue';
 </script>
 
 <template>
@@ -16,9 +18,11 @@ import ProjectsSection from '../components/LandingPage/ProjectsSection.vue';
     <WhySolarSection />
     <AboutSection />
     <HowItWorksSection />
+    <PartnersSection />
+    <ServicesSection/>  
     <ProjectsSection/>
     <TestimonialsSection/>
-    <PartnersSection />
+    <FaqSection />
 </template>
 
 <style scoped >
