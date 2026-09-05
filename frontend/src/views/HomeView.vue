@@ -1,5 +1,6 @@
 <script setup>
-import Navbar from '../components/LandingPage/Navbar.vue'
+
+ import Navbar from '../components/LandingPage/Navbar.vue'
 import HeroSection from '../components/LandingPage/HeroSection.vue'
 import WhySolarSection from '../components/LandingPage/WhySolarSection.vue'
 import AboutSection from '../components/LandingPage/AboutSection.vue'
@@ -13,6 +14,8 @@ import PartnersSection from '../components/LandingPage/PartnersSection.vue';
     <WhySolarSection />
     <AboutSection />
     <HowItWorksSection />
+    <ProjectsSection/>
+    <TestimonialsSection/>
     <PartnersSection />
 </template>
 
