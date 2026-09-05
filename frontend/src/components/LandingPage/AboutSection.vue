@@ -76,13 +76,13 @@
                 </svg>
               </button>
               <video
-    ref="videoRef"
-    class="modal-video"
-    src="/testingVideo.mp4"
-    autoplay
-    playsinline
-    @ended="closeModal"
-  ></video>
+                ref="videoRef"
+                class="modal-video"
+                src="/coverr.mp4"
+                autoplay
+                playsinline
+                @ended="closeModal"
+              ></video>
             </div>
           </div>
         </transition>
