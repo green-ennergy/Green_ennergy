@@ -1,12 +1,16 @@
 <script setup>
-import AboutSection from '@/components/LandingPage/AboutSection.vue';
-
+import Navbar from '../components/LandingPage/Navbar.vue'
+import HeroSection from '../components/LandingPage/HeroSection.vue'
+import WhySolarSection from '../components/LandingPage/WhySolarSection.vue'
+import AboutSection from '../components/LandingPage/AboutSection.vue'
 </script>
 
 <template>
-  <AboutSection />
+    <Navbar />
+    <HeroSection />
+    <WhySolarSection />
+    <AboutSection />
 </template>
-
 
 <style scoped >
 .home-view {
