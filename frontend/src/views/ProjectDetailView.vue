@@ -3,13 +3,6 @@
     <!-- Header Hero -->
     <header class="project-hero" :style="{ backgroundImage: `linear-gradient(rgba(2, 13, 7, 0.8), rgba(2, 13, 7, 0.95)), url(${project.image})` }">
       <div class="container hero-container">
-        <router-link to="/" class="back-link">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
-          </svg>
-          Back to Portfolio
-        </router-link>
-        
         <div class="hero-content">
           <span class="project-tag">{{ project.category }}</span>
           <h1 class="project-title">{{ project.title }}</h1>
@@ -63,17 +56,10 @@
                 </li>
               </ul>
             </div>
-
-            <!-- Local Morocco context note -->
-            <div class="morocco-note">
-              <div class="note-icon">🇲🇦</div>
-              <p>Designed and optimized for the high solar irradiance indexes of {{ project.location }}, ensuring maximum efficiency year-round under Moroccan climatic conditions.</p>
-            </div>
           </div>
         </div>
       </div>
     </section>
-
     <!-- Bottom CTA -->
     <section class="project-cta-section">
       <div class="container text-center">
@@ -200,29 +186,6 @@ const project = computed(() => {
   z-index: 2;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: rgba(255,255,255,0.7);
-  font-weight: 600;
-  font-size: 0.95rem;
-  text-decoration: none;
-  transition: color 0.3s;
-  width: fit-content;
-}
-
-.back-link:hover {
-  color: var(--primary);
-}
-
-.back-link svg {
-  transition: transform 0.3s;
-}
-
-.back-link:hover svg {
-  transform: translateX(-4px);
-}
 
 .hero-content {
   max-width: 800px;
@@ -387,27 +350,7 @@ const project = computed(() => {
   color: var(--text-main);
 }
 
-.morocco-note {
-  display: flex;
-  gap: 1rem;
-  background: rgba(74,222,128,0.06);
-  border: 1px solid rgba(74,222,128,0.15);
-  border-radius: var(--radius-md);
-  padding: 1.5rem;
-  align-items: center;
-}
 
-.note-icon {
-  font-size: 2rem;
-  line-height: 1;
-}
-
-.morocco-note p {
-  font-size: 0.92rem;
-  line-height: 1.6;
-  color: var(--primary-dark);
-  font-weight: 500;
-}
 
 /* ─── Bottom CTA ────────────────────────────────────────── */
 .project-cta-section {
