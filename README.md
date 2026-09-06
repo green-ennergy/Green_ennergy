@@ -7,6 +7,7 @@ Local development runs entirely in Docker. You do **not** need PHP, Composer, No
 | Backend (Laravel) | http://localhost:8000 |
 | Frontend (Vue + Vite) | http://localhost:5173 |
 | PostgreSQL | `localhost:5432` |
+| API docs | http://localhost:8000/docs/api |
 
 ---
 
