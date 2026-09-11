@@ -5,9 +5,9 @@
 
 
 <template>
-  <Navbar />
-  <RouterView />
-  <Footer />
+    <Navbar v-if="showLayout" />
+    <RouterView />
+    <Footer v-if="showLayout" />
 </template>
 
 

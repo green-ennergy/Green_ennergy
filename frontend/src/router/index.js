@@ -17,6 +17,11 @@ path: '/:pathMatch(.*)*',
 name: 'not-found',
 component: () => import('../views/NotFoundView.vue'),
 },
+{
+    path: '/admin',
+    name: 'admin',
+    component: () => import('../views/AdminDashboardView.vue'),
+}
 ]
 
 const router = createRouter({
