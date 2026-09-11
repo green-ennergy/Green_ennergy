@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
 {
@@ -40,7 +40,7 @@ class ProductSeeder extends Seeder
                     'Rated Output' => '550 Wp',
                     'Bifaciality' => 'Up to 80%',
                     'Module Efficiency' => '21.5%',
-                    'Product Warranty' => '15 Years'
+                    'Product Warranty' => '15 Years',
                 ],
                 'specs' => [
                     'Cell Type' => 'N-Type TOPCon Monocrystalline',
@@ -50,18 +50,18 @@ class ProductSeeder extends Seeder
                     'Front Glass' => '2.0 mm Semi-tempered Glass',
                     'Back Glass' => '2.0 mm Semi-tempered Glass',
                     'Junction Box' => 'IP68 rating with bypass diodes',
-                    'Wind / Snow Load Capacity' => '2400 Pa / 5400 Pa'
+                    'Wind / Snow Load Capacity' => '2400 Pa / 5400 Pa',
                 ],
                 'documents' => [
                     ['name' => 'Atlas 550W Tech Datasheet', 'size' => '2.4 MB'],
                     ['name' => 'Installation & Mounting Manual', 'size' => '4.1 MB'],
-                    ['name' => 'Moroccan Grid Compliance Guidelines', 'size' => '1.8 MB']
+                    ['name' => 'Moroccan Grid Compliance Guidelines', 'size' => '1.8 MB'],
                 ],
                 'unit_capacity' => 0.55,
                 'unit_weight' => 32.5,
                 'unit_area' => 2.58,
                 'local_onee_cert' => true,
-                'related_ids' => ['toubkal-inverter', 'sahara-battery']
+                'related_ids' => ['toubkal-inverter', 'sahara-battery'],
             ],
             [
                 'product_key' => 'atlas-panel-utility',
@@ -76,7 +76,7 @@ class ProductSeeder extends Seeder
                     'Rated Output' => '670 Wp',
                     'Bifaciality' => 'Up to 85%',
                     'Module Efficiency' => '22.1%',
-                    'Product Warranty' => '12 Years'
+                    'Product Warranty' => '12 Years',
                 ],
                 'specs' => [
                     'Cell Type' => 'N-Type Monocrystalline G12',
@@ -86,18 +86,18 @@ class ProductSeeder extends Seeder
                     'Front Glass' => '2.0 mm High Transmission Glass',
                     'Back Glass' => '2.0 mm Heat Strengthened Glass',
                     'Junction Box' => 'IP68 with 3 bypass diodes',
-                    'Certifications' => 'CE, TUV'
+                    'Certifications' => 'CE, TUV',
                 ],
                 'documents' => [
                     ['name' => 'Atlas Ultra Max 670W Spec Sheet', 'size' => '3.1 MB'],
                     ['name' => 'Utility Mounting Systems Guide', 'size' => '5.2 MB'],
-                    ['name' => 'High-Voltage Grid Interconnect Log', 'size' => '2.2 MB']
+                    ['name' => 'High-Voltage Grid Interconnect Log', 'size' => '2.2 MB'],
                 ],
                 'unit_capacity' => 0.67,
                 'unit_weight' => 38.7,
                 'unit_area' => 3.11,
                 'local_onee_cert' => true,
-                'related_ids' => ['toubkal-inverter-com', 'sahara-container']
+                'related_ids' => ['toubkal-inverter-com', 'sahara-container'],
             ],
             [
                 'product_key' => 'toubkal-inverter',
@@ -112,7 +112,7 @@ class ProductSeeder extends Seeder
                     'Nominal AC Power' => '10,000 Watts',
                     'MPPT Range' => '140V - 1000V',
                     'Max Efficiency' => '98.2%',
-                    'Product Warranty' => '10 Years'
+                    'Product Warranty' => '10 Years',
                 ],
                 'specs' => [
                     'Phase Support' => 'Three-Phase',
@@ -122,18 +122,18 @@ class ProductSeeder extends Seeder
                     'Dimensions' => '515 x 370 x 225 mm',
                     'Cooling Mechanism' => 'Smart Intelligent Fan Cooling',
                     'Communication Interface' => 'Wi-Fi / Ethernet / RS485 / GPRS',
-                    'Protection Features' => 'DC reverse polarity, AC short circuit, Anti-islanding'
+                    'Protection Features' => 'DC reverse polarity, AC short circuit, Anti-islanding',
                 ],
                 'documents' => [
                     ['name' => 'Toubkal Inverter Pro Specifications', 'size' => '3.1 MB'],
                     ['name' => 'App Setup & Cloud Telemetry Manual', 'size' => '2.8 MB'],
-                    ['name' => 'CE Certification Framework', 'size' => '1.2 MB']
+                    ['name' => 'CE Certification Framework', 'size' => '1.2 MB'],
                 ],
                 'unit_capacity' => 10,
                 'unit_weight' => 26,
                 'unit_area' => 0.12,
                 'local_onee_cert' => true,
-                'related_ids' => ['atlas-panel', 'sahara-battery']
+                'related_ids' => ['atlas-panel', 'sahara-battery'],
             ],
             [
                 'product_key' => 'toubkal-inverter-com',
@@ -148,7 +148,7 @@ class ProductSeeder extends Seeder
                     'Nominal AC Power' => '100,000 Watts',
                     'MPPT Trackers' => '9 Trackers',
                     'Max Efficiency' => '98.9%',
-                    'Product Warranty' => '5 Years'
+                    'Product Warranty' => '5 Years',
                 ],
                 'specs' => [
                     'Phase Support' => 'Three-Phase',
@@ -158,17 +158,17 @@ class ProductSeeder extends Seeder
                     'Ingress Protection' => 'IP66 Industrial Dust & Water',
                     'Cooling' => 'Smart forced-air active cooling',
                     'Grid Regulation' => 'Low & Medium Voltage Compliance',
-                    'Safety Standards' => 'IEC 62109-1/2, VDE-AR-N 4105'
+                    'Safety Standards' => 'IEC 62109-1/2, VDE-AR-N 4105',
                 ],
                 'documents' => [
                     ['name' => 'Toubkal 100kW Engineering Spec Guide', 'size' => '4.8 MB'],
-                    ['name' => 'Commercial Grid Interconnection Manual', 'size' => '6.1 MB']
+                    ['name' => 'Commercial Grid Interconnection Manual', 'size' => '6.1 MB'],
                 ],
                 'unit_capacity' => 100,
                 'unit_weight' => 84,
                 'unit_area' => 0.35,
                 'local_onee_cert' => true,
-                'related_ids' => ['atlas-panel-utility', 'sahara-container']
+                'related_ids' => ['atlas-panel-utility', 'sahara-container'],
             ],
             [
                 'product_key' => 'sahara-battery',
@@ -183,7 +183,7 @@ class ProductSeeder extends Seeder
                     'Storage Capacity' => '15 kWh usable',
                     'Cell Chemistry' => 'LiFePO4 (LFP)',
                     'Cycle Life' => '6,000 Cycles (90% DoD)',
-                    'Product Warranty' => '10 Years'
+                    'Product Warranty' => '10 Years',
                 ],
                 'specs' => [
                     'Nominal Battery Voltage' => '51.2 V',
@@ -193,17 +193,17 @@ class ProductSeeder extends Seeder
                     'Weight' => '142 kg',
                     'Protection Standard' => 'IP65 Dustproof',
                     'Certifications' => 'IEC 62619, CE, UN38.3',
-                    'Expandability' => 'Parallel link up to 4 battery modules'
+                    'Expandability' => 'Parallel link up to 4 battery modules',
                 ],
                 'documents' => [
                     ['name' => 'Sahara LFP Storage Datasheet', 'size' => '1.9 MB'],
-                    ['name' => 'BMS Safety & Programming Manual', 'size' => '3.5 MB']
+                    ['name' => 'BMS Safety & Programming Manual', 'size' => '3.5 MB'],
                 ],
                 'unit_capacity' => 15,
                 'unit_weight' => 142,
                 'unit_area' => 0.24,
                 'local_onee_cert' => true,
-                'related_ids' => ['atlas-panel', 'toubkal-inverter']
+                'related_ids' => ['atlas-panel', 'toubkal-inverter'],
             ],
             [
                 'product_key' => 'sahara-container',
@@ -218,7 +218,7 @@ class ProductSeeder extends Seeder
                     'Storage Capacity' => '100 kWh usable',
                     'Cell Chemistry' => 'LiFePO4 (LFP) Grade-A',
                     'Cycle Life' => '8,000 Cycles (85% DoD)',
-                    'Product Warranty' => '10 Years'
+                    'Product Warranty' => '10 Years',
                 ],
                 'specs' => [
                     'System Voltage' => '768 V DC',
@@ -228,17 +228,17 @@ class ProductSeeder extends Seeder
                     'Dimensions' => '1850 x 1100 x 950 mm',
                     'Weight' => '980 kg',
                     'Enclosure Security' => 'Automatic Aerosol Fire Suppression built-in',
-                    'Seismic Standard' => 'IEEE 693 compliance'
+                    'Seismic Standard' => 'IEEE 693 compliance',
                 ],
                 'documents' => [
                     ['name' => 'Sahara PowerVault 100kWh Spec Book', 'size' => '6.4 MB'],
-                    ['name' => 'Fire Suppression & HVAC Maintenance Log', 'size' => '3.9 MB']
+                    ['name' => 'Fire Suppression & HVAC Maintenance Log', 'size' => '3.9 MB'],
                 ],
                 'unit_capacity' => 100,
                 'unit_weight' => 980,
                 'unit_area' => 1.05,
                 'local_onee_cert' => true,
-                'related_ids' => ['toubkal-inverter-com', 'atlas-panel-utility']
+                'related_ids' => ['toubkal-inverter-com', 'atlas-panel-utility'],
             ],
             [
                 'product_key' => 'oasis-charger',
@@ -253,7 +253,7 @@ class ProductSeeder extends Seeder
                     'Maximum Output' => '22 kW AC',
                     'Connector Type' => 'Type 2 Tethered',
                     'Cable Length' => '5 Meters',
-                    'Product Warranty' => '5 Years'
+                    'Product Warranty' => '5 Years',
                 ],
                 'specs' => [
                     'Input Voltage' => '400V AC (3-Phase)',
@@ -263,17 +263,17 @@ class ProductSeeder extends Seeder
                     'Weight' => '6.2 kg',
                     'Enclosure Rating' => 'IK10 Impact / IP54 Splash',
                     'Smart App Connectivity' => 'Yes (Wi-Fi / Bluetooth / App control)',
-                    'Mounting Hardware' => 'Wall bracket / Stand post compatible'
+                    'Mounting Hardware' => 'Wall bracket / Stand post compatible',
                 ],
                 'documents' => [
                     ['name' => 'Oasis EV Charger Installation Manual', 'size' => '2.2 MB'],
-                    ['name' => 'Smart Solar Sync Programming Layout', 'size' => '1.5 MB']
+                    ['name' => 'Smart Solar Sync Programming Layout', 'size' => '1.5 MB'],
                 ],
                 'unit_capacity' => 22,
                 'unit_weight' => 6.2,
                 'unit_area' => 0.09,
                 'local_onee_cert' => false,
-                'related_ids' => ['atlas-panel', 'toubkal-inverter']
+                'related_ids' => ['atlas-panel', 'toubkal-inverter'],
             ],
             [
                 'product_key' => 'ares-wind-turbine',
@@ -288,7 +288,7 @@ class ProductSeeder extends Seeder
                     'Rated Output' => '5,000 Watts',
                     'Start-up Wind Speed' => '2.0 m/s',
                     'Rotor Diameter' => '3.2 Meters',
-                    'Product Warranty' => '5 Years'
+                    'Product Warranty' => '5 Years',
                 ],
                 'specs' => [
                     'Generator Type' => 'Permanent Magnet 3-Phase AC',
@@ -298,17 +298,17 @@ class ProductSeeder extends Seeder
                     'Tower Height Recommended' => '9m to 12m pole',
                     'Weight' => '186 kg',
                     'Braking System' => 'Electromagnetic + Mechanical yawing control',
-                    'Noise Level' => 'Under 48dB at 5m/s wind speed'
+                    'Noise Level' => 'Under 48dB at 5m/s wind speed',
                 ],
                 'documents' => [
                     ['name' => 'Ares 5kW Wind Turbine Technical Data', 'size' => '3.5 MB'],
-                    ['name' => 'Tower Construction & Concrete Specs', 'size' => '5.1 MB']
+                    ['name' => 'Tower Construction & Concrete Specs', 'size' => '5.1 MB'],
                 ],
                 'unit_capacity' => 5,
                 'unit_weight' => 186,
                 'unit_area' => 8.0,
                 'local_onee_cert' => false,
-                'related_ids' => ['toubkal-inverter', 'sahara-battery']
+                'related_ids' => ['toubkal-inverter', 'sahara-battery'],
             ],
         ];
 

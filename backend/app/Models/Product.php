@@ -39,7 +39,7 @@ class Product extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if (!$this->image) {
+        if (! $this->image) {
             return null;
         }
 
@@ -48,7 +48,7 @@ class Product extends Model
         }
 
         if (str_starts_with($this->image, '/storage/')) {
-            return rtrim(config('app.url'), '/') . $this->image;
+            return rtrim(config('app.url'), '/').$this->image;
         }
 
         if (str_starts_with($this->image, 'products/')) {

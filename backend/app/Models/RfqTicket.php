@@ -44,9 +44,9 @@ class RfqTicket extends Model
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($model) {
-            $model->ticket_number = 'RFQ-' . strtoupper(uniqid());
+            $model->ticket_number = 'RFQ-'.strtoupper(uniqid());
         });
     }
 }

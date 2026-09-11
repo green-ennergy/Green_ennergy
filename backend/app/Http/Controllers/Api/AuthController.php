@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\User;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
-
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -21,7 +20,6 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()],
         ]);
 
-
         $user = User::create([
             'name' => $validated['name'],
             'company' => $validated['company'],
@@ -30,7 +28,6 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
             'role' => 'user',
         ]);
-
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -41,8 +38,6 @@ class AuthController extends Controller
         ], 201);
     }
 
-
-
     public function login(Request $request)
     {
         $validated = $request->validate([
@@ -52,7 +47,7 @@ class AuthController extends Controller
 
         $user = User::where('email', $validated['email'])->first();
 
-        if (!$user || !Hash::check($validated['password'], $user->password)) {
+        if (! $user || ! Hash::check($validated['password'], $user->password)) {
             return response()->json([
                 'message' => 'Invalid email or password.',
             ], 401);
@@ -67,7 +62,6 @@ class AuthController extends Controller
         ]);
     }
 
-
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
@@ -77,13 +71,11 @@ class AuthController extends Controller
         ]);
     }
 
-
     public function me(Request $request)
     {
         return response()->json($request->user());
     }
 
-    
     public function updateProfile(Request $request)
     {
         $validated = $request->validate([

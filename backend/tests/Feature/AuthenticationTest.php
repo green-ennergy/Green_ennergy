@@ -82,6 +82,7 @@ class AuthenticationTest extends TestCase
 
         $response->assertStatus(401);
     }
+
     public function test_user_cannot_register_with_existing_email(): void
     {
         $this->postJson('/api/auth/register', [
