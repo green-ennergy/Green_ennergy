@@ -1,5 +1,5 @@
 import { createApp, h, nextTick } from 'vue'
-import RfqQuoteDocument from '../components/RfqQuoteDocument.vue'
+import RfqQuoteDocument from '../components/adminDashboard/RfqQuoteDocument.vue'
 
 export function rfqPdfFilename(rfq) {
   const ticket = (rfq?.ticket_number || 'quote').replace(/[^\w.-]+/g, '-')

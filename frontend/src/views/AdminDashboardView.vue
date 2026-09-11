@@ -740,12 +740,12 @@ import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useAdmin } from '../composables/useAdmin'
 import { useLocale } from '../composables/useLocale'
-import AdminIcon from '../components/AdminIcon.vue'
+import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
-import FollowupCard from '../components/FollowupCard.vue'
-import ProjectTimeline from '../components/ProjectTimeline.vue'
+import FollowupCard from '../components/adminDashboard/FollowupCard.vue'
+import ProjectTimeline from '../components/adminDashboard/ProjectTimeline.vue'
 import { resolveProductImage } from '../utils/productImage'
-import RfqQuoteEditor from '../components/RfqQuoteEditor.vue'
+import RfqQuoteEditor from '../components/adminDashboard/RfqQuoteEditor.vue'
 import {
   buildQuoteLinesFromRfq,
   formatMoney,
@@ -758,11 +758,13 @@ import {
   rfqPdfErrorMessage,
   getRfqStatusSteps
 } from '../utils/rfqQuote'
+
 import {
   formatTraceChange,
   formatTraceSummary,
   traceActorLabel
 } from '../utils/projectTrace'
+
 import {
   getWorkflowSteps,
   extractClientMessage,

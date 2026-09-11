@@ -91,6 +91,7 @@ export function useAdmin() {
     }
   }
 
+
   const fetchProjects = async (filters = {}) => {
     try {
       isLoading.value = true
@@ -106,6 +107,7 @@ export function useAdmin() {
     }
   }
 
+
   const updateProject = async (id, data) => {
     try {
       const response = await api.patch(`/admin/projects/${id}`, data)
@@ -120,6 +122,7 @@ export function useAdmin() {
     }
   }
 
+
   const fetchProjectTraces = async (id) => {
     try {
       const response = await api.get(`/admin/projects/${id}/traces`)
@@ -129,6 +132,7 @@ export function useAdmin() {
       return []
     }
   }
+
 
   const createProject = async (data) => {
     try {
@@ -142,6 +146,7 @@ export function useAdmin() {
     }
   }
 
+
   const deleteProject = async (id) => {
     try {
       await api.delete(`/admin/projects/${id}`)
@@ -152,6 +157,7 @@ export function useAdmin() {
       return { success: false, error: error.value }
     }
   }
+
 
   const fetchProducts = async (filters = {}) => {
     try {
@@ -167,6 +173,7 @@ export function useAdmin() {
       isLoading.value = false
     }
   }
+
 
   const updateProduct = async (id, data, imageFile = null) => {
     try {
@@ -185,6 +192,7 @@ export function useAdmin() {
     }
   }
 
+
   const createProduct = async (data, imageFile = null) => {
     try {
       error.value = null
@@ -200,6 +208,7 @@ export function useAdmin() {
     }
   }
 
+
   const deleteProduct = async (id) => {
     try {
       await api.delete(`/admin/products/${id}`)
@@ -211,6 +220,7 @@ export function useAdmin() {
     }
   }
 
+
   const fetchCategories = async () => {
     try {
       const response = await api.get('/categories')
@@ -220,6 +230,7 @@ export function useAdmin() {
     }
   }
 
+  
   const fetchUsers = async (filters = {}) => {
     try {
       isLoading.value = true

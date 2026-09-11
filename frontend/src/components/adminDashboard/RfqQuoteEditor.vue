@@ -113,14 +113,14 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useLocale } from '../composables/useLocale'
+import { useLocale } from '../../composables/useLocale'
 import {
   getRfqItemTypes,
   rfqItemTypeLabel,
   createManualQuoteLine,
   draftQuoteTotal,
   formatMoney
-} from '../utils/rfqQuote'
+} from '../../utils/rfqQuote'
 
 const props = defineProps({
   lines: { type: Array, required: true },

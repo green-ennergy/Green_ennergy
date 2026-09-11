@@ -139,7 +139,7 @@
 
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useLocale } from '../composables/useLocale'
+import { useLocale } from '../../composables/useLocale'
 import {
   getWorkflowSteps,
   getStepShortLabel,
@@ -150,7 +150,7 @@ import {
   isStepDone,
   projectClientMessage,
   projectStatusLabel
-} from '../utils/projectSteps'
+} from '../../utils/projectSteps'
 
 const { t } = useI18n()
 const { locale } = useLocale()
