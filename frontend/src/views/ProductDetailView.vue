@@ -464,4 +464,3 @@ const relatedProducts = computed(() => {
     grid-template-columns: 1fr;
   }
 }
-</style>
