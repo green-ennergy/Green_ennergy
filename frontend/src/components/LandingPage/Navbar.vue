@@ -13,14 +13,13 @@
 
       <!-- Desktop links -->
       <ul class="nav-links" role="list">
-        <li>Store</li>
-        <li>FAQ</li>
-        <li>About</li>
+        <li><router-link to="/store" class="nav-link">Store</router-link></li>
+        <li><router-link to="/#faq" class="nav-link">FAQ</router-link></li>
+        <li><router-link to="/#about" class="nav-link">About</router-link></li>
       </ul>
 
       <div class="nav-actions">
-        <router-link to="/" class="nav-signin" id="nav-signin">Connexion</router-link>
-        <router-link to="/#cta" class="btn nav-cta get-consultation" id="nav-cta">Consultation</router-link>
+        <router-link to="/login" class="btn nav-login get-consultation" id="nav-login">Connexion</router-link>
       </div>
 
 
@@ -138,7 +137,7 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   gap: 2rem;
 }
 
-.nav-links a {
+.nav-links .nav-link {
   font-size: 0.9rem;
   font-weight: 500;
   color: rgba(240,253,244,0.75);
@@ -194,6 +193,22 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 }
 
 .nav-cta:hover {
+  background: #22c55e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(34,197,94,0.4);
+}
+
+.nav-login {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #052e16;
+  background: #4ade80;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.nav-login:hover {
   background: #22c55e;
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(34,197,94,0.4);
