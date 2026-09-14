@@ -26,11 +26,11 @@
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
         </a>
-        <a href="#" class="hero-btn-ghost" id="hero-cta-store">Explore Store</a>
+        <a href="/store" class="hero-btn-ghost" id="hero-cta-store">Explore Store</a>
       </div>
 
       <p class="hero-login animate-fade-up delay-400">
-        Already have an account? <a href="#">Sign in</a>
+        Already have an account? <a href="/login">Sign in</a>
       </p>
 
       <!-- Trust pills -->
