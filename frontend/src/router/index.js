@@ -19,12 +19,6 @@ const routes = [
     name: 'login',
     component: () => import('../views/LoginView.vue')
 },
-
-{
-    path: '/:pathMatch(.*)*',
-    name: 'not-found',
-    component: () => import('../views/NotFoundView.vue'),
-},
 {
     path: '/admin',
     name: 'admin',
@@ -35,16 +29,22 @@ const routes = [
     name: 'store',
     component: () => import('../views/StoreView.vue'),
 },
-
-
-
 {
-    path: '/admin',
-    name: 'admin',
+    path: '/store/:id',
+    name: 'product-detail',
+    component: () => import('../views/ProductDetailView.vue'),
+    props: true,
+},
+{
+    path: '/dashboard',
+    name: 'dashboard',
     component: () => import('../views/AdminDashboardView.vue')
-}
-
-
+},
+{
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('../views/NotFoundView.vue'),
+},
 ]
 
 const router = createRouter({
@@ -64,6 +64,11 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const { isLoggedIn, isAdmin } = useAuth()
+
+  if (to.name === 'login' && isLoggedIn.value) {
+    next({ name: isAdmin.value ? 'admin' : 'dashboard' })
+    return
+  }
 
   if (to.name === 'dashboard' || to.name === 'client-project-detail') {
     if (!isLoggedIn.value) {

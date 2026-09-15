@@ -1,27 +1,18 @@
 <template>
   <!-- <div class="admin-page" v-if="user"> -->
   <div class="admin-page">
-    <header class="admin-header animate-fade-in">
-      <div class="header-brand">
-        <router-link to="/" class="brand-link">
-          <div class="brand-icon"><AdminIcon name="bolt" :size="18" /></div>
-          <div>
-            <span class="brand-title">ENERGY AGENCY</span>
-            <span class="brand-sub">{{ t('admin.console') }}</span>
-          </div>
-        </router-link>
-      </div>
-
-      <div class="header-meta">
-        <!-- <LanguageSwitcher variant="compact" class="dark" /> -->
-        <!-- <span class="admin-name">{{ user.name }}</span> -->
-         <span class="admin-name">{{ user?.name || 'Admin' }}</span>
-        <button @click="handleLogout" class="logout-btn">{{ t('common.signOut') }}</button>
-      </div>
-    </header>
-
     <div class="admin-layout animate-fade-in">
       <aside class="admin-sidebar">
+        <div class="sidebar-brand">
+          <router-link to="/" class="brand-link">
+            <div class="brand-icon"><AdminIcon name="bolt" :size="18" /></div>
+            <div>
+              <span class="brand-title">ENERGY AGENCY</span>
+              <span class="brand-sub">{{ t('admin.console') }}</span>
+            </div>
+          </router-link>
+        </div>
+
         <nav class="sidebar-nav">
           <button
             v-for="tab in tabs"
@@ -35,11 +26,24 @@
             <span v-if="tab.badge" class="nav-badge">{{ tab.badge }}</span>
           </button>
         </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-profile">
+            <div class="profile-avatar" aria-hidden="true">
+              {{ userInitials }}
+            </div>
+            <div class="profile-meta">
+              <span class="admin-name">{{ user?.name || 'Admin' }}</span>
+              <span class="admin-role">{{ user?.email || t('admin.console') }}</span>
+            </div>
+          </div>
+          <button type="button" @click="handleLogout" class="logout-btn">
+            {{ t('common.signOut') }}
+          </button>
+        </div>
       </aside>
 
       <main class="admin-main">
-        <div v-if="error" class="alert-banner">{{ error }}</div>
-
         <!-- Overview -->
         <section v-if="activeTab === 'overview'" class="panel">
           <header class="panel-header">
@@ -251,6 +255,240 @@
 
         <!-- Marketplace -->
         <section v-if="activeTab === 'marketplace'" class="panel catalog-panel">
+          <!-- Full-screen product editor -->
+          <div v-if="showProductForm" class="product-editor">
+            <header class="product-editor-header">
+              <div>
+                <button type="button" class="back-catalog-btn" @click="closeProductForm">
+                  ← {{ t('admin.marketplace.backToCatalog') }}
+                </button>
+                <p class="drawer-eyebrow">{{ editingProduct ? t('admin.marketplace.editProduct') : t('admin.marketplace.newProduct') }}</p>
+                <h1>{{ editingProduct ? editingProduct.title : t('admin.marketplace.addToCatalog') }}</h1>
+              </div>
+              <div class="product-editor-actions">
+                <button type="button" class="ghost-btn" @click="closeProductForm">{{ t('common.cancel') }}</button>
+                <button type="button" class="primary-btn" :disabled="productSaving" @click="handleSaveProduct">
+                  {{ productSaving ? t('admin.projects.saving') : (editingProduct ? t('admin.marketplace.saveChanges') : t('admin.marketplace.createProduct')) }}
+                </button>
+              </div>
+            </header>
+
+            <form class="product-editor-form" @submit.prevent="handleSaveProduct">
+              <div class="product-editor-grid">
+                <aside class="product-editor-media">
+                  <div class="media-card">
+                    <div class="media-card-header">
+                      <h2>{{ t('admin.marketplace.images') }}</h2>
+                      <span>{{ productImages.length }} {{ t('admin.marketplace.filesCount') }}</span>
+                    </div>
+
+                    <div
+                      class="upload-zone upload-zone-lg"
+                      :class="{ 'has-image': activeImagePreview }"
+                      @dragover.prevent
+                      @drop.prevent="handleImageDrop"
+                    >
+                      <img v-if="activeImagePreview" :src="activeImagePreview" alt="Preview" class="upload-preview" />
+                      <div v-else class="upload-placeholder">
+                        <AdminIcon name="image" :size="36" />
+                        <p>{{ t('admin.marketplace.dropImages') }}</p>
+                        <span>{{ t('admin.marketplace.chooseFiles') }}</span>
+                      </div>
+                      <input type="file" accept="image/*" multiple class="upload-input" @change="handleImagePick" />
+                    </div>
+
+                    <div class="image-thumbs">
+                      <button
+                        v-for="(img, index) in productImages"
+                        :key="img.id"
+                        type="button"
+                        class="image-thumb"
+                        :class="{ active: activeImageIndex === index }"
+                        @click="activeImageIndex = index"
+                      >
+                        <img :src="img.preview" :alt="`Image ${index + 1}`" />
+                        <span class="thumb-remove" @click.stop="removeProductImage(index)">×</span>
+                      </button>
+                      <label class="image-thumb add-thumb">
+                        <span>+</span>
+                        <input type="file" accept="image/*" multiple hidden @change="handleImagePick" />
+                      </label>
+                    </div>
+                  </div>
+                </aside>
+
+                <div class="product-editor-fields">
+                  <section class="editor-section">
+                    <h2>{{ t('admin.marketplace.sectionBasic') }}</h2>
+                    <div class="editor-section-grid">
+                      <label class="span-2">
+                        {{ t('admin.marketplace.productName') }}
+                        <input v-model="productForm.title" type="text" required maxlength="50" placeholder="e.g. Atlas Bifacial 550W Panel" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.sku') }}
+                        <input v-model="productForm.product_key" type="text" maxlength="50" placeholder="e.g. PV-450W" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.colCategory') }}
+                        <select v-model="productForm.category_id" :required="!showNewCategory" :disabled="showNewCategory">
+                          <option disabled value="">{{ t('admin.marketplace.selectCategory') }}</option>
+                          <option v-for="cat in adminCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                        </select>
+                        <button
+                          type="button"
+                          class="linkish-btn"
+                          @click="toggleNewCategory"
+                        >
+                          {{ showNewCategory ? t('admin.marketplace.useExistingCategory') : t('admin.marketplace.createNewCategory') }}
+                        </button>
+                      </label>
+
+                      <div v-if="showNewCategory" class="new-category-box span-2">
+                        <label>
+                          {{ t('admin.marketplace.newCategoryName') }}
+                          <input
+                            v-model="newCategoryForm.name"
+                            type="text"
+                            maxlength="255"
+                            :placeholder="t('admin.marketplace.newCategoryPlaceholder')"
+                          />
+                        </label>
+                        <label>
+                          {{ t('admin.marketplace.newCategoryDescription') }}
+                          <input
+                            v-model="newCategoryForm.description"
+                            type="text"
+                            maxlength="1000"
+                            :placeholder="t('admin.marketplace.newCategoryDescPlaceholder')"
+                          />
+                        </label>
+                        <div class="new-category-actions">
+                          <button
+                            type="button"
+                            class="primary-btn"
+                            :disabled="categorySaving || !newCategoryForm.name.trim()"
+                            @click="handleCreateCategory"
+                          >
+                            {{ categorySaving ? t('admin.projects.saving') : t('admin.marketplace.saveCategory') }}
+                          </button>
+                        </div>
+                        <p v-if="categoryFormError" class="form-error">{{ categoryFormError }}</p>
+                      </div>
+                      <label>
+                        {{ t('admin.marketplace.stock') }}
+                        <input v-model.number="productForm.stock" type="number" min="0" required />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.rating') }}
+                        <input v-model.number="productForm.rating" type="number" min="0" max="5" step="0.1" />
+                      </label>
+                      <label class="span-2 visibility-toggle">
+                        <span class="toggle-row">
+                          <input id="product-visible" v-model="productForm.is_visible" type="checkbox" />
+                          <span>
+                            <strong>{{ t('admin.marketplace.visibleInStore') }}</strong>
+                            <small>{{ t('admin.marketplace.visibleInStoreHint') }}</small>
+                          </span>
+                        </span>
+                      </label>
+                      <label class="span-2">
+                        {{ t('common.description') }}
+                        <textarea v-model="productForm.description" rows="3" maxlength="200" :placeholder="t('admin.marketplace.describePlaceholder')"></textarea>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="editor-section">
+                    <h2>{{ t('admin.marketplace.sectionTechnical') }}</h2>
+                    <div class="editor-section-grid">
+                      <label>
+                        {{ t('admin.marketplace.capacity') }}
+                        <input v-model.number="productForm.capacity" type="number" min="0" step="0.01" placeholder="450" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.weight') }}
+                        <input v-model.number="productForm.weight_kg" type="number" min="0" step="0.01" placeholder="22.5" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.surface') }}
+                        <input v-model.number="productForm.surface" type="number" min="0" step="0.01" placeholder="2.1" />
+                      </label>
+                      <label class="span-2">
+                        {{ t('admin.marketplace.climateInfo') }}
+                        <textarea v-model="productForm.climate_info" rows="3" maxlength="250" :placeholder="t('admin.marketplace.climatePlaceholder')"></textarea>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="editor-section">
+                    <h2>{{ t('admin.marketplace.sectionDetails') }}</h2>
+                    <div class="editor-section-grid">
+                      <label class="span-2">
+                        {{ t('admin.marketplace.highlights') }}
+                        <textarea v-model="productForm.highlights_text" rows="4" :placeholder="t('admin.marketplace.highlightsPlaceholder')"></textarea>
+                        <small class="field-hint">{{ t('admin.marketplace.kvHint') }}</small>
+                      </label>
+                      <label class="span-2">
+                        {{ t('admin.marketplace.specs') }}
+                        <textarea v-model="productForm.specs_text" rows="4" :placeholder="t('admin.marketplace.specsPlaceholder')"></textarea>
+                        <small class="field-hint">{{ t('admin.marketplace.kvHint') }}</small>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="editor-section">
+                    <div class="section-head-row">
+                      <h2>{{ t('admin.marketplace.documents') }}</h2>
+                      <button type="button" class="ghost-btn small-btn" @click="addDocumentRow">
+                        + {{ t('admin.marketplace.addDocument') }}
+                      </button>
+                    </div>
+
+                    <div v-if="!productDocuments.length" class="docs-empty">
+                      {{ t('admin.marketplace.documentsEmpty') }}
+                    </div>
+
+                    <div v-else class="document-rows">
+                      <div v-for="(doc, index) in productDocuments" :key="doc.id" class="document-row">
+                        <label class="doc-name">
+                          {{ t('admin.marketplace.documentName') }}
+                          <input v-model="doc.name" type="text" maxlength="255" :placeholder="t('admin.marketplace.documentNamePlaceholder')" />
+                        </label>
+                        <label class="doc-file">
+                          {{ t('admin.marketplace.documentFile') }}
+                          <div class="doc-file-box">
+                            <span class="doc-file-label">
+                              {{ doc.file?.name || doc.size || t('admin.marketplace.chooseFile') }}
+                            </span>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.txt,.csv"
+                              @change="handleDocumentFilePick($event, index)"
+                            />
+                          </div>
+                        </label>
+                        <button type="button" class="action-btn danger doc-remove" @click="removeDocumentRow(index)" title="Remove">
+                          <AdminIcon name="trash" :size="15" />
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <p v-if="productFormError" class="form-error">{{ productFormError }}</p>
+
+              <footer class="product-editor-footer">
+                <button type="button" class="ghost-btn" @click="closeProductForm">{{ t('common.cancel') }}</button>
+                <button type="submit" class="primary-btn" :disabled="productSaving">
+                  {{ productSaving ? t('admin.projects.saving') : (editingProduct ? t('admin.marketplace.saveChanges') : t('admin.marketplace.createProduct')) }}
+                </button>
+              </footer>
+            </form>
+          </div>
+
+          <template v-else>
           <header class="catalog-header">
             <div>
               <h1>{{ t('admin.marketplace.title') }}</h1>
@@ -301,6 +539,11 @@
               <option value="low">{{ t('admin.marketplace.stockLow') }}</option>
               <option value="out">{{ t('admin.marketplace.stockOut') }}</option>
             </select>
+            <select v-model="productVisibilityFilter" class="filter-select">
+              <option value="">{{ t('admin.marketplace.allVisibility') }}</option>
+              <option value="visible">{{ t('admin.marketplace.onlyVisible') }}</option>
+              <option value="hidden">{{ t('admin.marketplace.onlyHidden') }}</option>
+            </select>
           </div>
 
           <div v-if="isLoading && !products.length" class="catalog-loading">{{ t('admin.marketplace.loading') }}</div>
@@ -321,11 +564,16 @@
                   <th>{{ t('admin.marketplace.colStock') }}</th>
                   <th>{{ t('admin.marketplace.colDemand') }}</th>
                   <th>{{ t('admin.marketplace.colSold') }}</th>
+                  <th>{{ t('admin.marketplace.colVisibility') }}</th>
                   <th class="col-actions">{{ t('admin.marketplace.colActions') }}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="product in filteredCatalogProducts" :key="product.id">
+                <tr
+                  v-for="product in filteredCatalogProducts"
+                  :key="product.id"
+                  :class="{ 'row-hidden': product.is_visible === false }"
+                >
                   <td class="col-product">
                     <div class="product-cell">
                       <div class="product-thumb-sm">
@@ -350,12 +598,28 @@
                   </td>
                   <td class="col-num">{{ product.rfq_demand || 0 }}</td>
                   <td class="col-num">{{ product.units_sold || 0 }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="visibility-pill"
+                      :class="product.is_visible === false ? 'hidden' : 'visible'"
+                      @click="toggleProductVisibility(product)"
+                    >
+                      {{ product.is_visible === false ? t('admin.marketplace.hidden') : t('admin.marketplace.visible') }}
+                    </button>
+                  </td>
                   <td class="col-actions">
                     <div class="row-actions">
                       <button type="button" class="action-btn" title="Edit" @click="openProductForm(product)">
                         <AdminIcon name="edit" :size="15" />
                       </button>
-                      <router-link :to="`/store/${product.id}`" class="action-btn" title="View in store" target="_blank">
+                      <router-link
+                        v-if="product.is_visible !== false"
+                        :to="`/store/${product.id}`"
+                        class="action-btn"
+                        title="View in store"
+                        target="_blank"
+                      >
                         <AdminIcon name="external" :size="15" />
                       </router-link>
                       <button type="button" class="action-btn danger" title="Delete" @click="handleDeleteProduct(product)">
@@ -367,79 +631,7 @@
               </tbody>
             </table>
           </div>
-
-          <!-- Product drawer -->
-          <div v-if="showProductForm" class="drawer-overlay" @click.self="closeProductForm">
-            <aside class="product-drawer">
-              <header class="drawer-header">
-                <div>
-                  <p class="drawer-eyebrow">{{ editingProduct ? t('admin.marketplace.editProduct') : t('admin.marketplace.newProduct') }}</p>
-                  <h2>{{ editingProduct ? editingProduct.title : t('admin.marketplace.addToCatalog') }}</h2>
-                </div>
-                <button type="button" class="drawer-close" @click="closeProductForm">×</button>
-              </header>
-
-              <form class="drawer-form" @submit.prevent="handleSaveProduct">
-                <div class="drawer-layout">
-                  <div
-                    class="upload-zone"
-                    :class="{ 'has-image': productImagePreview }"
-                    @dragover.prevent
-                    @drop.prevent="handleImageDrop"
-                  >
-                    <img v-if="productImagePreview" :src="productImagePreview" alt="Preview" class="upload-preview" />
-                    <div v-else class="upload-placeholder">
-                      <AdminIcon name="image" :size="28" />
-                      <p>{{ t('admin.marketplace.dropImage') }}</p>
-                      <span>{{ t('admin.marketplace.chooseFile') }}</span>
-                    </div>
-                    <input type="file" accept="image/*" class="upload-input" @change="handleImagePick" />
-                    <button v-if="productImagePreview" type="button" class="upload-clear" @click="clearProductImage">{{ t('admin.marketplace.removeImage') }}</button>
-                  </div>
-
-                  <div class="drawer-fields">
-                    <label>
-                      {{ t('admin.marketplace.productName') }}
-                      <input v-model="productForm.title" type="text" required placeholder="e.g. Atlas Bifacial 550W Panel" />
-                    </label>
-
-                    <label>
-                      {{ t('admin.marketplace.colCategory') }}
-                      <select v-model="productForm.category_id" required>
-                        <option disabled value="">{{ t('admin.marketplace.selectCategory') }}</option>
-                        <option v-for="cat in adminCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                      </select>
-                    </label>
-
-                    <div class="drawer-row">
-                      <label>
-                        {{ t('admin.marketplace.stock') }}
-                        <input v-model.number="productForm.stock" type="number" min="0" required />
-                      </label>
-                      <label>
-                        {{ t('admin.marketplace.rating') }}
-                        <input v-model.number="productForm.rating" type="number" min="0" max="5" step="0.1" />
-                      </label>
-                    </div>
-
-                    <label>
-                      {{ t('common.description') }}
-                      <textarea v-model="productForm.description" rows="4" :placeholder="t('admin.marketplace.describePlaceholder')"></textarea>
-                    </label>
-                  </div>
-                </div>
-
-                <p v-if="productFormError" class="form-error">{{ productFormError }}</p>
-
-                <footer class="drawer-footer">
-                  <button type="button" class="ghost-btn" @click="closeProductForm">{{ t('common.cancel') }}</button>
-                  <button type="submit" class="primary-btn" :disabled="productSaving">
-                    {{ productSaving ? t('admin.projects.saving') : (editingProduct ? t('admin.marketplace.saveChanges') : t('admin.marketplace.createProduct')) }}
-                  </button>
-                </footer>
-              </form>
-            </aside>
-          </div>
+          </template>
         </section>
 
         <!-- Projects -->
@@ -500,7 +692,7 @@
             <aside class="product-drawer project-drawer">
               <header class="drawer-header">
                 <div>
-                  <p class="drawer-eyebrow">{{ t('admin.drawer.sakFollowup') }}</p>
+                  <p class="drawer-eyebrow">{{ t('admin.drawer.followup') }}</p>
                   <h2>{{ editingProject.name }}</h2>
                   <p v-if="editingProject.rfq_ticket" class="drawer-sub">
                     {{ t('admin.drawer.quoteLabel') }} {{ editingProject.rfq_ticket.ticket_number }} · {{ editingProject.user?.company || editingProject.user?.name }}
@@ -692,6 +884,7 @@
           </div>
         </section>
 
+
         <!-- Clients -->
         <section v-if="activeTab === 'clients'" class="panel">
           <header class="panel-header">
@@ -720,7 +913,7 @@
                   <td>{{ client.company }}</td>
                   <td>{{ client.email }}</td>
                   <td>{{ client.phone || '—' }}</td>
-                  <td>{{ client.rfq_tickets_count }}</td>
+                  <td>{{ client.quoteRequests }}</td>
                   <td>{{ client.projects_count }}</td>
                   <td>{{ formatDate(client.created_at) }}</td>
                 </tr>
@@ -734,17 +927,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useAdmin } from '../composables/useAdmin'
 import { useLocale } from '../composables/useLocale'
+import { useToast } from '../composables/useToast'
 import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import FollowupCard from '../components/adminDashboard/FollowupCard.vue'
 import ProjectTimeline from '../components/adminDashboard/ProjectTimeline.vue'
-import { resolveProductImage } from '../utils/productImage'
+import { resolveProductImage, resolveMediaUrl } from '../utils/productImage'
+import {
+  objectToLines,
+  linesToObject,
+} from '../utils/productDetails'
 import RfqQuoteEditor from '../components/adminDashboard/RfqQuoteEditor.vue'
 import {
   buildQuoteLinesFromRfq,
@@ -779,6 +977,7 @@ const router = useRouter()
 const { t } = useI18n()
 const { locale } = useLocale()
 const { user, isAdmin, logoutUser } = useAuth()
+const toast = useToast()
 const {
   stats,
   rfqs,
@@ -798,9 +997,16 @@ const {
   createProduct,
   deleteProduct,
   fetchCategories,
+  createCategory,
   fetchUsers,
   quoteRfq
 } = useAdmin()
+
+watch(error, (message) => {
+  if (!message) return
+  toast.error(message)
+  error.value = null
+})
 
 const activeTab = ref('overview')
 const quoteSaving = ref(false)
@@ -833,21 +1039,48 @@ const noteSuggestions = computed(() => {
 const productSearch = ref('')
 const productCategoryFilter = ref('')
 const productStockFilter = ref('')
+const productVisibilityFilter = ref('')
 const showProductForm = ref(false)
 const editingProduct = ref(null)
 const productSaving = ref(false)
 const productFormError = ref('')
-const productImageFile = ref(null)
-const productImagePreview = ref('')
+const productImages = ref([])
+const activeImageIndex = ref(0)
+const productDocuments = ref([])
 const adminCategories = ref([])
-const productForm = ref({
-  title: '',
-  category_id: '',
-  stock: 10,
-  rating: 4.5,
-  description: ''
-})
+const showNewCategory = ref(false)
+const categorySaving = ref(false)
+const categoryFormError = ref('')
+const newCategoryForm = ref({ name: '', description: '' })
+const productForm = ref(emptyProductForm())
 let productSearchTimer = null
+let mediaIdCounter = 0
+
+function nextMediaId() {
+  mediaIdCounter += 1
+  return `media-${mediaIdCounter}`
+}
+
+function emptyProductForm() {
+  return {
+    title: '',
+    product_key: '',
+    category_id: '',
+    stock: 10,
+    rating: 4.5,
+    description: '',
+    capacity: null,
+    weight_kg: null,
+    surface: null,
+    climate_info: '',
+    highlights_text: '',
+    specs_text: '',
+    is_visible: true,
+  }
+}
+
+const activeImagePreview = computed(() => productImages.value[activeImageIndex.value]?.preview || '')
+
 
 const projectStepDefs = computed(() => {
   locale.value
@@ -906,6 +1139,14 @@ const tabs = computed(() => {
   ]
 })
 
+const userInitials = computed(() => {
+  const name = user.value?.name?.trim()
+  if (!name) return 'A'
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+})
+
 const kpiCards = computed(() => {
   if (!stats.value?.totals) return []
   locale.value
@@ -939,6 +1180,12 @@ const filteredCatalogProducts = computed(() => {
     list = list.filter(p => p.stock > 0 && p.stock < 5)
   } else if (productStockFilter.value === 'out') {
     list = list.filter(p => p.stock === 0)
+  }
+
+  if (productVisibilityFilter.value === 'visible') {
+    list = list.filter(p => p.is_visible !== false)
+  } else if (productVisibilityFilter.value === 'hidden') {
+    list = list.filter(p => p.is_visible === false)
   }
 
   return list
@@ -1041,12 +1288,12 @@ const handleSendQuote = async () => {
   }))
 
   if (!lines.length) {
-    alert('Add at least one quote line.')
+    toast.error('Add at least one quote line.')
     return
   }
 
   if (lines.some(line => !line.quantity || line.unit_price <= 0 || (!line.id && !line.label?.trim()))) {
-    alert('Fill description, quantity and unit price for every line.')
+    toast.error('Fill description, quantity and unit price for every line.')
     return
   }
 
@@ -1059,7 +1306,7 @@ const handleSendQuote = async () => {
     await loadOrders()
     await loadOverview()
   } else {
-    alert(result.error || 'Could not send quote')
+    toast.error(result.error || 'Could not send quote')
   }
 }
 
@@ -1075,52 +1322,159 @@ const loadMarketplace = async () => {
 
 const openProductForm = (product = null) => {
   productFormError.value = ''
-  productImageFile.value = null
   editingProduct.value = product
+  activeImageIndex.value = 0
+
   if (product) {
     productForm.value = {
-      title: product.title,
-      category_id: product.category_id,
-      stock: product.stock,
+      title: product.title || '',
+      product_key: product.product_key || '',
+      category_id: product.category_id || '',
+      stock: product.stock ?? 0,
       rating: product.rating ?? 4.5,
-      description: product.description || ''
+      description: product.description || '',
+      capacity: product.unit_capacity ?? product.capacity ?? null,
+      weight_kg: product.unit_weight ?? product.weight_kg ?? null,
+      surface: product.unit_area ?? product.surface ?? null,
+      climate_info: product.climate_info || '',
+      highlights_text: objectToLines(product.highlights),
+      specs_text: objectToLines(product.specs),
+      is_visible: product.is_visible !== false,
     }
-    productImagePreview.value = resolveProductImage(product)
+
+    const gallery = product.images?.length
+      ? product.images
+      : product.image || product.image_url
+        ? [{ path: product.image, url: product.image_url || resolveProductImage(product) }]
+        : []
+
+    productImages.value = gallery.map((img) => ({
+      id: nextMediaId(),
+      path: img.path || null,
+      preview: resolveMediaUrl(img.url || img.path),
+      file: null,
+    }))
+
+    productDocuments.value = (product.documents || []).map((doc) => ({
+      id: nextMediaId(),
+      name: doc.name || '',
+      path: doc.path || null,
+      size: doc.size || '',
+      url: doc.url || null,
+      file: null,
+    }))
   } else {
-    productForm.value = { title: '', category_id: '', stock: 10, rating: 4.5, description: '' }
-    productImagePreview.value = ''
+    productForm.value = emptyProductForm()
+    productImages.value = []
+    productDocuments.value = []
   }
+
   showProductForm.value = true
 }
 
 const closeProductForm = () => {
   showProductForm.value = false
   editingProduct.value = null
-  productImageFile.value = null
-  productImagePreview.value = ''
+  productImages.value = []
+  productDocuments.value = []
+  activeImageIndex.value = 0
   productFormError.value = ''
+  showNewCategory.value = false
+  categoryFormError.value = ''
+  newCategoryForm.value = { name: '', description: '' }
+}
+
+const toggleNewCategory = () => {
+  showNewCategory.value = !showNewCategory.value
+  categoryFormError.value = ''
+  if (!showNewCategory.value) {
+    newCategoryForm.value = { name: '', description: '' }
+  }
+}
+
+const handleCreateCategory = async () => {
+  categoryFormError.value = ''
+  const name = newCategoryForm.value.name.trim()
+  if (!name) {
+    categoryFormError.value = t('admin.marketplace.newCategoryRequired')
+    return
+  }
+
+  categorySaving.value = true
+  const result = await createCategory({
+    name,
+    description: newCategoryForm.value.description.trim() || null,
+  })
+  categorySaving.value = false
+
+  if (!result.success) {
+    categoryFormError.value = result.error || t('admin.marketplace.newCategoryFailed')
+    return
+  }
+
+  adminCategories.value = [...adminCategories.value, result.category]
+    .sort((a, b) => a.name.localeCompare(b.name))
+  productForm.value.category_id = result.category.id
+  showNewCategory.value = false
+  newCategoryForm.value = { name: '', description: '' }
+}
+
+const addImageFiles = (files) => {
+  const list = Array.from(files || []).filter((file) => file.type.startsWith('image/'))
+  if (!list.length) return
+
+  list.forEach((file) => {
+    productImages.value.push({
+      id: nextMediaId(),
+      path: null,
+      preview: URL.createObjectURL(file),
+      file,
+    })
+  })
+  activeImageIndex.value = productImages.value.length - 1
 }
 
 const handleImagePick = (event) => {
-  const file = event.target.files?.[0]
-  if (!file) return
-  setProductImageFile(file)
+  addImageFiles(event.target.files)
+  event.target.value = ''
 }
 
 const handleImageDrop = (event) => {
-  const file = event.dataTransfer?.files?.[0]
-  if (!file || !file.type.startsWith('image/')) return
-  setProductImageFile(file)
+  addImageFiles(event.dataTransfer?.files)
 }
 
-const setProductImageFile = (file) => {
-  productImageFile.value = file
-  productImagePreview.value = URL.createObjectURL(file)
+const removeProductImage = (index) => {
+  productImages.value.splice(index, 1)
+  if (activeImageIndex.value >= productImages.value.length) {
+    activeImageIndex.value = Math.max(0, productImages.value.length - 1)
+  }
 }
 
-const clearProductImage = () => {
-  productImageFile.value = null
-  productImagePreview.value = editingProduct.value ? resolveProductImage(editingProduct.value) : ''
+const addDocumentRow = () => {
+  productDocuments.value.push({
+    id: nextMediaId(),
+    name: '',
+    path: null,
+    size: '',
+    url: null,
+    file: null,
+  })
+}
+
+const removeDocumentRow = (index) => {
+  productDocuments.value.splice(index, 1)
+}
+
+const handleDocumentFilePick = (event, index) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const doc = productDocuments.value[index]
+  doc.file = file
+  doc.size = `${Math.max(1, Math.round(file.size / 1024))} KB`
+  if (!doc.name) {
+    doc.name = file.name.replace(/\.[^.]+$/, '')
+  }
+  event.target.value = ''
 }
 
 const adjustStock = async (product, delta) => {
@@ -1128,6 +1482,13 @@ const adjustStock = async (product, delta) => {
   if (next === product.stock) return
   await updateProduct(product.id, { stock: next })
   await fetchStats()
+}
+
+const toggleProductVisibility = async (product) => {
+  const nextVisible = product.is_visible === false
+  await updateProduct(product.id, {
+    is_visible: nextVisible ? '1' : '0',
+  })
 }
 
 const stockLevelClass = (stock) => {
@@ -1145,13 +1506,65 @@ const handleSaveProduct = async () => {
   productFormError.value = ''
   productSaving.value = true
 
-  const payload = { ...productForm.value }
-  let result
+  const form = productForm.value
+  const highlights = linesToObject(form.highlights_text)
+  const specs = linesToObject(form.specs_text)
 
+  const existingImages = productImages.value
+    .filter((img) => img.path && !img.file)
+    .map((img) => img.path)
+
+  const imageFiles = productImages.value
+    .filter((img) => img.file)
+    .map((img) => img.file)
+
+  const existingDocuments = productDocuments.value
+    .filter((doc) => doc.path && !doc.file)
+    .map((doc) => ({
+      name: doc.name,
+      path: doc.path,
+      size: doc.size,
+    }))
+
+  const documentUploads = productDocuments.value
+    .filter((doc) => doc.file)
+    .map((doc) => ({
+      name: doc.name,
+      file: doc.file,
+    }))
+
+  const incompleteDoc = productDocuments.value.find((doc) => !doc.name?.trim() || (!doc.file && !doc.path))
+  if (incompleteDoc) {
+    productSaving.value = false
+    productFormError.value = t('admin.marketplace.documentIncomplete')
+    return
+  }
+
+  const payload = {
+    title: form.title,
+    product_key: form.product_key || undefined,
+    category_id: form.category_id,
+    stock: form.stock,
+    rating: form.rating,
+    description: form.description || '',
+    climate_info: form.climate_info || '',
+    capacity: form.capacity,
+    weight_kg: form.weight_kg,
+    surface: form.surface,
+    highlights: highlights ? JSON.stringify(highlights) : '',
+    specs: specs ? JSON.stringify(specs) : '',
+    is_visible: form.is_visible ? '1' : '0',
+    existing_images: JSON.stringify(existingImages),
+    existing_documents: JSON.stringify(existingDocuments),
+  }
+
+  const media = { imageFiles, documentUploads }
+
+  let result
   if (editingProduct.value) {
-    result = await updateProduct(editingProduct.value.id, payload, productImageFile.value)
+    result = await updateProduct(editingProduct.value.id, payload, media)
   } else {
-    result = await createProduct(payload, productImageFile.value)
+    result = await createProduct(payload, media)
   }
 
   productSaving.value = false
@@ -1266,16 +1679,6 @@ const handleStockChange = async (product, stock) => {
   font-family: 'Outfit', sans-serif;
 }
 
-.admin-header {
-  background: #020d07;
-  color: #f0fdf4;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(74, 222, 128, 0.15);
-}
-
 .brand-link {
   display: flex;
   align-items: center;
@@ -1298,6 +1701,7 @@ const handleStockChange = async (product, stock) => {
   align-items: center;
   justify-content: center;
   color: #4ade80;
+  flex-shrink: 0;
 }
 
 .brand-title {
@@ -1305,59 +1709,120 @@ const handleStockChange = async (product, stock) => {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 800;
   letter-spacing: 1.5px;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .brand-sub {
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #4ade80;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.header-meta {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.admin-name {
-  font-size: 0.9rem;
-  opacity: 0.85;
-}
-
-.logout-btn {
-  background: transparent;
-  border: 1px solid rgba(240, 253, 244, 0.25);
-  color: #f0fdf4;
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-}
-
-.logout-btn:hover {
-  background: rgba(240, 253, 244, 0.08);
-}
-
 .admin-layout {
   display: grid;
-  grid-template-columns: 240px 1fr;
-  min-height: calc(100vh - 68px);
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
 }
 
 .admin-sidebar {
-  background: #fff;
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
-  padding: 1.5rem 1rem;
+  background: #020d07;
+  color: #f0fdf4;
+  border-right: 1px solid rgba(74, 222, 128, 0.12);
+  padding: 1.15rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 0.35rem 0.55rem 1rem;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.12);
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  flex: 1;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(74, 222, 128, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(74, 222, 128, 0.16);
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.profile-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.admin-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f0fdf4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-role {
+  font-size: 0.72rem;
+  color: rgba(240, 253, 244, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(240, 253, 244, 0.22);
+  color: #f0fdf4;
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.logout-btn:hover {
+  background: rgba(240, 253, 244, 0.08);
+  border-color: rgba(74, 222, 128, 0.35);
 }
 
 .nav-btn {
@@ -1372,17 +1837,18 @@ const handleStockChange = async (product, stock) => {
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #374151;
+  color: rgba(240, 253, 244, 0.72);
   text-align: left;
 }
 
 .nav-btn:hover {
-  background: #f3f7f4;
+  background: rgba(74, 222, 128, 0.08);
+  color: #f0fdf4;
 }
 
 .nav-btn.active {
-  background: rgba(34, 197, 94, 0.1);
-  color: #15803d;
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
 }
 
 .nav-icon {
@@ -1418,17 +1884,14 @@ const handleStockChange = async (product, stock) => {
 }
 
 .admin-main {
-  padding: 2rem;
+  padding: 1.15rem 1.5rem 1.5rem;
   overflow-x: auto;
 }
 
-.alert-banner {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #b91c1c;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  margin-bottom: 1rem;
+/* Global `section { padding: 7rem 0 }` is for marketing pages — reset in admin */
+.admin-main > .panel,
+.admin-main .drawer-section {
+  padding: 0;
 }
 
 .panel-header {
@@ -1820,17 +2283,31 @@ const handleStockChange = async (product, stock) => {
   }
 
   .admin-sidebar {
+    position: static;
+    height: auto;
     border-right: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(74, 222, 128, 0.12);
   }
 
   .sidebar-nav {
     flex-direction: row;
     overflow-x: auto;
+    flex: none;
   }
 
   .nav-btn {
     white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 0;
+  }
+
+  .logout-btn {
+    width: auto;
     flex-shrink: 0;
   }
 
@@ -2122,6 +2599,68 @@ const handleStockChange = async (product, stock) => {
   border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 999px;
   padding: 0.2rem;
+}
+
+.visibility-pill {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.visibility-pill.visible {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.visibility-pill.hidden {
+  background: rgba(107, 114, 128, 0.15);
+  color: #4b5563;
+}
+
+.row-hidden {
+  opacity: 0.62;
+}
+
+.row-hidden .product-thumb-sm {
+  filter: grayscale(0.35);
+}
+
+.visibility-toggle {
+  margin-top: 0.15rem;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.toggle-row input[type='checkbox'] {
+  margin-top: 0.2rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #16a34a;
+}
+
+.toggle-row strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #052e16;
+}
+
+.toggle-row small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
 }
 
 .qty-btn {
@@ -2817,6 +3356,352 @@ const handleStockChange = async (product, stock) => {
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
 }
 
+.product-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: calc(100vh - 8rem);
+}
+
+.product-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.product-editor-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+  font-weight: 800;
+  color: #052e16;
+  margin: 0.15rem 0 0;
+}
+
+.back-catalog-btn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.back-catalog-btn:hover {
+  color: #16a34a;
+}
+
+.product-editor-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.product-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.product-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.product-editor-media {
+  position: sticky;
+  top: 1rem;
+}
+
+.media-card {
+  background: #f8faf9;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.media-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.media-card-header h2 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #15803d;
+}
+
+.media-card-header span {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.upload-zone-lg {
+  min-height: 280px;
+}
+
+.upload-zone-lg .upload-preview {
+  height: 280px;
+}
+
+.image-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.image-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  padding: 0;
+  background: #eef4f0;
+  cursor: pointer;
+}
+
+.image-thumb.active {
+  border-color: #22c55e;
+}
+
+.image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.add-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(34, 197, 94, 0.4);
+  color: #16a34a;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.section-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.section-head-row h2 {
+  margin: 0;
+}
+
+.small-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.docs-empty {
+  padding: 1rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px dashed rgba(0, 0, 0, 0.1);
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.document-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.document-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 0.85rem;
+}
+
+.doc-name,
+.doc-file {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.doc-name input {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+}
+
+.doc-file-box {
+  position: relative;
+  border: 1px dashed rgba(34, 197, 94, 0.4);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  background: #f7fcf9;
+  overflow: hidden;
+}
+
+.doc-file-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #15803d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.doc-file-box input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.doc-remove {
+  margin-bottom: 0.15rem;
+}
+
+@media (max-width: 960px) {
+  .document-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.product-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.editor-section {
+  background: #f8faf9;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+}
+
+.editor-section h2 {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #15803d;
+  margin: 0 0 0.9rem;
+}
+
+.editor-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem 1rem;
+}
+
+.editor-section-grid .span-2 {
+  grid-column: span 2;
+}
+
+.editor-section-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.editor-section-grid input,
+.editor-section-grid select,
+.editor-section-grid textarea {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+  color: #052e16;
+  background: #fff;
+}
+
+.editor-section-grid input:focus,
+.editor-section-grid select:focus,
+.editor-section-grid textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.product-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding-bottom: 0.25rem;
+}
+
+@media (max-width: 960px) {
+  .product-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-editor-media {
+    position: static;
+  }
+
+  .product-editor-header {
+    flex-direction: column;
+  }
+
+  .editor-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-section-grid .span-2 {
+    grid-column: span 1;
+  }
+}
+
 .drawer-header {
   display: flex;
   justify-content: space-between;
@@ -2934,6 +3819,79 @@ const handleStockChange = async (product, stock) => {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.drawer-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.linkish-btn {
+  margin-top: 0.4rem;
+  border: none;
+  background: transparent;
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.linkish-btn:hover {
+  color: #166534;
+  text-decoration: underline;
+}
+
+.new-category-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px dashed rgba(34, 197, 94, 0.45);
+}
+
+.new-category-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.new-category-box input {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+}
+
+.new-category-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 960px) {
+  .new-category-box {
+    grid-template-columns: 1fr;
+  }
 }
 
 .drawer-fields label {
@@ -2993,7 +3951,8 @@ const handleStockChange = async (product, stock) => {
 }
 
 @media (max-width: 768px) {
-  .drawer-row {
+  .drawer-row,
+  .drawer-row-3 {
     grid-template-columns: 1fr;
   }
 }

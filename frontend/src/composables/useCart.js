@@ -1,18 +1,5 @@
 import { ref, computed } from 'vue'
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
-})
-
-// Add token to requests if it exists
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('ea_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+import api from '../api/client'
 
 const quoteItems = ref([])
 const isQuoteOpen = ref(false)

@@ -1,32 +1,5 @@
 import { ref, computed } from 'vue'
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  headers: {
-    Accept: 'application/json',
-    'Content-Type': 'application/json'
-  }
-})
-
-const getApiErrorMessage = (err, fallback) => {
-  const data = err.response?.data
-  if (!data) return fallback
-  if (data.errors) {
-    const first = Object.values(data.errors).flat()[0]
-    if (first) return first
-  }
-  return data.message || fallback
-}
-
-// Add token to requests if it exists
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('ea_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
+import api, { getApiErrorMessage } from '../api/client'
 
 const storedUser = localStorage.getItem('ea_user') ?? localStorage.getItem('ea_b2b_user')
 if (storedUser && !localStorage.getItem('ea_user') && localStorage.getItem('ea_b2b_user')) {
@@ -41,7 +14,10 @@ const error = ref(null)
 
 export function useAuth() {
   const isLoggedIn = computed(() => user.value !== null && token.value !== null)
-  const isAdmin = computed(() => user.value?.role === 'admin')
+  const isAdmin = computed(() => {
+    const role = user.value?.role
+    return role === 'administrator' || role === 'admin'
+  })
 
   const registerUser = async (name, company, phone, email, password) => {
     try {

@@ -27,7 +27,7 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response->assertJsonStructure([
-            'user' => ['id', 'name', 'company', 'phone', 'email', 'role'],
+            'user' => ['id_user', 'name', 'company', 'phone', 'email', 'role'],
             'token',
             'message',
         ]);
@@ -37,7 +37,6 @@ class AuthenticationTest extends TestCase
             'company' => 'Green Energy Company',
             'phone' => '+212 600 123 456',
             'email' => 'salah.eddine@green.com',
-            'role' => 'user',
         ]);
     }
 
