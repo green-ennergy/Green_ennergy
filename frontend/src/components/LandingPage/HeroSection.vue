@@ -30,7 +30,15 @@
       </div>
 
       <p class="hero-login animate-fade-up delay-400">
-        Already have an account? <a href="/login">Sign in</a>
+        <template v-if="isLoggedIn">
+          <router-link :to="isAdmin ? '/admin' : '/dashboard'">
+            {{ isAdmin ? t('nav.admin') : t('nav.dashboard') }}
+          </router-link>
+        </template>
+        <template v-else>
+          Already have an account?
+          <router-link to="/login">{{ t('nav.signIn') }}</router-link>
+        </template>
       </p>
 
       <!-- Trust pills -->
@@ -53,6 +61,12 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+import { useAuth } from '../../composables/useAuth'
+
+const { t } = useI18n()
+const { isLoggedIn, isAdmin } = useAuth()
+
 const features = [
   { label: 'No hidden fees' },
   { label: 'Certified installation' },

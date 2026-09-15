@@ -40,7 +40,7 @@
           <ul class="footer-links">
             <li><router-link to="/#about">About Us</router-link></li>
             <li><router-link to="/#projects">Our Projects</router-link></li>
-            <li><a href="#">Marketplace</a></li>
+            <li><router-link to="/store">Marketplace</router-link></li>
             <li><a href="#">Careers</a></li>
           </ul>
         </div>

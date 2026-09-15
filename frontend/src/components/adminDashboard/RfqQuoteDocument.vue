@@ -2,7 +2,7 @@
   <div class="quote-document">
     <header class="sheet-header">
       <div class="brand">
-        <strong>Energy Agency SAK</strong>
+        <strong>Energy Agency</strong>
         <span>{{ t('rfq.document.tagline') }}</span>
       </div>
       <div class="doc-meta">

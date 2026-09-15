@@ -1,28 +1,17 @@
 import { ref } from 'vue'
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  headers: { Accept: 'application/json' }
-})
-
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('ea_token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
-  return config
-})
+import api from '../api/client'
 
 const messages = ref([])
-const sakContact = ref(null)
+const agencyContact = ref(null)
 const isLoading = ref(false)
 const error = ref(null)
 
 export function useMessages() {
-  const fetchSakContact = async () => {
+  const fetchAgencyContact = async () => {
     try {
       const response = await api.get('/messages/contact')
-      sakContact.value = response.data.contact
-      return sakContact.value
+      agencyContact.value = response.data.contact
+      return agencyContact.value
     } catch {
       return null
     }
@@ -72,10 +61,10 @@ export function useMessages() {
 
   return {
     messages,
-    sakContact,
+    agencyContact,
     isLoading,
     error,
-    fetchSakContact,
+    fetchAgencyContact,
     fetchMessages,
     sendMessage,
     markRead

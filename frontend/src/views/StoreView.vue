@@ -57,10 +57,15 @@
       <div v-else class="product-grid">
         <article v-for="prod in filteredProducts" :key="prod.id" class="product-card">
           <router-link :to="`/store/${prod.id}`" class="product-image-link">
-            <img :src="resolveProductImage(prod)" :alt="prod.title" />
-            <span class="stock-badge" :class="{ low: prod.stock <= 3, out: prod.stock === 0 }">
-              {{ prod.stock === 0 ? t('store.outOfStock') : t('store.inStock', { n: prod.stock }) }}
-            </span>
+            <div class="product-image-stage">
+              <img :src="resolveProductImage(prod)" :alt="prod.title" />
+              <div class="image-fade" aria-hidden="true"></div>
+              <span v-if="prod.category?.name" class="image-category">{{ prod.category.name }}</span>
+              <span v-if="(prod.images?.length || 0) > 1" class="image-count">{{ prod.images.length }} photos</span>
+              <span class="stock-badge" :class="{ low: prod.stock <= 3, out: prod.stock === 0 }">
+                {{ prod.stock === 0 ? t('store.outOfStock') : t('store.inStock', { n: prod.stock }) }}
+              </span>
+            </div>
           </router-link>
 
           <div class="product-body">
@@ -513,24 +518,80 @@ const closeSuccessModal = () => {
   position: relative;
   display: block;
   aspect-ratio: 4/3;
-  background: #eef4f0;
+  background:
+    linear-gradient(160deg, #eef4f0, #f8fbf9),
+    repeating-linear-gradient(
+      -18deg,
+      rgba(22, 163, 74, 0.04) 0,
+      rgba(22, 163, 74, 0.04) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  overflow: hidden;
+}
+
+.product-image-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .product-image-link img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.product-card:hover .product-image-link img {
+  transform: scale(1.05);
+}
+
+.image-fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 42%;
+  background: linear-gradient(to top, rgba(5, 46, 22, 0.35), transparent);
+  pointer-events: none;
+}
+
+.image-category {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.92);
+  color: #14532d;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.image-count {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 1;
+  background: rgba(5, 46, 22, 0.72);
+  color: #ecfdf5;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .stock-badge {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
+  z-index: 1;
   background: rgba(255, 255, 255, 0.95);
   padding: 0.25rem 0.55rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
+  box-shadow: 0 6px 14px rgba(5, 46, 22, 0.1);
 }
 
 .stock-badge.low { color: #b45309; }
