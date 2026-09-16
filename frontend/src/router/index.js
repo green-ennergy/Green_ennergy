@@ -2,65 +2,78 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 
 const routes = [
-{
+  {
     path: '/',
     name: 'home',
-    component: () => import('../views/HomeView.vue'),
-},
-{
+    component: () => import('../views/HomeView.vue')
+  },
+  {
+    path: '/services',
+    name: 'services',
+    component: () => import('../views/ServicesView.vue')
+  },
+  {
+    path: '/services/:id',
+    name: 'service-detail',
+    component: () => import('../views/ServiceDetailView.vue'),
+    props: true
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../views/UserDashboardView.vue')
+  },
+  {
     path: '/projects/:id',
     name: 'project-detail',
     component: () => import('../views/ProjectDetailView.vue'),
     props: true
-},
-
-{
+  },
+  {
     path: '/login',
     name: 'login',
     component: () => import('../views/LoginView.vue')
-},
-
-{
-    path: '/:pathMatch(.*)*',
-    name: 'not-found',
-    component: () => import('../views/NotFoundView.vue'),
-},
-{
+  },
+  {
     path: '/admin',
     name: 'admin',
-    component: () => import('../views/AdminDashboardView.vue'),
-},
-{
+    component: () => import('../views/AdminDashboardView.vue')
+  },
+  {
     path: '/store',
     name: 'store',
-    component: () => import('../views/StoreView.vue'),
-},
-{
+    component: () => import('../views/StoreView.vue')
+  },
+  {
     path: '/operator',
     name: 'operator',
-    component: () => import('../views/OperatorDashboardView.vue'),
-}
+    component: () => import('../views/OperatorDashboardView.vue')
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('../views/NotFoundView.vue')
+  }
 ]
 
 const router = createRouter({
-    history: createWebHistory(),
-    routes,
-    scrollBehavior(to, from, savedPosition) {
-    if ( savedPosition) {
-        return savedPosition
+  history: createWebHistory(),
+  routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
     }
     if (to.hash) {
-        return { el: to.hash, top: 80, behavior: 'smooth' }
+      return { el: to.hash, top: 80, behavior: 'smooth' }
     }
-        return { top: 0, behavior: 'instant' }
-    },
+    return { top: 0, behavior: 'instant' }
+  }
 })
-
 
 router.beforeEach((to, from, next) => {
   const { isLoggedIn, isAdmin } = useAuth()
 
-  if (to.name === 'dashboard' || to.name === 'client-project-detail') {
+  if (to.name === 'dashboard') {
     if (!isLoggedIn.value) {
       next({ name: 'login' })
       return

@@ -33,12 +33,12 @@
             </li>
           </ul>
 
-          <a href="#" class="service-link" :id="`service-learn-${i}`">
+          <router-link :to="s.route" class="service-link" :id="`service-learn-${i}`">
             Learn more
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
-          </a>
+          </router-link>
 
           <div class="card-glow" aria-hidden="true"></div>
         </div>
@@ -54,6 +54,7 @@ const services = [
     desc: 'Premium tier-1 solar panels, inverters, and battery storage systems from our trusted manufacturing partners.',
     bullets: ['Tier-1 solar panels', 'Smart inverters', 'Battery storage', 'Competitive pricing'],
     featured: false,
+    route: '/store',
     icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
   },
   {
@@ -61,6 +62,7 @@ const services = [
     desc: 'Professional, permitted, and inspected installations by our certified in-house engineering team. Typically completed in 1-2 days.',
     bullets: ['Certified engineers', '1-2 day install', 'Permit handling', 'Grid connection'],
     featured: true,
+    route: '/services/installation',
     icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
   },
   {
@@ -68,6 +70,7 @@ const services = [
     desc: 'Ongoing monitoring, cleaning, and preventative maintenance to keep your system operating at peak performance year after year.',
     bullets: ['24/7 monitoring', 'Annual cleaning', 'Performance reports', '25yr warranty support'],
     featured: false,
+    route: '/services/maintenance',
     icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`,
   },
 ]

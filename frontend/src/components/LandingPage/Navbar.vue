@@ -14,6 +14,7 @@
       <!-- Desktop links -->
       <ul class="nav-links" role="list">
         <li><router-link to="/store" class="nav-link">{{ t('nav.store') }}</router-link></li>
+        <li><router-link to="/services" class="nav-link">{{ t('nav.services') }}</router-link></li>
         <li><router-link to="/#faq" class="nav-link">{{ t('nav.faq') }}</router-link></li>
         <li><router-link to="/#about" class="nav-link">{{ t('nav.about') }}</router-link></li>
       </ul>

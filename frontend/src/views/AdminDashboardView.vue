@@ -1003,6 +1003,22 @@
               <span>{{ t('admin.operations.subtabs.tasksQueue') }}</span>
               <span class="tab-badge">{{ opsTasks.length }}</span>
             </button>
+            <button
+              :class="['ops-subtab-btn', { active: operationsSubtab === 'serviceRequests' }]"
+              @click="operationsSubtab = 'serviceRequests'"
+            >
+              <AdminIcon name="operations" size="16" />
+              <span>Service Requests & Progress</span>
+              <span class="tab-badge">{{ serviceRequests.length }}</span>
+            </button>
+            <button
+              :class="['ops-subtab-btn', { active: operationsSubtab === 'serviceConfig' }]"
+              @click="operationsSubtab = 'serviceConfig'"
+            >
+              <AdminIcon name="edit" size="16" />
+              <span>Manage Services (Enable/Disable)</span>
+              <span class="tab-badge">{{ availableServices.length }}/{{ servicesConfig.length }}</span>
+            </button>
           </div>
 
           <!-- SUBTAB 1: CALENDAR & SCHEDULE -->
@@ -1251,6 +1267,133 @@
             </div>
           </div>
 
+          <!-- SUBTAB 4: SERVICE REQUESTS & REALIZATION PROGRESS -->
+          <div v-if="operationsSubtab === 'serviceRequests'" class="ops-requests-view">
+            <div class="table-wrap">
+              <table class="admin-table ops-table">
+                <thead>
+                  <tr>
+                    <th>Request ID</th>
+                    <th>Service</th>
+                    <th>Client Details</th>
+                    <th>Assigned Operator</th>
+                    <th>Realization Phase</th>
+                    <th>Actions & Phase Controls</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="req in serviceRequests" :key="req.id">
+                    <td><code>{{ req.id }}</code></td>
+                    <td>
+                      <strong class="ops-task-title">{{ req.serviceTitle }}</strong>
+                      <div class="ops-task-sub">📅 Pref: {{ req.preferredDate }}</div>
+                    </td>
+                    <td>
+                      <strong>{{ req.clientName }}</strong><br />
+                      <small>📍 {{ req.city }} — {{ req.address }}</small><br />
+                      <small>📞 {{ req.clientPhone }} | {{ req.clientEmail }}</small>
+                    </td>
+                    <td>
+                      <div v-if="req.assignedOperatorId" class="op-table-cell">
+                        👤 {{ req.assignedOperatorName }}
+                      </div>
+                      <div v-else class="assign-op-box">
+                        <select v-model="selectedServiceOpId[req.id]">
+                          <option value="" disabled>Select Operator...</option>
+                          <option v-for="op in opsOperators" :key="op.id" :value="op.id">
+                            {{ op.name }}
+                          </option>
+                        </select>
+                        <button
+                          class="primary-btn small"
+                          :disabled="!selectedServiceOpId[req.id]"
+                          @click="
+                            const op = opsOperators.find(o => o.id === selectedServiceOpId[req.id]);
+                            if (op) acceptAndAssignRequest(req.id, op.id, op.name);
+                          "
+                        >
+                          Assign & Accept
+                        </button>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="phase-badge-cell">
+                        <span class="phase-num">Step {{ req.currentPhase }} / 5</span>
+                        <div class="mini-progress-bar">
+                          <div class="mini-fill" :style="{ width: `${(req.currentPhase / 5) * 100}%` }"></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="phase-step-buttons">
+                        <span>Advance Phase:</span>
+                        <div class="step-btn-group">
+                          <button
+                            v-for="st in 5"
+                            :key="st"
+                            :class="['step-toggle-btn', { active: req.currentPhase === st }]"
+                            @click="updateRequestPhase(req.id, st, 'Admin Dispatch', `Phase set to ${st}`)"
+                          >
+                            {{ st }}
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- SUBTAB 5: SERVICES ENABLE / DISABLE CONTROLS -->
+          <div v-if="operationsSubtab === 'serviceConfig'" class="ops-services-config-view">
+            <div class="config-grid">
+              <div
+                v-for="srv in servicesConfig"
+                :key="srv.id"
+                :class="['service-config-card', { disabled: !srv.enabled }]"
+              >
+                <div class="card-head">
+                  <div>
+                    <span class="cat-tag">{{ srv.category }}</span>
+                    <h3>{{ srv.title }}</h3>
+                  </div>
+
+                  <!-- Toggle Switch -->
+                  <div class="toggle-switch-wrap">
+                    <label class="switch">
+                      <input
+                        type="checkbox"
+                        :checked="srv.enabled"
+                        @change="toggleServiceEnabled(srv.id)"
+                      />
+                      <span class="slider round"></span>
+                    </label>
+                    <span :class="['toggle-lbl', srv.enabled ? 'enabled' : 'disabled']">
+                      {{ srv.enabled ? 'Enabled' : 'Disabled' }}
+                    </span>
+                  </div>
+                </div>
+
+                <p class="config-desc">{{ srv.desc }}</p>
+
+                <div class="config-meta">
+                  <span>⏱️ Duration: <strong>{{ srv.estimatedDuration }}</strong></span>
+                  <span>💰 Price: <strong>{{ srv.startingPrice }}</strong></span>
+                </div>
+
+                <div class="realization-summary">
+                  <strong>5 Realization Steps:</strong>
+                  <ol class="steps-mini-list">
+                    <li v-for="step in srv.realizationSteps" :key="step.step">
+                      {{ step.step }}. {{ step.title }}
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- TASK ASSIGNMENT & EDIT MODAL -->
           <div v-if="showTaskModal" class="modal-overlay" @click.self="showTaskModal = false">
             <div class="modal-card ops-modal">
@@ -1381,6 +1524,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useAdmin } from '../composables/useAdmin'
 import { useOperatorAdmin } from '../composables/useOperatorAdmin'
+import { useServices } from '../composables/useServices'
 import { useLocale } from '../composables/useLocale'
 import { useToast } from '../composables/useToast'
 import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
@@ -1588,6 +1732,17 @@ const {
   getOperatorActiveTaskCount,
   reloadOperations
 } = useOperatorAdmin()
+
+const {
+  servicesConfig,
+  serviceRequests,
+  availableServices,
+  toggleServiceEnabled,
+  acceptAndAssignRequest,
+  updateRequestPhase
+} = useServices()
+
+const selectedServiceOpId = ref({})
 
 const operationsSubtab = ref('calendar')
 const selectedCalendarDate = ref('2026-09-15')
@@ -5276,6 +5431,217 @@ const handleStockChange = async (product, stock) => {
   border-top: 1px solid #e5e7eb;
   padding-top: 1rem;
   margin-top: 1rem;
+}
+
+/* Service Admin Controls & Realization Progress CSS */
+.ops-services-config-view .config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.service-config-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.service-config-card.disabled {
+  background: #f8fafc;
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.service-config-card .card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.cat-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #16a34a;
+  text-transform: uppercase;
+}
+
+.service-config-card h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0.2rem 0 0 0;
+}
+
+.toggle-switch-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: #16a34a;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.toggle-lbl {
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.toggle-lbl.enabled { color: #16a34a; }
+.toggle-lbl.disabled { color: #b45309; }
+
+.config-desc {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.config-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  background: #f8fafc;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.realization-summary {
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.steps-mini-list {
+  padding-left: 1.2rem;
+  margin: 0.35rem 0 0 0;
+}
+
+/* Service Requests Phase Controls */
+.assign-op-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.assign-op-box select {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.phase-badge-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 130px;
+}
+
+.phase-num {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.mini-progress-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mini-fill {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 999px;
+}
+
+.phase-step-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.phase-step-buttons span {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.step-btn-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.step-toggle-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-weight: 800;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.step-toggle-btn.active {
+  background: #052e16;
+  color: #4ade80;
+  border-color: #052e16;
 }
 </style>
 

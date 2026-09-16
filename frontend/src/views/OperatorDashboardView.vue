@@ -196,6 +196,55 @@
         </div>
       </section>
 
+      <!-- TAB 2: SERVICES REALIZATION PROGRESS -->
+      <section v-else-if="currentTab === 'services'" class="panel">
+        <header class="panel-header">
+          <div>
+            <h1>Assigned Service Realization Requests</h1>
+            <p>Update realization progress phases (Step 1 to 5) for active client service installations and audits.</p>
+          </div>
+        </header>
+
+        <div v-if="operatorServiceRequests.length === 0" class="empty-state">
+          <p>No active service requests assigned.</p>
+        </div>
+
+        <div v-else class="services-op-list">
+          <div v-for="req in operatorServiceRequests" :key="req.id" class="op-service-card">
+            <div class="card-head">
+              <div>
+                <span class="req-id"><code>{{ req.id }}</code></span>
+                <h3>{{ req.serviceTitle }}</h3>
+                <p class="req-client">📍 {{ req.clientName }} — {{ req.city }} ({{ req.address }}) · 📞 {{ req.clientPhone }}</p>
+              </div>
+
+              <div class="phase-current-badge">
+                Realization Phase: <strong>Step {{ req.currentPhase }} / 5</strong>
+              </div>
+            </div>
+
+            <!-- Realization Progress Step buttons -->
+            <div class="phase-update-box">
+              <span>Advance Realization Progress Step:</span>
+              <div class="phase-buttons">
+                <button
+                  v-for="st in 5"
+                  :key="st"
+                  :class="['phase-btn', { active: req.currentPhase === st }]"
+                  @click="updateRequestPhase(req.id, st, `Operator (${user?.name || 'Field'})`, `Updated on-site realization step to ${st}`)"
+                >
+                  Step {{ st }}
+                </button>
+              </div>
+            </div>
+
+            <div class="req-notes">
+              <strong>Client Notes:</strong> {{ req.notes || 'None provided' }}
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- TAB 3: COMPLETED ARCHIVE -->
       <section v-else-if="currentTab === 'archive'" class="panel">
         <header class="panel-header">
@@ -255,7 +304,17 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useOperator } from '../composables/useOperator'
+import { useServices } from '../composables/useServices'
 import OperatorIcon from '../components/operatorDashboard/OperatorIcon.vue'
+
+const {
+  serviceRequests,
+  updateRequestPhase
+} = useServices()
+
+const operatorServiceRequests = computed(() => {
+  return serviceRequests.value
+})
 import OperatorKpiGrid from '../components/operatorDashboard/OperatorKpiGrid.vue'
 import TaskFilterBar from '../components/operatorDashboard/TaskFilterBar.vue'
 import TaskCard from '../components/operatorDashboard/TaskCard.vue'
@@ -293,6 +352,7 @@ const incidentTask = ref(null)
 
 const mainTabs = computed(() => [
   { id: 'tasks', label: t('operator.tabs.tasks') || 'Tasks Hub', icon: 'bolt', badge: stats.value.assigned + stats.value.inProgress },
+  { id: 'services', label: 'Service Realization', icon: 'refresh', badge: operatorServiceRequests.value.length },
   { id: 'agenda', label: t('operator.tabs.agenda') || "Today's Agenda", icon: 'calendar', badge: stats.value.todayPending || null },
   { id: 'archive', label: t('operator.tabs.archive') || 'Completed Archive', icon: 'check-circle' }
 ])
@@ -902,5 +962,99 @@ const handleLogout = async () => {
     flex-direction: row;
     justify-content: space-between;
   }
+}
+
+/* Service Realization Styles for Operator */
+.services-op-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.op-service-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.op-service-card .card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+}
+
+.req-id {
+  font-size: 0.78rem;
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.op-service-card h3 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0.25rem 0;
+}
+
+.req-client {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.phase-current-badge {
+  background: #dcfce7;
+  color: #15803d;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.phase-update-box {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.phase-update-box span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.phase-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.phase-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.phase-btn.active {
+  background: #052e16;
+  color: #4ade80;
+  border-color: #052e16;
+}
+
+.req-notes {
+  font-size: 0.85rem;
+  color: #475569;
 }
 </style>

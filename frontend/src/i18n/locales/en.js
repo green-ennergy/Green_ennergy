@@ -1,4 +1,4 @@
-﻿export default {
+export default {
   common: {
     save: 'Save',
     cancel: 'Cancel',
@@ -27,6 +27,7 @@
   },
   nav: {
     store: 'Store',
+    services: 'Services',
     admin: 'Admin space',
     dashboard: 'Client space',
     faq: 'FAQ',
@@ -618,6 +619,32 @@
       title: 'No tasks match your filter',
       sub: 'Try selecting a different task type or status, or clear the search keyword.',
       clearFilters: 'Clear All Filters'
+    }
+  },
+  services: {
+    heroTitle: 'Professional Solar & Renewable Services',
+    heroSubtitle: 'From turnkey installation and maintenance to free electricity audits and express equipment delivery.',
+    ourServices: 'Our Service Offerings',
+    requestService: 'Request Service',
+    viewDetails: 'View Details & Sizing',
+    disabledNotice: 'This service is currently undergoing capacity upgrades and is temporarily paused.',
+    requestModalTitle: 'Submit Service Request',
+    requestModalSubtitle: 'Fill in your site details and our engineering team will review and assign an operator within 2 hours.',
+    form: {
+      fullName: 'Full Name / Business',
+      email: 'Email Address',
+      phone: 'Phone Number',
+      city: 'City / Region',
+      address: 'Installation / Site Address',
+      preferredDate: 'Preferred Service Date',
+      notes: 'Service Scope & Site Context Notes',
+      submitBtn: 'Submit Service Request'
+    },
+    realization: {
+      title: 'Realization Progress Tracker',
+      currentPhase: 'Current Realization Phase',
+      phaseStep: 'Step {step} of 5',
+      historyTitle: 'Realization Activity Log'
     }
   }
 }
