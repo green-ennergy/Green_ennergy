@@ -728,6 +728,454 @@
             </table>
           </div>
         </section>
+
+        <!-- Operations Dispatch -->
+        <section v-if="activeTab === 'operations'" class="panel ops-panel">
+          <header class="panel-header ops-header">
+            <div>
+              <h1>{{ t('admin.operations.title') }}</h1>
+              <p>{{ t('admin.operations.subtitle') }}</p>
+            </div>
+            <button class="primary-btn" @click="openCreateTaskModal()">
+              <AdminIcon name="plus" size="16" />
+              <span>{{ t('admin.operations.assignTaskBtn') }}</span>
+            </button>
+          </header>
+
+          <!-- Operations KPI Summary -->
+          <div class="ops-kpis">
+            <div class="ops-kpi-card">
+              <div class="kpi-icon-wrap green">
+                <AdminIcon name="clients" size="20" />
+              </div>
+              <div>
+                <span class="kpi-num">{{ opsStats.totalOps }}</span>
+                <span class="kpi-lbl">{{ t('admin.operations.kpis.totalOps') }}</span>
+              </div>
+            </div>
+
+            <div class="ops-kpi-card">
+              <div class="kpi-icon-wrap blue">
+                <AdminIcon name="user-check" size="20" />
+              </div>
+              <div>
+                <span class="kpi-num">{{ opsStats.onDutyOps }}</span>
+                <span class="kpi-lbl">{{ t('admin.operations.kpis.onDutyOps') }}</span>
+              </div>
+            </div>
+
+            <div class="ops-kpi-card">
+              <div class="kpi-icon-wrap orange">
+                <AdminIcon name="clock" size="20" />
+              </div>
+              <div>
+                <span class="kpi-num">{{ opsStats.inProgress }}</span>
+                <span class="kpi-lbl">{{ t('admin.operations.kpis.inProgress') }}</span>
+              </div>
+            </div>
+
+            <div class="ops-kpi-card">
+              <div class="kpi-icon-wrap purple">
+                <AdminIcon name="operations" size="20" />
+              </div>
+              <div>
+                <span class="kpi-num">{{ opsStats.totalTasks }}</span>
+                <span class="kpi-lbl">{{ t('admin.operations.kpis.totalTasks') }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Operations Navigation Subtabs -->
+          <div class="ops-nav-tabs">
+            <button
+              :class="['ops-subtab-btn', { active: operationsSubtab === 'calendar' }]"
+              @click="operationsSubtab = 'calendar'"
+            >
+              <AdminIcon name="calendar" size="16" />
+              <span>{{ t('admin.operations.subtabs.calendar') }}</span>
+            </button>
+            <button
+              :class="['ops-subtab-btn', { active: operationsSubtab === 'operators' }]"
+              @click="operationsSubtab = 'operators'"
+            >
+              <AdminIcon name="clients" size="16" />
+              <span>{{ t('admin.operations.subtabs.operators') }}</span>
+              <span class="tab-badge">{{ opsOperators.length }}</span>
+            </button>
+            <button
+              :class="['ops-subtab-btn', { active: operationsSubtab === 'tasksQueue' }]"
+              @click="operationsSubtab = 'tasksQueue'"
+            >
+              <AdminIcon name="orders" size="16" />
+              <span>{{ t('admin.operations.subtabs.tasksQueue') }}</span>
+              <span class="tab-badge">{{ opsTasks.length }}</span>
+            </button>
+          </div>
+
+          <!-- SUBTAB 1: CALENDAR & SCHEDULE -->
+          <div v-if="operationsSubtab === 'calendar'" class="ops-calendar-view">
+            <!-- Date Strip Picker -->
+            <div class="date-strip">
+              <div
+                v-for="day in calendarDays"
+                :key="day.date"
+                :class="['day-chip', { selected: selectedCalendarDate === day.date }]"
+                @click="selectedCalendarDate = day.date"
+              >
+                <span class="day-name">{{ day.dayName }}</span>
+                <span class="day-num">{{ day.dayNum }}</span>
+                <span class="day-dot" v-if="opsTasks.some(t => t.scheduledDate === day.date)"></span>
+              </div>
+            </div>
+
+            <!-- Calendar Schedule Content Grid -->
+            <div class="calendar-grid-container">
+              <div class="schedule-matrix">
+                <div class="matrix-header">
+                  <div class="op-cell-head">Operator</div>
+                  <div class="time-cell-head">Morning (08:00 - 13:00)</div>
+                  <div class="time-cell-head">Afternoon (13:00 - 18:00)</div>
+                </div>
+
+                <div v-for="op in opsOperators" :key="op.id" class="matrix-row">
+                  <div class="op-cell">
+                    <div class="op-mini-avatar" :style="{ backgroundColor: op.avatarColor }">
+                      {{ op.name.substring(0, 2).toUpperCase() }}
+                    </div>
+                    <div class="op-mini-info">
+                      <strong>{{ op.name }}</strong>
+                      <span :class="['duty-dot', getDutyStatusClass(op.dutyStatus)]"></span>
+                      <small>{{ getDutyStatusLabel(op.dutyStatus) }}</small>
+                    </div>
+                  </div>
+
+                  <!-- Morning Slot Tasks -->
+                  <div class="slot-cell">
+                    <div
+                      v-for="t in opsTasks.filter(task => task.operatorId === op.id && task.scheduledDate === selectedCalendarDate && (task.timeSlot.includes('08:') || task.timeSlot.includes('09:') || task.timeSlot.includes('10:') || task.timeSlot.includes('11:')))"
+                      :key="t.id"
+                      :class="['schedule-card', t.type]"
+                      @click="openEditTaskModal(t)"
+                    >
+                      <div class="sched-card-top">
+                        <span class="sched-type-tag">{{ t.type.toUpperCase() }}</span>
+                        <span class="sched-time">{{ t.timeSlot }}</span>
+                      </div>
+                      <h4 class="sched-title">{{ t.title }}</h4>
+                      <div class="sched-client">📍 {{ t.client.name }} ({{ t.client.city }})</div>
+                    </div>
+                    <button class="add-slot-btn" @click="openCreateTaskModal(op.id)">+ Assign</button>
+                  </div>
+
+                  <!-- Afternoon Slot Tasks -->
+                  <div class="slot-cell">
+                    <div
+                      v-for="t in opsTasks.filter(task => task.operatorId === op.id && task.scheduledDate === selectedCalendarDate && (task.timeSlot.includes('13:') || task.timeSlot.includes('14:') || task.timeSlot.includes('15:') || task.timeSlot.includes('16:') || task.timeSlot.includes('17:')))"
+                      :key="t.id"
+                      :class="['schedule-card', t.type]"
+                      @click="openEditTaskModal(t)"
+                    >
+                      <div class="sched-card-top">
+                        <span class="sched-type-tag">{{ t.type.toUpperCase() }}</span>
+                        <span class="sched-time">{{ t.timeSlot }}</span>
+                      </div>
+                      <h4 class="sched-title">{{ t.title }}</h4>
+                      <div class="sched-client">📍 {{ t.client.name }} ({{ t.client.city }})</div>
+                    </div>
+                    <button class="add-slot-btn" @click="openCreateTaskModal(op.id)">+ Assign</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Selected Day Agenda Summary Sidebar -->
+              <div class="day-agenda-sidebar">
+                <h3>{{ t('admin.operations.calendarView.selectDay') }}</h3>
+                <p class="agenda-date-label">📅 {{ selectedCalendarDate }}</p>
+
+                <div v-if="calendarTasksForSelectedDay.length === 0" class="agenda-empty">
+                  {{ t('admin.operations.calendarView.noTasks') }}
+                </div>
+
+                <div v-else class="agenda-list">
+                  <div
+                    v-for="task in calendarTasksForSelectedDay"
+                    :key="task.id"
+                    class="agenda-card"
+                    @click="openEditTaskModal(task)"
+                  >
+                    <div class="agenda-card-head">
+                      <span :class="['type-badge', task.type]">{{ task.type }}</span>
+                      <span :class="['status-pill', task.status]">{{ task.status }}</span>
+                    </div>
+                    <h4>{{ task.title }}</h4>
+                    <p class="agenda-op">👤 {{ task.operatorName }}</p>
+                    <p class="agenda-time">⏰ {{ task.timeSlot }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 2: OPERATORS FLEET ROSTER -->
+          <div v-if="operationsSubtab === 'operators'" class="ops-roster-view">
+            <div class="roster-grid">
+              <div v-for="op in opsOperators" :key="op.id" class="op-roster-card">
+                <div class="op-card-header">
+                  <div class="op-avatar-lg" :style="{ backgroundColor: op.avatarColor }">
+                    {{ op.name.substring(0, 2).toUpperCase() }}
+                  </div>
+                  <div class="op-header-text">
+                    <h3>{{ op.name }}</h3>
+                    <span class="op-role">{{ op.role }}</span>
+                    <div class="op-status-row">
+                      <span :class="['duty-badge', getDutyStatusClass(op.dutyStatus)]">
+                        ● {{ getDutyStatusLabel(op.dutyStatus) }}
+                      </span>
+                      <span class="op-rating">⭐ {{ op.rating }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="op-card-body">
+                  <div class="op-detail-item">
+                    <span class="lbl">📍 Region:</span>
+                    <span class="val">{{ op.city }}</span>
+                  </div>
+                  <div class="op-detail-item">
+                    <span class="lbl">📞 Phone:</span>
+                    <span class="val">{{ op.phone }}</span>
+                  </div>
+                  <div class="op-detail-item">
+                    <span class="lbl">⚡ Active Workload:</span>
+                    <span class="workload-tag">{{ getOperatorActiveTaskCount(op.id) }} Active Tasks</span>
+                  </div>
+
+                  <div class="op-specialties">
+                    <span v-for="spec in op.specialties" :key="spec" class="spec-chip">
+                      {{ spec }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="op-card-footer">
+                  <button class="primary-btn full" @click="openCreateTaskModal(op.id)">
+                    <AdminIcon name="plus" size="14" />
+                    <span>Assign Task</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUBTAB 3: ALL DISPATCHED TASKS QUEUE -->
+          <div v-if="operationsSubtab === 'tasksQueue'" class="ops-queue-view">
+            <div class="queue-toolbar">
+              <div class="search-wrap">
+                <AdminIcon name="search" size="16" />
+                <input
+                  v-model="opsSearch"
+                  type="text"
+                  placeholder="Search tasks, clients, or operators..."
+                />
+              </div>
+
+              <div class="filter-group">
+                <select v-model="opsFilterType">
+                  <option value="all">All Service Types</option>
+                  <option value="installation">Installation</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="delivery">Delivery</option>
+                  <option value="study">Electricity Study</option>
+                </select>
+
+                <select v-model="opsFilterStatus">
+                  <option value="all">All Statuses</option>
+                  <option value="assigned">Assigned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="on_hold">On Hold</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="admin-table ops-table">
+                <thead>
+                  <tr>
+                    <th>Task ID</th>
+                    <th>Type</th>
+                    <th>Title & Client</th>
+                    <th>Assigned Operator</th>
+                    <th>Schedule</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="t in filteredOpsTasks" :key="t.id">
+                    <td><code>{{ t.id }}</code></td>
+                    <td>
+                      <span :class="['type-badge', t.type]">{{ t.type }}</span>
+                    </td>
+                    <td>
+                      <strong class="ops-task-title">{{ t.title }}</strong>
+                      <div class="ops-task-sub">📍 {{ t.client.name }} — {{ t.client.city }}</div>
+                    </td>
+                    <td>
+                      <div class="op-table-cell">
+                        👤 {{ t.operatorName }}
+                      </div>
+                    </td>
+                    <td>
+                      <div class="time-cell">
+                        📅 {{ t.scheduledDate }}<br />
+                        ⏰ {{ t.timeSlot }}
+                      </div>
+                    </td>
+                    <td>
+                      <span :class="['prio-badge', t.priority]">{{ t.priority }}</span>
+                    </td>
+                    <td>
+                      <span :class="['status-pill', t.status]">{{ t.status }}</span>
+                    </td>
+                    <td>
+                      <div class="action-btns">
+                        <button class="ghost-btn small" @click="openEditTaskModal(t)" title="Edit / Reassign">
+                          <AdminIcon name="edit" size="14" />
+                        </button>
+                        <button class="ghost-btn small danger" @click="handleDeleteTask(t.id)" title="Delete">
+                          <AdminIcon name="trash" size="14" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr v-if="filteredOpsTasks.length === 0">
+                    <td colspan="8" class="text-center py-4">No tasks found matching your filters.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TASK ASSIGNMENT & EDIT MODAL -->
+          <div v-if="showTaskModal" class="modal-overlay" @click.self="showTaskModal = false">
+            <div class="modal-card ops-modal">
+              <header class="modal-header">
+                <h3>{{ editingTask ? t('admin.operations.modal.editTitle') : t('admin.operations.modal.createTitle') }}</h3>
+                <button class="close-btn" @click="showTaskModal = false">×</button>
+              </header>
+
+              <form @submit.prevent="submitTaskForm" class="task-form">
+                <div class="form-row">
+                  <label>
+                    <span>{{ t('admin.operations.modal.taskType') }}</span>
+                    <select v-model="taskForm.type" required>
+                      <option value="installation">Installation (New Equipment)</option>
+                      <option value="maintenance">Maintenance (Diagnostics & Repair)</option>
+                      <option value="delivery">Delivery (New Order)</option>
+                      <option value="study">Make a Study (Audit & Sizing)</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>{{ t('admin.operations.modal.selectOperator') }}</span>
+                    <select v-model="taskForm.operatorId" required>
+                      <option v-for="op in opsOperators" :key="op.id" :value="op.id">
+                        {{ op.name }} ({{ op.role }})
+                      </option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label class="full-width">
+                    <span>{{ t('admin.operations.modal.taskTitle') }}</span>
+                    <input
+                      v-model="taskForm.title"
+                      type="text"
+                      placeholder="e.g. 10 kWp Solar Installation & Inverter Commissioning"
+                      required
+                    />
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    <span>{{ t('admin.operations.modal.priority') }}</span>
+                    <select v-model="taskForm.priority">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </label>
+
+                  <label>
+                    <span>{{ t('admin.operations.modal.scheduledDate') }}</span>
+                    <input v-model="taskForm.scheduledDate" type="date" required />
+                  </label>
+
+                  <label>
+                    <span>{{ t('admin.operations.modal.timeSlot') }}</span>
+                    <select v-model="taskForm.timeSlot">
+                      <option value="08:30 - 11:30">08:30 - 11:30</option>
+                      <option value="09:00 - 13:00">09:00 - 13:00</option>
+                      <option value="10:30 - 12:30">10:30 - 12:30</option>
+                      <option value="14:00 - 17:00">14:00 - 17:00</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="form-section-title">Client & Location Details</div>
+
+                <div class="form-row">
+                  <label>
+                    <span>{{ t('admin.operations.modal.clientName') }}</span>
+                    <input v-model="taskForm.clientName" type="text" placeholder="Client Name or Business" required />
+                  </label>
+
+                  <label>
+                    <span>{{ t('admin.operations.modal.clientPhone') }}</span>
+                    <input v-model="taskForm.clientPhone" type="text" placeholder="+212 6..." />
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label>
+                    <span>{{ t('admin.operations.modal.clientAddress') }}</span>
+                    <input v-model="taskForm.clientAddress" type="text" placeholder="Full street address..." />
+                  </label>
+
+                  <label>
+                    <span>{{ t('admin.operations.modal.clientCity') }}</span>
+                    <input v-model="taskForm.clientCity" type="text" placeholder="Casablanca, Rabat, etc." />
+                  </label>
+                </div>
+
+                <div class="form-row">
+                  <label class="full-width">
+                    <span>{{ t('admin.operations.modal.adminNotes') }}</span>
+                    <textarea
+                      v-model="taskForm.adminNotes"
+                      rows="3"
+                      placeholder="Special instructions for field operator, site access notes, equipment instructions..."
+                    ></textarea>
+                  </label>
+                </div>
+
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showTaskModal = false">
+                    {{ t('common.cancel') }}
+                  </button>
+                  <button type="submit" class="primary-btn">
+                    {{ editingTask ? t('admin.operations.modal.submitUpdate') : t('admin.operations.modal.submitCreate') }}
+                  </button>
+                </footer>
+              </form>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   </div>
@@ -739,6 +1187,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useAdmin } from '../composables/useAdmin'
+import { useOperatorAdmin } from '../composables/useOperatorAdmin'
 import { useLocale } from '../composables/useLocale'
 import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
@@ -895,6 +1344,157 @@ function emptyProjectForm() {
   }
 }
 
+const {
+  tasks: opsTasks,
+  operators: opsOperators,
+  stats: opsStats,
+  createTask: createOpsTask,
+  updateTaskStatus: updateOpsTaskStatus,
+  reassignTask: reassignOpsTask,
+  deleteTask: deleteOpsTask,
+  getOperatorActiveTaskCount,
+  reloadOperations
+} = useOperatorAdmin()
+
+const operationsSubtab = ref('calendar')
+const selectedCalendarDate = ref('2026-09-15')
+const showTaskModal = ref(false)
+const editingTask = ref(null)
+
+const taskForm = ref({
+  type: 'installation',
+  title: '',
+  operatorId: '',
+  priority: 'medium',
+  scheduledDate: '2026-09-15',
+  timeSlot: '09:00 - 12:00',
+  clientName: '',
+  clientPhone: '',
+  clientEmail: '',
+  clientAddress: '',
+  clientCity: 'Casablanca',
+  adminNotes: ''
+})
+
+const opsFilterType = ref('all')
+const opsFilterStatus = ref('all')
+const opsSearch = ref('')
+
+const calendarDays = computed(() => {
+  return [
+    { date: '2026-09-14', dayName: 'Mon', dayNum: '14' },
+    { date: '2026-09-15', dayName: 'Tue', dayNum: '15' },
+    { date: '2026-09-16', dayName: 'Wed', dayNum: '16' },
+    { date: '2026-09-17', dayName: 'Thu', dayNum: '17' },
+    { date: '2026-09-18', dayName: 'Fri', dayNum: '18' },
+    { date: '2026-09-19', dayName: 'Sat', dayNum: '19' }
+  ]
+})
+
+const calendarTasksForSelectedDay = computed(() => {
+  return opsTasks.value.filter(t => t.scheduledDate === selectedCalendarDate.value)
+})
+
+const filteredOpsTasks = computed(() => {
+  return opsTasks.value.filter(task => {
+    const matchType = opsFilterType.value === 'all' || task.type === opsFilterType.value
+    const matchStatus = opsFilterStatus.value === 'all' || task.status === opsFilterStatus.value
+    const matchSearch = !opsSearch.value || 
+      task.title.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
+      task.id.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
+      task.client.name.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
+      task.operatorName.toLowerCase().includes(opsSearch.value.toLowerCase())
+    return matchType && matchStatus && matchSearch
+  })
+})
+
+function openCreateTaskModal(opId = null) {
+  editingTask.value = null
+  taskForm.value = {
+    type: 'installation',
+    title: '',
+    operatorId: opId || (opsOperators.value[0]?.id || ''),
+    priority: 'medium',
+    scheduledDate: selectedCalendarDate.value || '2026-09-15',
+    timeSlot: '09:00 - 12:00',
+    clientName: '',
+    clientPhone: '',
+    clientEmail: '',
+    clientAddress: '',
+    clientCity: 'Casablanca',
+    adminNotes: ''
+  }
+  showTaskModal.value = true
+}
+
+function openEditTaskModal(task) {
+  editingTask.value = task
+  taskForm.value = {
+    type: task.type,
+    title: task.title,
+    operatorId: task.operatorId,
+    priority: task.priority,
+    scheduledDate: task.scheduledDate,
+    timeSlot: task.timeSlot,
+    clientName: task.client.name,
+    clientPhone: task.client.phone,
+    clientEmail: task.client.email,
+    clientAddress: task.client.address,
+    clientCity: task.client.city,
+    adminNotes: task.adminNotes
+  }
+  showTaskModal.value = true
+}
+
+function submitTaskForm() {
+  if (!taskForm.value.title || !taskForm.value.operatorId) return
+  if (editingTask.value) {
+    reassignOpsTask(editingTask.value.id, taskForm.value.operatorId)
+    editingTask.value.title = taskForm.value.title
+    editingTask.value.type = taskForm.value.type
+    editingTask.value.priority = taskForm.value.priority
+    editingTask.value.scheduledDate = taskForm.value.scheduledDate
+    editingTask.value.timeSlot = taskForm.value.timeSlot
+    editingTask.value.client.name = taskForm.value.clientName
+    editingTask.value.client.phone = taskForm.value.clientPhone
+    editingTask.value.client.email = taskForm.value.clientEmail
+    editingTask.value.client.address = taskForm.value.clientAddress
+    editingTask.value.client.city = taskForm.value.clientCity
+    editingTask.value.adminNotes = taskForm.value.adminNotes
+  } else {
+    createOpsTask(taskForm.value)
+  }
+  showTaskModal.value = false
+}
+
+function handleDeleteTask(taskId) {
+  if (confirm('Are you sure you want to delete this task assignment?')) {
+    deleteOpsTask(taskId)
+  }
+}
+
+function getOpsTypeLabel(type) {
+  const map = {
+    installation: t('admin.operations.types.installation'),
+    maintenance: t('admin.operations.types.maintenance'),
+    delivery: t('admin.operations.types.delivery'),
+    study: t('admin.operations.types.study')
+  }
+  return map[type] || type
+}
+
+function getDutyStatusLabel(status) {
+  if (status === 'onDuty') return 'On Duty'
+  if (status === 'onBreak') return 'On Break'
+  return 'Off Duty'
+}
+
+function getDutyStatusClass(status) {
+  if (status === 'onDuty') return 'duty-onduty'
+  if (status === 'onBreak') return 'duty-onbreak'
+  return 'duty-offduty'
+}
+
 const tabs = computed(() => {
   locale.value
   return [
@@ -902,7 +1502,8 @@ const tabs = computed(() => {
     { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: stats.value?.totals?.pending_rfqs || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
     { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
-    { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' }
+    { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
+    { id: 'operations', label: t('admin.tabs.operations'), icon: 'operations', badge: opsStats.value?.inProgress || null }
   ]
 })
 
@@ -3106,4 +3707,616 @@ const handleStockChange = async (product, stock) => {
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Operations Dispatch Section ────────────────── */
+.ops-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ops-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ops-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.ops-kpi-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.kpi-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kpi-icon-wrap.green { background: #dcfce7; color: #16a34a; }
+.kpi-icon-wrap.blue { background: #e0f2fe; color: #0284c7; }
+.kpi-icon-wrap.orange { background: #ffedd5; color: #ea580c; }
+.kpi-icon-wrap.purple { background: #f3e8ff; color: #9333ea; }
+
+.kpi-num {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #052e16;
+  line-height: 1.1;
+}
+
+.kpi-lbl {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.ops-nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.ops-subtab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ops-subtab-btn:hover {
+  background: rgba(22, 163, 74, 0.06);
+  color: #16a34a;
+}
+
+.ops-subtab-btn.active {
+  background: #052e16;
+  color: #4ade80;
+}
+
+.tab-badge {
+  background: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Calendar Date Strip */
+.date-strip {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.day-chip {
+  flex: 1;
+  min-width: 80px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.day-chip:hover {
+  border-color: #16a34a;
+}
+
+.day-chip.selected {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+}
+
+.day-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.day-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.day-dot {
+  width: 6px;
+  height: 6px;
+  background: #3b82f6;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+.day-chip.selected .day-dot {
+  background: #ffffff;
+}
+
+/* Schedule Matrix */
+.calendar-grid-container {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.schedule-matrix {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.matrix-header {
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #374151;
+  padding: 0.75rem 1rem;
+}
+
+.matrix-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr;
+  border-bottom: 1px solid #f3f4f6;
+  min-height: 110px;
+}
+
+.op-cell {
+  padding: 1rem;
+  border-right: 1px solid #f3f4f6;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  background: #fafafa;
+}
+
+.op-mini-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.op-mini-info strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #111827;
+}
+
+.duty-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.duty-onduty { background: #22c55e; }
+.duty-onbreak { background: #f59e0b; }
+.duty-offduty { background: #9ca3af; }
+
+.slot-cell {
+  padding: 0.75rem;
+  border-right: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.schedule-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.schedule-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.schedule-card.installation { border-left-color: #16a34a; background: #f0fdf4; }
+.schedule-card.maintenance { border-left-color: #d97706; background: #fffbeb; }
+.schedule-card.delivery { border-left-color: #9333ea; background: #faf5ff; }
+.schedule-card.study { border-left-color: #0891b2; background: #ecfeff; }
+
+.sched-card-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.sched-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+}
+
+.sched-client {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.add-slot-btn {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.add-slot-btn:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+/* Agenda Sidebar */
+.day-agenda-sidebar {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.day-agenda-sidebar h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #052e16;
+  margin-bottom: 0.25rem;
+}
+
+.agenda-date-label {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.agenda-empty {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agenda-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.agenda-card:hover { background: #f9fafb; }
+
+.agenda-card-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.agenda-card h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.agenda-op, .agenda-time {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+/* Operators Roster Grid */
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.op-roster-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.op-card-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.op-avatar-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.op-header-text h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0 0 0.15rem 0;
+}
+
+.op-role {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.35rem;
+}
+
+.op-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.duty-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.duty-badge.duty-onduty { background: #dcfce7; color: #15803d; }
+.duty-badge.duty-onbreak { background: #fef3c7; color: #b45309; }
+.duty-badge.duty-offduty { background: #f3f4f6; color: #4b5563; }
+
+.op-rating {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.op-card-body {
+  border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+  padding: 0.85rem 0;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.op-detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+.op-detail-item .lbl { color: #6b7280; }
+.op-detail-item .val { font-weight: 600; color: #1f2937; }
+
+.workload-tag {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+}
+
+.op-specialties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.spec-chip {
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.op-card-footer .full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Tasks Queue View */
+.queue-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.filter-group select {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  background: #ffffff;
+}
+
+.ops-task-title {
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.ops-task-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.type-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+.type-badge.installation { background: #dcfce7; color: #15803d; }
+.type-badge.maintenance { background: #fef3c7; color: #b45309; }
+.type-badge.delivery { background: #f3e8ff; color: #6d28d9; }
+.type-badge.study { background: #cff4fc; color: #055160; }
+
+.prio-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.prio-badge.urgent { color: #dc2626; font-weight: 800; }
+.prio-badge.high { color: #ea580c; }
+.prio-badge.medium { color: #d97706; }
+.prio-badge.low { color: #16a34a; }
+
+/* Modal Form Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.ops-modal {
+  background: #ffffff;
+  border-radius: 18px;
+  width: 100%;
+  max-width: 650px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  padding: 1.5rem;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #052e16;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #9ca3af;
+}
+
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-section-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #16a34a;
+  margin-top: 0.5rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
 </style>
+

@@ -35,16 +35,11 @@ const routes = [
     name: 'store',
     component: () => import('../views/StoreView.vue'),
 },
-
-
-
 {
-    path: '/admin',
-    name: 'admin',
-    component: () => import('../views/AdminDashboardView.vue')
+    path: '/operator',
+    name: 'operator',
+    component: () => import('../views/OperatorDashboardView.vue'),
 }
-
-
 ]
 
 const router = createRouter({

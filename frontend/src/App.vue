@@ -9,7 +9,7 @@
   const route = useRoute()
 
   const showLayout = computed(() => {
-  return !['login', 'dashboard', 'admin'].includes(route.name)
+  return !['login', 'dashboard', 'admin', 'operator'].includes(route.name)
 })
 
 
