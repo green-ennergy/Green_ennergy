@@ -26,7 +26,7 @@ class AuthController extends Controller
             'phone' => preg_replace('/\s+/', ' ', trim($validated['phone'])),
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => 'user',
+            'creation_date' => now(),
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;

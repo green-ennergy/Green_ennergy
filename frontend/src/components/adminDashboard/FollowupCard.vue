@@ -58,7 +58,7 @@
 
 
 
-    <div class="step-pipeline" aria-label="SAK workflow steps">
+    <div class="step-pipeline" aria-label="Workflow steps">
 
       <span
 
@@ -101,7 +101,7 @@
 
 
     <p v-if="clientMessage" class="client-update">
-      <span class="update-label">{{ variant === 'admin' ? t('followup.clientMessage') : t('followup.latestFromSak') }}</span>
+      <span class="update-label">{{ variant === 'admin' ? t('followup.clientMessage') : t('followup.latestUpdate') }}</span>
       {{ clientMessage }}
     </p>
 

@@ -2,7 +2,7 @@
   <nav class="navbar" :class="{ scrolled: isScrolled, 'light-navbar': isLightNavbar }" role="navigation" aria-label="Main navigation">
     <div class="container nav-container">
       <!-- Logo -->
-      <router-link to="/" class="logo" aria-label="Energy Agency home">
+      <router-link to="/" class="logo" :aria-label="t('nav.homeAria')">
         <div class="logo-icon">
           <svg width="18" height="24" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M12.986 0L0 17.525H10.158L7.863 32L24 12.019H12.986V0Z" fill="#4ade80"/>
@@ -13,22 +13,46 @@
 
       <!-- Desktop links -->
       <ul class="nav-links" role="list">
-        <li><router-link to="/store" class="nav-link">Store</router-link></li>
-        <li><router-link to="/#faq" class="nav-link">FAQ</router-link></li>
-        <li><router-link to="/#about" class="nav-link">About</router-link></li>
+        <li><router-link to="/store" class="nav-link">{{ t('nav.store') }}</router-link></li>
+        <li><router-link to="/#faq" class="nav-link">{{ t('nav.faq') }}</router-link></li>
+        <li><router-link to="/#about" class="nav-link">{{ t('nav.about') }}</router-link></li>
       </ul>
 
       <div class="nav-actions">
-        <router-link to="/login" class="btn nav-login get-consultation" id="nav-login">Connexion</router-link>
+        <template v-if="isLoggedIn">
+          <router-link
+            v-if="isAdmin"
+            to="/admin"
+            class="nav-signin"
+          >
+            {{ t('nav.admin') }}
+          </router-link>
+          <router-link
+            v-else
+            to="/dashboard"
+            class="nav-signin"
+          >
+            {{ t('nav.dashboard') }}
+          </router-link>
+          <button type="button" class="btn nav-login get-consultation" @click="handleLogout">
+            {{ t('common.signOut') }}
+          </button>
+        </template>
+        <router-link
+          v-else
+          to="/login"
+          class="btn nav-login get-consultation"
+        >
+          {{ t('nav.signIn') }}
+        </router-link>
       </div>
-
 
       <!-- Mobile hamburger -->
       <button
         class="mobile-menu-btn"
         :aria-expanded="isMenuOpen"
         aria-controls="mobile-menu"
-        :aria-label="toggleMenu"
+        :aria-label="t('nav.toggleMenu')"
         @click="isMenuOpen = !isMenuOpen"
       >
         <svg v-if="!isMenuOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -43,21 +67,36 @@
     <!-- Mobile menu -->
     <div v-if="isMenuOpen" id="mobile-menu" class="mobile-menu animate-fade-in" role="dialog" aria-label="Mobile navigation">
       <ul role="list">
-        <li><router-link to="/" @click="isMenuOpen = false">Store</router-link></li>
-        <li ><router-link to="/" @click="isMenuOpen = false">FAQ</router-link></li>
-        <li ><router-link to="/" @click="isMenuOpen = false">About</router-link></li>
-        <li ><router-link to="/" @click="isMenuOpen = false">Connexion</router-link></li>
+        <li><router-link to="/store" @click="isMenuOpen = false">{{ t('nav.store') }}</router-link></li>
+        <li><router-link to="/#faq" @click="isMenuOpen = false">{{ t('nav.faq') }}</router-link></li>
+        <li><router-link to="/#about" @click="isMenuOpen = false">{{ t('nav.about') }}</router-link></li>
+        <li v-if="isLoggedIn && isAdmin">
+          <router-link to="/admin" @click="isMenuOpen = false">{{ t('nav.admin') }}</router-link>
+        </li>
+        <li v-else-if="isLoggedIn">
+          <router-link to="/dashboard" @click="isMenuOpen = false">{{ t('nav.dashboard') }}</router-link>
+        </li>
+        <li v-if="isLoggedIn">
+          <button type="button" class="mobile-auth-btn" @click="handleLogout">{{ t('common.signOut') }}</button>
+        </li>
+        <li v-else>
+          <router-link to="/login" @click="isMenuOpen = false">{{ t('nav.signIn') }}</router-link>
+        </li>
       </ul>
-      <router-link to="/" class="mobile-cta" @click="isMenuOpen = false">consultation</router-link>
     </div>
   </nav>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { useAuth } from '../../composables/useAuth'
 
 const route = useRoute()
+const router = useRouter()
+const { t } = useI18n()
+const { isLoggedIn, isAdmin, logoutUser } = useAuth()
 
 const isScrolled = ref(false)
 const isMenuOpen = ref(false)
@@ -68,6 +107,14 @@ const isLightNavbar = computed(() => {
 
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 50
+}
+
+const handleLogout = async () => {
+  isMenuOpen.value = false
+  await logoutUser()
+  if (route.name !== 'home') {
+    router.push('/')
+  }
 }
 
 onMounted(() => window.addEventListener('scroll', handleScroll))
@@ -124,49 +171,42 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 
 .logo-text {
   font-family: 'Space Grotesk', sans-serif;
-
-  font-size: 1.1rem;
   font-weight: 800;
-  letter-spacing: 2px;
+  font-size: 1.05rem;
+  letter-spacing: 1.5px;
   color: #f0fdf4;
 }
 
-/* Nav links */
 .nav-links {
   display: flex;
+  align-items: center;
   gap: 2rem;
+  list-style: none;
 }
 
-.nav-links .nav-link {
+.nav-links a {
   font-size: 0.9rem;
   font-weight: 500;
-  color: rgba(240,253,244,0.75);
-  transition: color 0.2s;
+  color: rgba(240,253,244,0.7);
   position: relative;
-  padding-bottom: 2px;
+  transition: color 0.2s;
 }
+
+.nav-links a:hover { color: #f0fdf4; }
 
 .nav-links a::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: -4px;
   left: 0;
   width: 0;
-  height: 1.5px;
+  height: 2px;
   background: #4ade80;
-  transition: width 0.25s ease;
-  border-radius: 1px;
+  transition: width 0.25s;
 }
 
-.nav-links a:hover {
-  color: #f0fdf4;
-}
+.nav-links a:hover::after { width: 100%; }
 
-.nav-links a:hover::after {
-  width: 100%;
-}
-
-/* Desktop actions */
 .nav-actions {
   display: flex;
   align-items: center;
@@ -182,22 +222,6 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 
 .nav-signin:hover { color: #f0fdf4; }
 
-.nav-cta {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #052e16;
-  background: #4ade80;
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
-  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
-}
-
-.nav-cta:hover {
-  background: #22c55e;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(34,197,94,0.4);
-}
-
 .nav-login {
   font-size: 0.875rem;
   font-weight: 600;
@@ -206,6 +230,9 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   padding: 0.6rem 1.25rem;
   border-radius: 8px;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .nav-login:hover {
@@ -225,10 +252,26 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   display: none;
 }
 
+.mobile-auth-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.875rem 0;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: rgba(240,253,244,0.75);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mobile-auth-btn:hover {
+  color: #4ade80;
+}
+
 @media (max-width: 900px) {
   .nav-links,
-  .nav-signin,
-  .get-consultation {
+  .nav-actions {
     display: none;
   }
 
@@ -256,10 +299,11 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
     display: flex;
     flex-direction: column;
     gap: 0;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
   }
 
-  .mobile-menu ul li a {
+  .mobile-menu ul li a,
+  .mobile-menu ul li .mobile-auth-btn {
     display: block;
     padding: 0.875rem 0;
     border-bottom: 1px solid rgba(240,253,244,0.06);
@@ -268,31 +312,12 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
     transition: color 0.2s;
   }
 
-  .mobile-menu ul li:last-child a {
+  .mobile-menu ul li:last-child a,
+  .mobile-menu ul li:last-child .mobile-auth-btn {
     border-bottom: none;
   }
 
   .mobile-menu ul li a:hover { color: #4ade80; }
-
-  .mobile-lang {
-    margin-bottom: 1rem;
-    width: 100%;
-  }
-
-  .mobile-lang :deep(.locale-select) {
-    width: 100%;
-  }
-
-  .mobile-cta {
-    display: block;
-    text-align: center;
-    background: #22c55e;
-    color: #052e16;
-    font-weight: 700;
-    font-size: 0.95rem;
-    padding: 0.875rem;
-    border-radius: 10px;
-  }
 }
 
 /* ─── Light Navbar Theme (Store pages) ────────── */

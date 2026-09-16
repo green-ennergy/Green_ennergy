@@ -2,77 +2,93 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, Notifiable;
 
-    public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
-    }
+    protected $table = 'users';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
+    protected $primaryKey = 'id_user';
+
+    protected $appends = ['role'];
+
+    public $timestamps = false;
+
     protected $fillable = [
         'name',
         'company',
         'email',
         'phone',
         'password',
-        'role',
+        'creation_date',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'creation_date' => 'date',
+        'password' => 'hashed',
+    ];
+
+    public function client(): HasOne
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->hasOne(Client::class, 'id_user', 'id_user');
     }
 
-    public function rfqTickets()
+    public function administrator(): HasOne
     {
-        return $this->hasMany(RfqTicket::class);
+        return $this->hasOne(Administrator::class, 'id_user', 'id_user');
     }
 
-    public function projects()
+    public function operator(): HasOne
     {
-        return $this->hasMany(Project::class);
+        return $this->hasOne(Operator::class, 'id_user', 'id_user');
     }
 
-    public function sentMessages()
+    public function attachments(): HasMany
     {
-        return $this->hasMany(Message::class, 'sender_id');
+        return $this->hasMany(Attachment::class, 'id_user', 'id_user');
     }
 
-    public function receivedMessages()
+    public function isClient(): bool
     {
-        return $this->hasMany(Message::class, 'recipient_id');
+        return $this->client()->exists();
+    }
+
+    public function isAdministrator(): bool
+    {
+        return $this->administrator()->exists();
+    }
+
+    public function isOperator(): bool
+    {
+        return $this->operator()->exists();
+    }
+
+    public function getRoleAttribute(): ?string
+    {
+        if ($this->isAdministrator()) {
+            return 'administrator';
+        }
+
+        if ($this->isOperator()) {
+            return 'operator';
+        }
+
+        if ($this->isClient()) {
+            return 'client';
+        }
+
+        return null;
     }
 }
