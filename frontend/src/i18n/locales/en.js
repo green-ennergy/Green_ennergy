@@ -110,7 +110,8 @@
       orders: 'Orders & RFQ',
       marketplace: 'Products',
       projects: 'Projects',
-      clients: 'Clients'
+      clients: 'Clients',
+      operations: 'Operations Dispatch'
     },
     overview: {
       title: 'Operations Overview',
@@ -147,6 +148,60 @@
     clients: {
       title: 'Clients',
       subtitle: 'Registered partners and their activity'
+    },
+    operations: {
+      title: 'Operations & Field Dispatch',
+      subtitle: 'Manage operator schedule, assign field tasks (Installation, Maintenance, Delivery, Study), and monitor active dispatch queue.',
+      assignTaskBtn: '+ Assign New Task',
+      subtabs: {
+        calendar: 'Schedule & Calendar',
+        operators: 'Field Operators Roster',
+        tasksQueue: 'All Dispatched Tasks'
+      },
+      kpis: {
+        totalOps: 'Field Operators',
+        onDutyOps: 'Techs On Duty',
+        totalTasks: 'Total Dispatched',
+        inProgress: 'In Progress',
+        assigned: 'Pending / Assigned',
+        completed: 'Completed Tasks'
+      },
+      types: {
+        installation: 'Installation (New Equipment)',
+        maintenance: 'Maintenance (Diagnostic & Repair)',
+        delivery: 'Delivery (New Order)',
+        study: 'Make a Study (Audit & Sizing)'
+      },
+      roster: {
+        title: 'Operator Fleet Roster',
+        activeTasks: 'Active Tasks',
+        assignQuick: 'Assign Task',
+        duty: 'Duty Status',
+        rating: 'Rating',
+        specialties: 'Specialties'
+      },
+      modal: {
+        createTitle: 'Dispatch New Task to Field Operator',
+        editTitle: 'Task Dispatch Detail',
+        taskType: 'Task Service Type',
+        selectOperator: 'Assigned Operator',
+        taskTitle: 'Task Title / Scope',
+        priority: 'Priority Level',
+        scheduledDate: 'Scheduled Date',
+        timeSlot: 'Time Slot',
+        clientName: 'Client Name',
+        clientPhone: 'Client Phone',
+        clientEmail: 'Client Email',
+        clientAddress: 'Site Address',
+        clientCity: 'City / Region',
+        adminNotes: 'Admin Instructions & Notes',
+        submitCreate: 'Dispatch Task',
+        submitUpdate: 'Update Dispatch'
+      },
+      calendarView: {
+        selectDay: 'Selected Day Agenda',
+        noTasks: 'No field tasks scheduled for this date.'
+      }
     },
     kpi: {
       clients: 'Clients',
@@ -457,5 +512,112 @@
     emptyCart: 'Your cart is empty.',
     submitRfq: 'Submit quote request',
     submitting: 'Submitting...'
+  },
+  operator: {
+    console: 'Operator Field Console',
+    resetDemo: 'Reset Demo',
+    duty: {
+      onDuty: 'On Duty (Active)',
+      onBreak: 'On Break',
+      offDuty: 'Off Duty',
+      offDutyNotice: 'You are currently marked as Off Duty. Set status to "On Duty" when ready to receive new dispatch updates.'
+    },
+    kpi: {
+      todayTasks: "Today's Agenda",
+      inProgress: 'In Progress (Active)',
+      urgent: 'Urgent / High Priority',
+      completed: 'Completed Tasks',
+      scheduled: 'scheduled today',
+      fieldActive: 'On-site execution',
+      requiresAttention: 'Immediate action',
+      total: 'total assigned'
+    },
+    tabs: {
+      tasks: 'Tasks Hub',
+      agenda: "Today's Agenda",
+      archive: 'Completed Archive',
+      tasksTitle: 'Assigned Field Tasks',
+      tasksSub: 'Installation, maintenance, delivery, and energy feasibility studies dispatched by Admin.'
+    },
+    types: {
+      all: 'All Tasks',
+      installation: 'Installation (New Equipments)',
+      maintenance: 'Maintenance (Old Installations)',
+      delivery: 'Delivery (New Orders)',
+      study: 'Make a Study (Electricity Audit)',
+      installationShort: 'Installation',
+      maintenanceShort: 'Maintenance',
+      deliveryShort: 'Delivery',
+      studyShort: 'Energy Study'
+    },
+    statuses: {
+      all: 'All Statuses',
+      assigned: 'Assigned',
+      inProgress: 'In Progress',
+      onHold: 'On Hold',
+      completed: 'Completed'
+    },
+    priority: {
+      urgent: 'Urgent',
+      high: 'High',
+      medium: 'Normal',
+      low: 'Low'
+    },
+    filters: {
+      searchPlaceholder: 'Search tasks by client, ID, city, equipment...'
+    },
+    views: {
+      grid: 'Cards View',
+      list: 'Compact List'
+    },
+    actions: {
+      start: 'Start',
+      finish: 'Review & Finish',
+      view: 'Details'
+    },
+    drawer: {
+      statusLabel: 'Current Status:',
+      reportIssue: 'Report Incident',
+      clientSite: 'Client & Site Details',
+      clientName: 'Client / Contact',
+      phone: 'Phone',
+      location: 'Installation / Delivery Address',
+      schedule: 'Scheduled Time Slot',
+      adminInstructions: 'Admin Instructions & Scope',
+      operatorNotes: 'Field Notes & Observations',
+      notesPlaceholder: 'Enter on-site notes, measurements, equipment condition, or next action recommendations...',
+      activityLog: 'Task Timeline & Activity Log',
+      markCompleted: 'Mark Task as Completed'
+    },
+    incident: {
+      title: 'Report Field Incident / Block',
+      typeLabel: 'Incident / Block Category',
+      absent: 'Customer Absent / Unreachable',
+      damaged: 'Defective / Damaged Hardware',
+      access: 'Site Access Denied / Key Missing',
+      hazard: 'Structural Hazard / Unsafe Roof',
+      weather: 'Adverse Weather (High Wind / Rain)',
+      specs: 'Site Mismatch / Need Admin Approval',
+      other: 'Other Blocker',
+      detailsLabel: 'Incident Description & On-Site Actions Taken',
+      placeholder: 'Detail what occurred, who was contacted, and what resolution is required from Admin...',
+      holdToggle: 'Put Task On Hold (Requires Admin or Dispatch intervention)',
+      submit: 'Submit Incident Report'
+    },
+    agenda: {
+      title: "Today's Field Route & Schedule",
+      sub: 'Step-by-step route planning for today’s active assignments.'
+    },
+    archive: {
+      title: 'Completed Field Work Archive',
+      sub: 'Historical archive of signed deliveries, installed solar setups, and audits.',
+      emptyTitle: 'No completed tasks yet',
+      emptySub: 'Tasks marked as completed will be recorded here.'
+    },
+    empty: {
+      title: 'No tasks match your filter',
+      sub: 'Try selecting a different task type or status, or clear the search keyword.',
+      clearFilters: 'Clear All Filters'
+    }
   }
 }

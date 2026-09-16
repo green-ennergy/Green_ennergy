@@ -169,7 +169,13 @@
             const result = await loginUser(email.value, password.value)
             isLoading.value = false
             if (result.success) {
-                router.push(result.user?.role === 'administrator' || result.user?.role === 'admin' ? '/admin' : '/dashboard')
+                if (result.user?.role === 'admin') {
+                    router.push('/admin')
+                } else if (result.user?.role === 'operator') {
+                    router.push('/operator')
+                } else {
+                    router.push('/dashboard')
+                }
             } else {
                 alertType.value = 'error'
                 alertMessage.value = result.error || 'Login failed'

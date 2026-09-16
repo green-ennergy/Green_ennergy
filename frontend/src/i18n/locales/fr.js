@@ -110,7 +110,8 @@ export default {
       orders: 'Commandes & RFQ',
       marketplace: 'Produits',
       projects: 'Projets',
-      clients: 'Clients'
+      clients: 'Clients',
+      operations: 'Gestion Opérations'
     },
     overview: {
       title: 'Vue d’ensemble',
@@ -147,6 +148,60 @@ export default {
     clients: {
       title: 'Clients',
       subtitle: 'Partenaires inscrits et leur activité'
+    },
+    operations: {
+      title: 'Opérations & Dispatch Terrain',
+      subtitle: 'Gérer le planning des opérateurs, attribuer les tâches terrain (Installation, Maintenance, Livraison, Étude) et suivre la file d’attente.',
+      assignTaskBtn: '+ Attribuer une tâche',
+      subtabs: {
+        calendar: 'Planning & Calendrier',
+        operators: 'Liste des Opérateurs',
+        tasksQueue: 'Toutes les Tâches'
+      },
+      kpis: {
+        totalOps: 'Opérateurs Terrain',
+        onDutyOps: 'Techniciens en service',
+        totalTasks: 'Tâches attribuées',
+        inProgress: 'En cours',
+        assigned: 'En attente / Assignées',
+        completed: 'Tâches terminées'
+      },
+      types: {
+        installation: 'Installation (Nouveaux Équipements)',
+        maintenance: 'Maintenance (Diagnostic & Réparation)',
+        delivery: 'Livraison (Nouvelle Commande)',
+        study: 'Faire une Étude (Audit & Dimensionnement)'
+      },
+      roster: {
+        title: 'Flotte d’Opérateurs',
+        activeTasks: 'Tâches Actives',
+        assignQuick: 'Assigner Tâche',
+        duty: 'Statut de Service',
+        rating: 'Évaluation',
+        specialties: 'Spécialités'
+      },
+      modal: {
+        createTitle: 'Affecter une nouvelle tâche à un opérateur',
+        editTitle: 'Détail de l’affectation',
+        taskType: 'Type de Service',
+        selectOperator: 'Opérateur Assigné',
+        taskTitle: 'Titre / Objet de la tâche',
+        priority: 'Niveau de Priorité',
+        scheduledDate: 'Date prévue',
+        timeSlot: 'Créneau horaire',
+        clientName: 'Nom du Client',
+        clientPhone: 'Téléphone Client',
+        clientEmail: 'Email Client',
+        clientAddress: 'Adresse du site',
+        clientCity: 'Ville / Région',
+        adminNotes: 'Consignes & Notes Administrateur',
+        submitCreate: 'Dépêcher la Tâche',
+        submitUpdate: 'Mettre à jour'
+      },
+      calendarView: {
+        selectDay: 'Planning du jour sélectionné',
+        noTasks: 'Aucune tâche programmée pour cette date.'
+      }
     },
     kpi: {
       clients: 'Clients',
@@ -457,5 +512,112 @@ export default {
     emptyCart: 'Votre panier est vide.',
     submitRfq: 'Envoyer la demande',
     submitting: 'Envoi...'
+  },
+  operator: {
+    console: 'Console Opérateur Terrain',
+    resetDemo: 'Réinitialiser démo',
+    duty: {
+      onDuty: 'En service (Actif)',
+      onBreak: 'En pause',
+      offDuty: 'Hors service',
+      offDutyNotice: 'Vous êtes actuellement marqué hors service. Passez en service pour recevoir les nouvelles missions.'
+    },
+    kpi: {
+      todayTasks: "Planning d'aujourd'hui",
+      inProgress: 'En cours (Sur site)',
+      urgent: 'Urgent / Haute priorité',
+      completed: 'Tâches terminées',
+      scheduled: 'prévues aujourd’hui',
+      fieldActive: 'Exécution terrain',
+      requiresAttention: 'Action immédiate',
+      total: 'total assigné'
+    },
+    tabs: {
+      tasks: 'Missions',
+      agenda: "Planning du jour",
+      archive: 'Archives terminées',
+      tasksTitle: 'Missions Terrain Assignées',
+      tasksSub: 'Installation, maintenance, livraison et études de consommation électrique confiées par l’Admin.'
+    },
+    types: {
+      all: 'Toutes les missions',
+      installation: 'Installation (Nouveaux équipements)',
+      maintenance: 'Maintenance (Anciennes installations)',
+      delivery: 'Livraison (Nouvelle commande)',
+      study: 'Réaliser une étude (Consommation électrique)',
+      installationShort: 'Installation',
+      maintenanceShort: 'Maintenance',
+      deliveryShort: 'Livraison',
+      studyShort: 'Étude solaire'
+    },
+    statuses: {
+      all: 'Tous les statuts',
+      assigned: 'Assignée',
+      inProgress: 'En cours',
+      onHold: 'En attente',
+      completed: 'Terminée'
+    },
+    priority: {
+      urgent: 'Urgent',
+      high: 'Haute',
+      medium: 'Normale',
+      low: 'Basse'
+    },
+    filters: {
+      searchPlaceholder: 'Rechercher par client, code, ville, équipement...'
+    },
+    views: {
+      grid: 'Vue cartes',
+      list: 'Vue liste'
+    },
+    actions: {
+      start: 'Démarrer',
+      finish: 'Finaliser',
+      view: 'Détails'
+    },
+    drawer: {
+      statusLabel: 'Statut actuel :',
+      reportIssue: 'Signaler un incident',
+      clientSite: 'Détails client & site',
+      clientName: 'Client / Contact',
+      phone: 'Téléphone',
+      location: 'Adresse d’intervention / livraison',
+      schedule: 'Créneau horaire planifié',
+      adminInstructions: 'Instructions Administrateur',
+      operatorNotes: 'Notes de terrain & observations',
+      notesPlaceholder: 'Saisissez vos observations sur site, mesures électriques, état des équipements...',
+      activityLog: 'Historique d’activité',
+      markCompleted: 'Marquer la tâche comme terminée'
+    },
+    incident: {
+      title: 'Signaler un incident terrain / blocage',
+      typeLabel: 'Catégorie de l’incident',
+      absent: 'Client absent / injoignable',
+      damaged: 'Matériel défectueux ou endommagé',
+      access: 'Accès au site refusé ou impossible',
+      hazard: 'Risque toiture / sécurité non garantie',
+      weather: 'Météo défavorable (pluie / vents violents)',
+      specs: 'Spécifications incompatibles / besoin validation Admin',
+      other: 'Autre blocage',
+      detailsLabel: 'Description de l’incident et démarches entreprises',
+      placeholder: 'Expliquez ce qui s’est passé, qui a été contacté et l’intervention requise...',
+      holdToggle: 'Mettre la mission en attente (requiert intervention Admin)',
+      submit: 'Envoyer le rapport d’incident'
+    },
+    agenda: {
+      title: "Itinéraire & Planning du jour",
+      sub: 'Feuille de route chronologique des interventions prévues aujourd’hui.'
+    },
+    archive: {
+      title: 'Archives des missions achevées',
+      sub: 'Historique des livraisons remises, chantiers solaires mis en service et audits.',
+      emptyTitle: 'Aucune tâche terminée pour le moment',
+      emptySub: 'Les missions validées s’afficheront ici.'
+    },
+    empty: {
+      title: 'Aucune tâche ne correspond à vos filtres',
+      sub: 'Modifiez vos filtres de type, statut ou effacez la recherche.',
+      clearFilters: 'Réinitialiser les filtres'
+    }
   }
 }
