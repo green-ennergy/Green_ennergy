@@ -14,11 +14,13 @@ class Maintenance extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'type', 'scheduled_at', 'status', 'description', 'id_installation', 'id_operator',
+        'type', 'scheduled_at', 'status', 'description', 'price',
+        'id_installation', 'id_operator', 'id_project',
     ];
 
     protected $casts = [
         'scheduled_at' => 'datetime',
+        'price' => 'float',
     ];
 
     public function installation(): BelongsTo
@@ -29,5 +31,10 @@ class Maintenance extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(Operator::class, 'id_operator', 'id_operator');
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'id_project', 'id_project');
     }
 }

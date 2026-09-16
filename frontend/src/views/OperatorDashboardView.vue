@@ -250,7 +250,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
@@ -270,6 +270,7 @@ const {
   tasks,
   dutyStatus,
   stats,
+  loadMissions,
   setDutyStatus,
   updateTaskStatus,
   updateTaskNotes,
@@ -312,7 +313,7 @@ const filteredTasks = computed(() => {
     // Search query filter
     if (searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase().trim()
-      const matchId = task.id.toLowerCase().includes(q)
+      const matchId = String(task.code || task.id).toLowerCase().includes(q)
       const matchTitle = task.title.toLowerCase().includes(q)
       const matchClient = task.client.name.toLowerCase().includes(q)
       const matchCity = task.client.city.toLowerCase().includes(q)
@@ -350,15 +351,15 @@ const closeTaskDrawer = () => {
   selectedTask.value = null
 }
 
-const handleDrawerStatusUpdate = (taskId, status) => {
-  const updated = updateTaskStatus(taskId, status)
+const handleDrawerStatusUpdate = async (taskId, status) => {
+  const updated = await updateTaskStatus(taskId, status)
   if (updated && selectedTask.value?.id === taskId) {
     selectedTask.value = { ...updated }
   }
 }
 
-const handleDeliveryConfirm = (taskId, recipientName, notes) => {
-  const updated = updateDeliveryProof(taskId, recipientName, notes)
+const handleDeliveryConfirm = async (taskId, recipientName, notes) => {
+  const updated = await updateDeliveryProof(taskId, recipientName, notes)
   if (updated && selectedTask.value?.id === taskId) {
     selectedTask.value = { ...updated }
   }
@@ -372,17 +373,22 @@ const closeIncidentModal = () => {
   incidentTask.value = null
 }
 
-const handleIncidentSubmit = (taskId, data) => {
-  const updated = reportIncident(taskId, data)
+const handleIncidentSubmit = async (taskId, data) => {
+  const updated = await reportIncident(taskId, data)
   if (updated && selectedTask.value?.id === taskId) {
     selectedTask.value = { ...updated }
   }
+  closeIncidentModal()
 }
 
 const handleLogout = async () => {
   await logoutUser()
   router.push('/login')
 }
+
+onMounted(() => {
+  loadMissions().catch(() => {})
+})
 </script>
 
 <style scoped>

@@ -18,6 +18,12 @@ export function useAuth() {
     const role = user.value?.role
     return role === 'administrator' || role === 'admin'
   })
+  const isOperator = computed(() => user.value?.role === 'operator')
+  const homeRoute = computed(() => {
+    if (isAdmin.value) return 'admin'
+    if (isOperator.value) return 'operator'
+    return 'dashboard'
+  })
 
   const registerUser = async (name, company, phone, email, password) => {
     try {
@@ -190,6 +196,8 @@ export function useAuth() {
     user,
     isLoggedIn,
     isAdmin,
+    isOperator,
+    homeRoute,
     rfqTickets,
     token,
     isLoading,

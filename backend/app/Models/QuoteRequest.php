@@ -17,7 +17,7 @@ class QuoteRequest extends Model
     protected $fillable = [
         'number', 'company', 'email', 'status', 'total_quantity', 'amount',
         'client_confirmed', 'stock_deducted', 'creation_date', 'id_admin',
-        'id_project', 'id_client',
+        'id_project', 'id_client', 'origin',
     ];
 
     protected $casts = [

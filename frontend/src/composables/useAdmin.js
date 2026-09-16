@@ -117,6 +117,21 @@ export function useAdmin() {
   }
 
 
+  const fetchProjectMessages = async (id) => {
+    try {
+      const response = await api.get(`/admin/projects/${id}/messages`)
+      return response.data.messages || []
+    } catch (err) {
+      error.value = getApiErrorMessage(err, 'Failed to load messages')
+      return []
+    }
+  }
+
+  const postProjectMessage = async (id, body) => {
+    const response = await api.post(`/admin/projects/${id}/messages`, { body })
+    return response.data.message
+  }
+
   const fetchProjectTraces = async (id) => {
     try {
       const response = await api.get(`/admin/projects/${id}/traces`)
@@ -127,6 +142,16 @@ export function useAdmin() {
     }
   }
 
+
+  const fetchQuotes = async () => {
+    try {
+      const response = await api.get('/admin/quotes')
+      return response.data.data || []
+    } catch (err) {
+      error.value = getApiErrorMessage(err, 'Failed to load quotes')
+      return []
+    }
+  }
 
   const createProject = async (data) => {
     try {
@@ -282,6 +307,9 @@ export function useAdmin() {
     fetchProjects,
     updateProject,
     fetchProjectTraces,
+    fetchProjectMessages,
+    postProjectMessage,
+    fetchQuotes,
     createProject,
     deleteProject,
     fetchProducts,

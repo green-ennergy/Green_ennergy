@@ -14,17 +14,30 @@
         </div>
 
         <nav class="sidebar-nav">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            class="nav-btn"
-            :class="{ active: activeTab === tab.id }"
-            @click="switchTab(tab.id)"
-          >
-            <span class="nav-icon"><AdminIcon :name="tab.icon" :size="18" /></span>
-            <span>{{ tab.label }}</span>
-            <span v-if="tab.badge" class="nav-badge">{{ tab.badge }}</span>
-          </button>
+          <template v-for="tab in tabs" :key="tab.id">
+            <button
+              class="nav-btn"
+              :class="{ active: activeTab === tab.id, open: tab.children && missionMenuOpen }"
+              @click="tab.children ? toggleMissionMenu() : switchTab(tab.id)"
+            >
+              <span class="nav-icon"><AdminIcon :name="tab.icon" :size="18" /></span>
+              <span>{{ tab.label }}</span>
+              <span v-if="tab.badge" class="nav-badge">{{ tab.badge }}</span>
+              <span v-if="tab.children" class="nav-caret" :class="{ open: missionMenuOpen }" aria-hidden="true"></span>
+            </button>
+            <div v-if="tab.children && missionMenuOpen" class="nav-sub">
+              <button
+                v-for="child in tab.children"
+                :key="child.id"
+                type="button"
+                class="nav-sub-btn"
+                :class="{ active: activeTab === tab.id && opsSection === child.id }"
+                @click="openOpsSection(child.id)"
+              >
+                {{ child.label }}
+              </button>
+            </div>
+          </template>
         </nav>
 
         <div class="sidebar-footer">
@@ -641,14 +654,20 @@
               <h1>{{ t('admin.projects.title') }}</h1>
               <p>{{ t('admin.projects.subtitle') }}</p>
             </div>
-            <select v-model="projectFilter" @change="loadProjects" class="filter-select">
-              <option value="">{{ t('admin.projects.allPhases') }}</option>
-              <option value="premier_contact">{{ t('followup.steps.premier_contact.label') }}</option>
-              <option value="data_collection">{{ t('followup.steps.data_collection.label') }}</option>
-              <option value="energy_data">{{ t('followup.steps.energy_data.label') }}</option>
-              <option value="completed">{{ t('followup.steps.completed.label') }}</option>
-              <option value="on_hold">{{ t('followup.status.on_hold') }}</option>
-            </select>
+            <div class="header-actions">
+              <select v-model="projectFilter" @change="loadProjects" class="filter-select">
+                <option value="">{{ t('admin.projects.allPhases') }}</option>
+                <option value="premier_contact">{{ t('followup.steps.premier_contact.label') }}</option>
+                <option value="data_collection">{{ t('followup.steps.data_collection.label') }}</option>
+                <option value="energy_data">{{ t('followup.steps.energy_data.label') }}</option>
+                <option value="completed">{{ t('followup.steps.completed.label') }}</option>
+                <option value="on_hold">{{ t('followup.status.on_hold') }}</option>
+              </select>
+              <button type="button" class="primary-btn" @click="openCreateProject">
+                <AdminIcon name="plus" size="16" />
+                <span>{{ t('admin.projects.newProject') }}</span>
+              </button>
+            </div>
           </header>
 
           <div v-if="projects.length" class="followup-stats">
@@ -681,7 +700,7 @@
               variant="admin"
             >
               <template #action>
-                <button type="button" class="primary-btn followup-btn" @click="openProjectDrawer(project)">
+                <button type="button" class="ghost-btn followup-btn" @click="openProjectDrawer(project)">
                   {{ t('admin.projects.updateFollowup') }}
                 </button>
               </template>
@@ -694,8 +713,9 @@
                 <div>
                   <p class="drawer-eyebrow">{{ t('admin.drawer.followup') }}</p>
                   <h2>{{ editingProject.name }}</h2>
-                  <p v-if="editingProject.rfq_ticket" class="drawer-sub">
-                    {{ t('admin.drawer.quoteLabel') }} {{ editingProject.rfq_ticket.ticket_number }} · {{ editingProject.user?.company || editingProject.user?.name }}
+                  <p v-if="editingQuotes.length" class="drawer-sub">
+                    {{ editingQuotes.map((quote) => quote.ticket_number).join(' · ') }}
+                    <template v-if="editingProject.user"> · {{ editingProject.user.company || editingProject.user.name }}</template>
                   </p>
                 </div>
                 <button type="button" class="drawer-close" @click="closeProjectDrawer">×</button>
@@ -703,15 +723,14 @@
 
               <form class="drawer-form" @submit.prevent="handleSaveProject">
                 <div class="drawer-layout">
-                  <section v-if="editingOrderLines.length || legacyOrderSummary" class="drawer-section order-recap">
+                  <section v-for="ticket in editingQuotes" :key="ticket.id" class="drawer-section order-recap">
                     <div class="section-head">
                       <div>
-                        <h3>{{ t('admin.drawer.confirmedOrder') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.confirmedOrderHint') }}</p>
+                        <h3>{{ ticket.ticket_number }}</h3>
                       </div>
-                      <span v-if="editingOrderTotal != null" class="order-total">{{ formatMoney(editingOrderTotal) }}</span>
+                      <span v-if="ticket.quoted_total != null" class="order-total">{{ formatMoney(ticket.quoted_total) }}</span>
                     </div>
-                    <table v-if="editingOrderLines.length" class="order-lines-table">
+                    <table v-if="ticket.items?.length" class="order-lines-table">
                       <thead>
                         <tr>
                           <th>{{ t('rfq.table.item') }}</th>
@@ -720,14 +739,100 @@
                         </tr>
                       </thead>
                       <tbody>
-                        <tr v-for="item in editingOrderLines" :key="item.id">
+                        <tr v-for="item in ticket.items" :key="item.id">
                           <td>{{ rfqItemLabel(item) }}</td>
                           <td>{{ item.quantity }}</td>
                           <td>{{ item.line_total != null ? formatMoney(item.line_total) : '—' }}</td>
                         </tr>
                       </tbody>
                     </table>
-                    <p v-else class="legacy-order-text">{{ legacyOrderSummary }}</p>
+                  </section>
+
+                  <section class="drawer-section">
+                    <h3>{{ t('admin.projects.assignQuotes') }}</h3>
+                    <div class="quote-picks">
+                      <label v-for="quote in clientQuotes" :key="quote.id">
+                        <input v-model="selectedQuoteIds" type="checkbox" :value="quote.id" />
+                        <span>{{ quote.ticket_number }}</span>
+                        <small>{{ quote.company || '—' }}</small>
+                      </label>
+                      <p v-if="!clientQuotes.length" class="thread-empty">{{ t('admin.projects.noQuotes') }}</p>
+                    </div>
+                  </section>
+
+                  <section class="drawer-section drawer-section-wide">
+                    <h3>{{ t('admin.projects.storeProducts') }}</h3>
+                    <ProjectCatalogPicker
+                      v-model="projectLines"
+                      :products="products"
+                      :categories="adminCategories"
+                      :loading="isLoading && !products.length"
+                      @refresh="loadCatalogForPicker"
+                    />
+                  </section>
+
+                  <section class="drawer-section">
+                    <div class="section-head">
+                      <h3>{{ t('admin.projects.installations') }}</h3>
+                      <button type="button" class="ghost-btn" @click="projectInstallations.push(blankInstallation())">{{ t('admin.projects.addInstallation') }}</button>
+                    </div>
+                    <div v-for="(row, index) in projectInstallations" :key="row.id || index" class="service-card">
+                      <label>
+                        <span>{{ t('admin.projects.projectName') }}</span>
+                        <input v-model="row.name" type="text" />
+                      </label>
+                      <div class="service-grid">
+                        <label>
+                          <span>{{ t('admin.drawer.location') }}</span>
+                          <input v-model="row.location" type="text" />
+                        </label>
+                        <label>
+                          <span>{{ t('admin.projects.energyType') }}</span>
+                          <input v-model="row.energy_type" type="text" />
+                        </label>
+                        <label>
+                          <span>{{ t('admin.projects.price') }}</span>
+                          <input v-model="row.price" type="number" min="0" step="0.01" />
+                        </label>
+                        <label>
+                          <span>{{ t('admin.projects.scheduled') }}</span>
+                          <input v-model="row.scheduled_at" type="datetime-local" />
+                        </label>
+                      </div>
+                      <label>
+                        <span>{{ t('admin.projects.description') }}</span>
+                        <textarea v-model="row.description" rows="2"></textarea>
+                      </label>
+                      <button type="button" class="ghost-btn" @click="projectInstallations.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
+                    </div>
+                  </section>
+
+                  <section class="drawer-section">
+                    <div class="section-head">
+                      <h3>{{ t('admin.projects.maintenances') }}</h3>
+                      <button type="button" class="ghost-btn" @click="projectMaintenances.push(blankMaintenance())">{{ t('admin.projects.addMaintenance') }}</button>
+                    </div>
+                    <div v-for="(row, index) in projectMaintenances" :key="row.id || index" class="service-card">
+                      <div class="service-grid">
+                        <label>
+                          <span>{{ t('admin.projects.serviceType') }}</span>
+                          <input v-model="row.type" type="text" />
+                        </label>
+                        <label>
+                          <span>{{ t('admin.projects.price') }}</span>
+                          <input v-model="row.price" type="number" min="0" step="0.01" />
+                        </label>
+                        <label>
+                          <span>{{ t('admin.projects.scheduled') }}</span>
+                          <input v-model="row.scheduled_at" type="datetime-local" />
+                        </label>
+                      </div>
+                      <label>
+                        <span>{{ t('admin.projects.description') }}</span>
+                        <textarea v-model="row.description" rows="2"></textarea>
+                      </label>
+                      <button type="button" class="ghost-btn" @click="projectMaintenances.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
+                    </div>
                   </section>
 
                   <section class="drawer-section site-section">
@@ -751,28 +856,33 @@
                   </section>
 
                   <section class="drawer-section client-update-section">
-                    <div class="section-head">
-                      <div>
-                        <h3>{{ t('admin.drawer.clientUpdate') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.clientUpdateHint') }}</p>
-                      </div>
-                      <span class="visibility-badge">{{ t('admin.drawer.clientVisible') }}</span>
+                    <h3>{{ t('admin.drawer.messagesTitle') }}</h3>
+                    <div class="thread">
+                      <p v-if="!projectMessages.length" class="thread-empty">{{ t('admin.drawer.emptyThread') }}</p>
+                      <article
+                        v-for="message in projectMessages"
+                        :key="message.id"
+                        class="thread-item"
+                        :class="message.author"
+                      >
+                        <header>
+                          <strong>{{ message.author === 'client' ? (message.user?.name || t('admin.drawer.clientLabel')) : (message.user?.name || t('admin.drawer.teamLabel')) }}</strong>
+                          <time>{{ formatDate(message.created_at) }}</time>
+                        </header>
+                        <p>{{ message.body }}</p>
+                      </article>
                     </div>
-                    <div class="drawer-fields">
-                      <label>
-                        {{ t('admin.drawer.message') }}
-                        <textarea
-                          v-model="projectForm.client_message"
-                          rows="4"
-                          :placeholder="t('admin.drawer.messagePlaceholder')"
-                        ></textarea>
-                      </label>
+                    <div class="thread-compose">
+                      <textarea
+                        v-model="replyDraft"
+                        rows="3"
+                        :placeholder="t('admin.drawer.replyPlaceholder')"
+                        @keydown.enter.exact.prevent="sendProjectReply"
+                      ></textarea>
+                      <button type="button" class="primary-btn" :disabled="replySending || !replyDraft.trim()" @click="sendProjectReply">
+                        {{ t('admin.drawer.sendReply') }}
+                      </button>
                     </div>
-                    <div v-if="projectForm.client_message?.trim()" class="client-message-preview">
-                      <span class="preview-label">{{ t('admin.drawer.clientPreview') }}</span>
-                      <p>{{ projectForm.client_message.trim() }}</p>
-                    </div>
-                    <p v-else class="empty-client-message">{{ t('admin.drawer.noClientMessage') }}</p>
                   </section>
 
                   <section class="drawer-section workflow-section">
@@ -780,7 +890,6 @@
                       <h3>{{ t('admin.drawer.workflowPhase') }}</h3>
                       <span class="phase-counter">{{ t('admin.drawer.stepCounter', { current: previewStepNumber, total: projectStepDefs.length }) }}</span>
                     </div>
-                    <p class="section-hint">{{ t('admin.drawer.workflowHint') }}</p>
 
                     <div class="phase-picker">
                       <button
@@ -799,12 +908,6 @@
                       </button>
                     </div>
 
-                    <ProjectTimeline
-                      :project="previewProject"
-                      variant="track"
-                      audience="admin"
-                    />
-
                     <label class="hold-toggle">
                       <input type="checkbox" v-model="projectForm.on_hold" />
                       <span>{{ t('admin.drawer.putOnHold') }}</span>
@@ -813,10 +916,7 @@
 
                   <section class="drawer-section internal-section">
                     <div class="section-head">
-                      <div>
-                        <h3>{{ t('admin.drawer.internalNotes') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.internalHint') }}</p>
-                      </div>
+                      <h3>{{ t('admin.drawer.internalNotes') }}</h3>
                       <span class="team-badge">{{ t('admin.drawer.teamBadge') }}</span>
                     </div>
 
@@ -848,7 +948,6 @@
                         <h4>{{ t('admin.drawer.activityLog') }}</h4>
                         <span class="trace-count" v-if="projectTraces.length">{{ projectTraces.length }}</span>
                       </div>
-                      <p class="trace-intro">{{ t('admin.drawer.traceIntro') }}</p>
 
                       <div v-if="tracesLoading" class="trace-empty">{{ t('admin.drawer.loadingActivity') }}</div>
                       <ul v-else-if="projectTraces.length" class="trace-list">
@@ -881,6 +980,135 @@
                 </footer>
               </form>
             </aside>
+          </div>
+
+          <div v-if="showCreateProject" class="modal-overlay project-create-overlay" @click.self="showCreateProject = false">
+            <div class="ops-modal project-create-modal" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <h3>{{ t('admin.projects.createTitle') }}</h3>
+                <button type="button" class="close-btn" @click="showCreateProject = false">×</button>
+              </header>
+              <form class="task-form" @submit.prevent="submitCreateProject">
+                <div class="modal-body project-create-body">
+                  <aside class="project-create-sidebar modal-group">
+                    <label>
+                      <span>{{ t('admin.projects.projectName') }}</span>
+                      <input v-model="createProjectForm.name" type="text" required />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.projects.selectClient') }}</span>
+                      <select v-model="createProjectForm.id_client" required>
+                        <option value="">{{ t('admin.projects.selectClient') }}</option>
+                        <option v-for="client in users" :key="client.id_client" :value="client.id_client">
+                          {{ client.company || client.name }}
+                        </option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>{{ t('admin.drawer.location') }}</span>
+                      <input v-model="createProjectForm.location" type="text" />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.projects.description') }}</span>
+                      <textarea v-model="createProjectForm.description" rows="3"></textarea>
+                    </label>
+                    <div class="quote-picks">
+                      <p>{{ t('admin.projects.assignQuotes') }}</p>
+                      <label v-for="quote in createClientQuotes" :key="quote.id">
+                        <input v-model="createProjectForm.quote_ids" type="checkbox" :value="quote.id" />
+                        <span>{{ quote.ticket_number }}</span>
+                        <small>{{ quote.company || '—' }}</small>
+                      </label>
+                      <p v-if="createProjectForm.id_client && !createClientQuotes.length" class="thread-empty">{{ t('admin.projects.noQuotes') }}</p>
+                    </div>
+                  </aside>
+
+                  <div class="project-create-main">
+                    <div class="modal-group modal-group-products">
+                      <h4>{{ t('admin.projects.storeProducts') }}</h4>
+                      <ProjectCatalogPicker
+                        ref="createCatalogPickerRef"
+                        v-model="createProjectForm.lines"
+                        :products="products"
+                        :categories="adminCategories"
+                        :loading="isLoading && !products.length"
+                        @refresh="loadCatalogForPicker"
+                      />
+                    </div>
+
+                    <div class="project-create-services">
+                      <div class="modal-group">
+                        <div class="section-head">
+                          <h4>{{ t('admin.projects.installations') }}</h4>
+                          <button type="button" class="ghost-btn" @click="createProjectForm.installations.push(blankInstallation())">{{ t('admin.projects.addInstallation') }}</button>
+                        </div>
+                        <div v-for="(row, index) in createProjectForm.installations" :key="index" class="service-card">
+                          <label>
+                            <span>{{ t('admin.projects.projectName') }}</span>
+                            <input v-model="row.name" type="text" />
+                          </label>
+                          <div class="service-grid">
+                            <label>
+                              <span>{{ t('admin.drawer.location') }}</span>
+                              <input v-model="row.location" type="text" />
+                            </label>
+                            <label>
+                              <span>{{ t('admin.projects.energyType') }}</span>
+                              <input v-model="row.energy_type" type="text" />
+                            </label>
+                            <label>
+                              <span>{{ t('admin.projects.price') }}</span>
+                              <input v-model="row.price" type="number" min="0" step="0.01" />
+                            </label>
+                            <label>
+                              <span>{{ t('admin.projects.scheduled') }}</span>
+                              <input v-model="row.scheduled_at" type="datetime-local" />
+                            </label>
+                          </div>
+                          <label>
+                            <span>{{ t('admin.projects.description') }}</span>
+                            <textarea v-model="row.description" rows="2"></textarea>
+                          </label>
+                          <button type="button" class="ghost-btn" @click="createProjectForm.installations.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
+                        </div>
+                      </div>
+
+                      <div class="modal-group">
+                        <div class="section-head">
+                          <h4>{{ t('admin.projects.maintenances') }}</h4>
+                          <button type="button" class="ghost-btn" @click="createProjectForm.maintenances.push(blankMaintenance())">{{ t('admin.projects.addMaintenance') }}</button>
+                        </div>
+                        <div v-for="(row, index) in createProjectForm.maintenances" :key="index" class="service-card">
+                          <div class="service-grid">
+                            <label>
+                              <span>{{ t('admin.projects.serviceType') }}</span>
+                              <input v-model="row.type" type="text" />
+                            </label>
+                            <label>
+                              <span>{{ t('admin.projects.price') }}</span>
+                              <input v-model="row.price" type="number" min="0" step="0.01" />
+                            </label>
+                            <label>
+                              <span>{{ t('admin.projects.scheduled') }}</span>
+                              <input v-model="row.scheduled_at" type="datetime-local" />
+                            </label>
+                          </div>
+                          <label>
+                            <span>{{ t('admin.projects.description') }}</span>
+                            <textarea v-model="row.description" rows="2"></textarea>
+                          </label>
+                          <button type="button" class="ghost-btn" @click="createProjectForm.maintenances.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showCreateProject = false">{{ t('common.cancel') }}</button>
+                  <button type="submit" class="primary-btn" :disabled="creatingProject">{{ t('admin.projects.create') }}</button>
+                </footer>
+              </form>
+            </div>
           </div>
         </section>
 
@@ -926,443 +1154,262 @@
         <section v-if="activeTab === 'operations'" class="panel ops-panel">
           <header class="panel-header ops-header">
             <div>
-              <h1>{{ t('admin.operations.title') }}</h1>
-              <p>{{ t('admin.operations.subtitle') }}</p>
+              <h1>{{ opsSection === 'operators' ? t('admin.operations.operatorsTitle') : t('admin.operations.title') }}</h1>
+              <p>{{ opsSection === 'operators' ? t('admin.operations.operatorsSubtitle') : t('admin.operations.subtitle') }}</p>
             </div>
-            <button class="primary-btn" @click="openCreateTaskModal()">
-              <AdminIcon name="plus" size="16" />
-              <span>{{ t('admin.operations.assignTaskBtn') }}</span>
-            </button>
+            <div class="panel-actions" v-if="opsSection === 'jobs'">
+              <button class="primary-btn" @click="openCreateTaskModal()">
+                <AdminIcon name="plus" size="16" />
+                <span>{{ t('admin.operations.assignTaskBtn') }}</span>
+              </button>
+            </div>
+            <div class="panel-actions" v-else>
+              <button type="button" class="primary-btn" @click="openCreateOperatorModal">
+                <AdminIcon name="plus" size="16" />
+                <span>{{ t('admin.operations.addOperatorBtn') }}</span>
+              </button>
+            </div>
           </header>
 
-          <!-- Operations KPI Summary -->
-          <div class="ops-kpis">
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap green">
-                <AdminIcon name="clients" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.totalOps }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.totalOps') }}</span>
-              </div>
-            </div>
-
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap blue">
-                <AdminIcon name="user-check" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.onDutyOps }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.onDutyOps') }}</span>
-              </div>
-            </div>
-
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap orange">
-                <AdminIcon name="clock" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.inProgress }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.inProgress') }}</span>
-              </div>
-            </div>
-
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap purple">
-                <AdminIcon name="operations" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.totalTasks }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.totalTasks') }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Operations Navigation Subtabs -->
-          <div class="ops-nav-tabs">
-            <button
-              :class="['ops-subtab-btn', { active: operationsSubtab === 'calendar' }]"
-              @click="operationsSubtab = 'calendar'"
-            >
-              <AdminIcon name="calendar" size="16" />
-              <span>{{ t('admin.operations.subtabs.calendar') }}</span>
-            </button>
-            <button
-              :class="['ops-subtab-btn', { active: operationsSubtab === 'operators' }]"
-              @click="operationsSubtab = 'operators'"
-            >
-              <AdminIcon name="clients" size="16" />
-              <span>{{ t('admin.operations.subtabs.operators') }}</span>
-              <span class="tab-badge">{{ opsOperators.length }}</span>
-            </button>
-            <button
-              :class="['ops-subtab-btn', { active: operationsSubtab === 'tasksQueue' }]"
-              @click="operationsSubtab = 'tasksQueue'"
-            >
-              <AdminIcon name="orders" size="16" />
-              <span>{{ t('admin.operations.subtabs.tasksQueue') }}</span>
-              <span class="tab-badge">{{ opsTasks.length }}</span>
-            </button>
-          </div>
-
-          <!-- SUBTAB 1: CALENDAR & SCHEDULE -->
-          <div v-if="operationsSubtab === 'calendar'" class="ops-calendar-view">
-            <!-- Date Strip Picker -->
-            <div class="date-strip">
-              <div
-                v-for="day in calendarDays"
-                :key="day.date"
-                :class="['day-chip', { selected: selectedCalendarDate === day.date }]"
-                @click="selectedCalendarDate = day.date"
-              >
-                <span class="day-name">{{ day.dayName }}</span>
-                <span class="day-num">{{ day.dayNum }}</span>
-                <span class="day-dot" v-if="opsTasks.some(t => t.scheduledDate === day.date)"></span>
-              </div>
-            </div>
-
-            <!-- Calendar Schedule Content Grid -->
-            <div class="calendar-grid-container">
-              <div class="schedule-matrix">
-                <div class="matrix-header">
-                  <div class="op-cell-head">Operator</div>
-                  <div class="time-cell-head">Morning (08:00 - 13:00)</div>
-                  <div class="time-cell-head">Afternoon (13:00 - 18:00)</div>
-                </div>
-
-                <div v-for="op in opsOperators" :key="op.id" class="matrix-row">
-                  <div class="op-cell">
-                    <div class="op-mini-avatar" :style="{ backgroundColor: op.avatarColor }">
-                      {{ op.name.substring(0, 2).toUpperCase() }}
-                    </div>
-                    <div class="op-mini-info">
-                      <strong>{{ op.name }}</strong>
-                      <span :class="['duty-dot', getDutyStatusClass(op.dutyStatus)]"></span>
-                      <small>{{ getDutyStatusLabel(op.dutyStatus) }}</small>
-                    </div>
-                  </div>
-
-                  <!-- Morning Slot Tasks -->
-                  <div class="slot-cell">
-                    <div
-                      v-for="t in opsTasks.filter(task => task.operatorId === op.id && task.scheduledDate === selectedCalendarDate && (task.timeSlot.includes('08:') || task.timeSlot.includes('09:') || task.timeSlot.includes('10:') || task.timeSlot.includes('11:')))"
-                      :key="t.id"
-                      :class="['schedule-card', t.type]"
-                      @click="openEditTaskModal(t)"
-                    >
-                      <div class="sched-card-top">
-                        <span class="sched-type-tag">{{ t.type.toUpperCase() }}</span>
-                        <span class="sched-time">{{ t.timeSlot }}</span>
-                      </div>
-                      <h4 class="sched-title">{{ t.title }}</h4>
-                      <div class="sched-client">📍 {{ t.client.name }} ({{ t.client.city }})</div>
-                    </div>
-                    <button class="add-slot-btn" @click="openCreateTaskModal(op.id)">+ Assign</button>
-                  </div>
-
-                  <!-- Afternoon Slot Tasks -->
-                  <div class="slot-cell">
-                    <div
-                      v-for="t in opsTasks.filter(task => task.operatorId === op.id && task.scheduledDate === selectedCalendarDate && (task.timeSlot.includes('13:') || task.timeSlot.includes('14:') || task.timeSlot.includes('15:') || task.timeSlot.includes('16:') || task.timeSlot.includes('17:')))"
-                      :key="t.id"
-                      :class="['schedule-card', t.type]"
-                      @click="openEditTaskModal(t)"
-                    >
-                      <div class="sched-card-top">
-                        <span class="sched-type-tag">{{ t.type.toUpperCase() }}</span>
-                        <span class="sched-time">{{ t.timeSlot }}</span>
-                      </div>
-                      <h4 class="sched-title">{{ t.title }}</h4>
-                      <div class="sched-client">📍 {{ t.client.name }} ({{ t.client.city }})</div>
-                    </div>
-                    <button class="add-slot-btn" @click="openCreateTaskModal(op.id)">+ Assign</button>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Selected Day Agenda Summary Sidebar -->
-              <div class="day-agenda-sidebar">
-                <h3>{{ t('admin.operations.calendarView.selectDay') }}</h3>
-                <p class="agenda-date-label">📅 {{ selectedCalendarDate }}</p>
-
-                <div v-if="calendarTasksForSelectedDay.length === 0" class="agenda-empty">
-                  {{ t('admin.operations.calendarView.noTasks') }}
-                </div>
-
-                <div v-else class="agenda-list">
-                  <div
-                    v-for="task in calendarTasksForSelectedDay"
-                    :key="task.id"
-                    class="agenda-card"
-                    @click="openEditTaskModal(task)"
-                  >
-                    <div class="agenda-card-head">
-                      <span :class="['type-badge', task.type]">{{ task.type }}</span>
-                      <span :class="['status-pill', task.status]">{{ task.status }}</span>
-                    </div>
-                    <h4>{{ task.title }}</h4>
-                    <p class="agenda-op">👤 {{ task.operatorName }}</p>
-                    <p class="agenda-time">⏰ {{ task.timeSlot }}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- SUBTAB 2: OPERATORS FLEET ROSTER -->
-          <div v-if="operationsSubtab === 'operators'" class="ops-roster-view">
-            <div class="roster-grid">
-              <div v-for="op in opsOperators" :key="op.id" class="op-roster-card">
-                <div class="op-card-header">
-                  <div class="op-avatar-lg" :style="{ backgroundColor: op.avatarColor }">
-                    {{ op.name.substring(0, 2).toUpperCase() }}
-                  </div>
-                  <div class="op-header-text">
-                    <h3>{{ op.name }}</h3>
-                    <span class="op-role">{{ op.role }}</span>
-                    <div class="op-status-row">
-                      <span :class="['duty-badge', getDutyStatusClass(op.dutyStatus)]">
-                        ● {{ getDutyStatusLabel(op.dutyStatus) }}
-                      </span>
-                      <span class="op-rating">⭐ {{ op.rating }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="op-card-body">
-                  <div class="op-detail-item">
-                    <span class="lbl">📍 Region:</span>
-                    <span class="val">{{ op.city }}</span>
-                  </div>
-                  <div class="op-detail-item">
-                    <span class="lbl">📞 Phone:</span>
-                    <span class="val">{{ op.phone }}</span>
-                  </div>
-                  <div class="op-detail-item">
-                    <span class="lbl">⚡ Active Workload:</span>
-                    <span class="workload-tag">{{ getOperatorActiveTaskCount(op.id) }} Active Tasks</span>
-                  </div>
-
-                  <div class="op-specialties">
-                    <span v-for="spec in op.specialties" :key="spec" class="spec-chip">
-                      {{ spec }}
-                    </span>
-                  </div>
-                </div>
-
-                <div class="op-card-footer">
-                  <button class="primary-btn full" @click="openCreateTaskModal(op.id)">
-                    <AdminIcon name="plus" size="14" />
-                    <span>Assign Task</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- SUBTAB 3: ALL DISPATCHED TASKS QUEUE -->
-          <div v-if="operationsSubtab === 'tasksQueue'" class="ops-queue-view">
-            <div class="queue-toolbar">
+          <template v-if="opsSection === 'jobs'">
+            <div class="queue-toolbar ops-simple-toolbar">
               <div class="search-wrap">
                 <AdminIcon name="search" size="16" />
-                <input
-                  v-model="opsSearch"
-                  type="text"
-                  placeholder="Search tasks, clients, or operators..."
-                />
+                <input v-model="opsSearch" type="search" :placeholder="t('admin.operations.list.search')" />
               </div>
-
               <div class="filter-group">
-                <select v-model="opsFilterType">
-                  <option value="all">All Service Types</option>
-                  <option value="installation">Installation</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="delivery">Delivery</option>
-                  <option value="study">Electricity Study</option>
+                <select v-model="opsFilterPerson">
+                  <option value="all">{{ t('admin.operations.list.allPeople') }}</option>
+                  <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
                 </select>
-
+                <input v-model="opsFilterDate" type="date" />
+                <select v-model="opsFilterType">
+                  <option value="all">{{ t('admin.operations.list.allTypes') }}</option>
+                  <option value="installation">{{ t('admin.operations.types.installation') }}</option>
+                  <option value="maintenance">{{ t('admin.operations.types.maintenance') }}</option>
+                  <option value="delivery">{{ t('admin.operations.types.delivery') }}</option>
+                  <option value="study">{{ t('admin.operations.types.study') }}</option>
+                </select>
                 <select v-model="opsFilterStatus">
-                  <option value="all">All Statuses</option>
-                  <option value="assigned">Assigned</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="on_hold">On Hold</option>
-                  <option value="completed">Completed</option>
+                  <option value="all">{{ t('admin.operations.list.allStatuses') }}</option>
+                  <option value="assigned">{{ t('admin.operations.list.assigned') }}</option>
+                  <option value="in_progress">{{ t('admin.operations.list.inProgress') }}</option>
+                  <option value="on_hold">{{ t('admin.operations.list.onHold') }}</option>
+                  <option value="completed">{{ t('admin.operations.list.completed') }}</option>
                 </select>
               </div>
             </div>
 
-            <div class="table-wrap">
-              <table class="admin-table ops-table">
-                <thead>
-                  <tr>
-                    <th>Task ID</th>
-                    <th>Type</th>
-                    <th>Title & Client</th>
-                    <th>Assigned Operator</th>
-                    <th>Schedule</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="t in filteredOpsTasks" :key="t.id">
-                    <td><code>{{ t.id }}</code></td>
-                    <td>
-                      <span :class="['type-badge', t.type]">{{ t.type }}</span>
-                    </td>
-                    <td>
-                      <strong class="ops-task-title">{{ t.title }}</strong>
-                      <div class="ops-task-sub">📍 {{ t.client.name }} — {{ t.client.city }}</div>
-                    </td>
-                    <td>
-                      <div class="op-table-cell">
-                        👤 {{ t.operatorName }}
-                      </div>
-                    </td>
-                    <td>
-                      <div class="time-cell">
-                        📅 {{ t.scheduledDate }}<br />
-                        ⏰ {{ t.timeSlot }}
-                      </div>
-                    </td>
-                    <td>
-                      <span :class="['prio-badge', t.priority]">{{ t.priority }}</span>
-                    </td>
-                    <td>
-                      <span :class="['status-pill', t.status]">{{ t.status }}</span>
-                    </td>
-                    <td>
-                      <div class="action-btns">
-                        <button class="ghost-btn small" @click="openEditTaskModal(t)" title="Edit / Reassign">
-                          <AdminIcon name="edit" size="14" />
-                        </button>
-                        <button class="ghost-btn small danger" @click="handleDeleteTask(t.id)" title="Delete">
-                          <AdminIcon name="trash" size="14" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr v-if="filteredOpsTasks.length === 0">
-                    <td colspan="8" class="text-center py-4">No tasks found matching your filters.</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div v-if="!filteredOpsTasks.length" class="ops-empty">
+              {{ t('admin.operations.list.empty') }}
+            </div>
+            <div v-else class="job-grid">
+              <article v-for="job in filteredOpsTasks" :key="job.id" class="job-card">
+                <div class="job-card-top">
+                  <span class="ops-chip">{{ getOpsTypeLabel(job.type) }}</span>
+                  <span class="ops-chip">{{ opsStatusLabel(job.status) }}</span>
+                </div>
+                <h3>{{ job.title }}</h3>
+                <p class="job-client">{{ job.client.name }} · {{ job.client.city }}</p>
+                <div class="job-meta">
+                  <span>{{ job.operatorName }}</span>
+                  <span>{{ job.scheduledDate }} · {{ job.timeSlot }}</span>
+                </div>
+                <footer class="job-card-actions">
+                  <span class="ops-quiet">{{ opsPriorityLabel(job.priority) }}</span>
+                  <div class="action-btns">
+                    <button type="button" class="ghost-btn small" @click="openEditTaskModal(job)">
+                      <AdminIcon name="edit" size="14" />
+                    </button>
+                    <button type="button" class="ghost-btn small danger" @click="handleDeleteTask(job.id)">
+                      <AdminIcon name="trash" size="14" />
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            </div>
+          </template>
+
+          <div v-else>
+            <div v-if="!opsOperators.length" class="ops-empty">{{ t('admin.operations.operatorsEmpty') }}</div>
+            <div v-else class="op-manage-grid">
+              <article v-for="op in opsOperators" :key="op.id" class="op-manage-card">
+                <div class="op-manage-head">
+                  <div class="op-avatar">
+                    {{ operatorInitials(op.name) }}
+                  </div>
+                  <div>
+                    <h3>{{ op.name }}</h3>
+                    <p>{{ op.role }}</p>
+                  </div>
+                </div>
+                <ul class="op-manage-facts">
+                  <li>{{ op.phone || '—' }}</li>
+                  <li>{{ op.city || '—' }}</li>
+                  <li>{{ op.email || '—' }}</li>
+                </ul>
+                <footer class="op-manage-foot">
+                  <span>{{ t('admin.operations.list.activeJobs', { n: getOperatorActiveTaskCount(op.id) }) }}</span>
+                  <div class="action-btns">
+                    <button type="button" class="ghost-btn small" @click="openEditOperatorModal(op)">
+                      <AdminIcon name="edit" size="14" />
+                    </button>
+                    <button type="button" class="ghost-btn small danger" @click="handleDeleteOperator(op.id)">
+                      <AdminIcon name="trash" size="14" />
+                    </button>
+                  </div>
+                </footer>
+              </article>
             </div>
           </div>
 
           <!-- TASK ASSIGNMENT & EDIT MODAL -->
           <div v-if="showTaskModal" class="modal-overlay" @click.self="showTaskModal = false">
-            <div class="modal-card ops-modal">
+            <div class="ops-modal" role="dialog" aria-modal="true">
               <header class="modal-header">
-                <h3>{{ editingTask ? t('admin.operations.modal.editTitle') : t('admin.operations.modal.createTitle') }}</h3>
-                <button class="close-btn" @click="showTaskModal = false">×</button>
+                <div>
+                  <p class="modal-kicker">{{ t('admin.operations.title') }}</p>
+                  <h3>{{ editingTask ? t('admin.operations.modal.editTitle') : t('admin.operations.modal.createTitle') }}</h3>
+                </div>
+                <button type="button" class="close-btn" :aria-label="t('common.close')" @click="showTaskModal = false">×</button>
               </header>
 
-              <form @submit.prevent="submitTaskForm" class="task-form">
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.taskType') }}</span>
-                    <select v-model="taskForm.type" required>
-                      <option value="installation">Installation (New Equipment)</option>
-                      <option value="maintenance">Maintenance (Diagnostics & Repair)</option>
-                      <option value="delivery">Delivery (New Order)</option>
-                      <option value="study">Make a Study (Audit & Sizing)</option>
-                    </select>
-                  </label>
+              <form class="task-form" @submit.prevent="submitTaskForm">
+                <div class="modal-body">
+                  <section class="modal-group">
+                    <h4>{{ t('admin.operations.modal.jobSection') }}</h4>
+                    <div class="form-grid">
+                      <label>
+                        <span>{{ t('admin.operations.modal.taskType') }}</span>
+                        <select v-model="taskForm.type" required>
+                          <option value="installation">{{ t('admin.operations.types.installation') }}</option>
+                          <option value="maintenance">{{ t('admin.operations.types.maintenance') }}</option>
+                          <option value="delivery">{{ t('admin.operations.types.delivery') }}</option>
+                          <option value="study">{{ t('admin.operations.types.study') }}</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.selectOperator') }}</span>
+                        <select v-model="taskForm.operatorId" required>
+                          <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
+                        </select>
+                      </label>
+                      <label class="span-2">
+                        <span>{{ t('admin.operations.modal.taskTitle') }}</span>
+                        <input v-model="taskForm.title" type="text" required />
+                      </label>
+                    </div>
+                  </section>
 
-                  <label>
-                    <span>{{ t('admin.operations.modal.selectOperator') }}</span>
-                    <select v-model="taskForm.operatorId" required>
-                      <option v-for="op in opsOperators" :key="op.id" :value="op.id">
-                        {{ op.name }} ({{ op.role }})
-                      </option>
-                    </select>
-                  </label>
-                </div>
+                  <section class="modal-group">
+                    <h4>{{ t('admin.operations.modal.whenSection') }}</h4>
+                    <div class="form-grid">
+                      <label>
+                        <span>{{ t('admin.operations.modal.scheduledDate') }}</span>
+                        <input v-model="taskForm.scheduledDate" type="date" required />
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.timeSlot') }}</span>
+                        <select v-model="taskForm.timeSlot">
+                          <option value="08:30 - 11:30">08:30 – 11:30</option>
+                          <option value="09:00 - 13:00">09:00 – 13:00</option>
+                          <option value="10:30 - 12:30">10:30 – 12:30</option>
+                          <option value="14:00 - 17:00">14:00 – 17:00</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="priority-row">
+                      <span>{{ t('admin.operations.modal.priority') }}</span>
+                      <div class="priority-pills">
+                        <button
+                          v-for="level in ['low', 'medium', 'high', 'urgent']"
+                          :key="level"
+                          type="button"
+                          class="priority-pill"
+                          :class="[level, { active: taskForm.priority === level }]"
+                          @click="taskForm.priority = level"
+                        >
+                          {{ t(`admin.operations.modal.priority${level.charAt(0).toUpperCase()}${level.slice(1)}`) }}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
 
-                <div class="form-row">
-                  <label class="full-width">
-                    <span>{{ t('admin.operations.modal.taskTitle') }}</span>
-                    <input
-                      v-model="taskForm.title"
-                      type="text"
-                      placeholder="e.g. 10 kWp Solar Installation & Inverter Commissioning"
-                      required
-                    />
-                  </label>
-                </div>
-
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.priority') }}</span>
-                    <select v-model="taskForm.priority">
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.scheduledDate') }}</span>
-                    <input v-model="taskForm.scheduledDate" type="date" required />
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.timeSlot') }}</span>
-                    <select v-model="taskForm.timeSlot">
-                      <option value="08:30 - 11:30">08:30 - 11:30</option>
-                      <option value="09:00 - 13:00">09:00 - 13:00</option>
-                      <option value="10:30 - 12:30">10:30 - 12:30</option>
-                      <option value="14:00 - 17:00">14:00 - 17:00</option>
-                    </select>
-                  </label>
-                </div>
-
-                <div class="form-section-title">Client & Location Details</div>
-
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientName') }}</span>
-                    <input v-model="taskForm.clientName" type="text" placeholder="Client Name or Business" required />
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientPhone') }}</span>
-                    <input v-model="taskForm.clientPhone" type="text" placeholder="+212 6..." />
-                  </label>
-                </div>
-
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientAddress') }}</span>
-                    <input v-model="taskForm.clientAddress" type="text" placeholder="Full street address..." />
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientCity') }}</span>
-                    <input v-model="taskForm.clientCity" type="text" placeholder="Casablanca, Rabat, etc." />
-                  </label>
-                </div>
-
-                <div class="form-row">
-                  <label class="full-width">
-                    <span>{{ t('admin.operations.modal.adminNotes') }}</span>
-                    <textarea
-                      v-model="taskForm.adminNotes"
-                      rows="3"
-                      placeholder="Special instructions for field operator, site access notes, equipment instructions..."
-                    ></textarea>
-                  </label>
+                  <section class="modal-group">
+                    <h4>{{ t('admin.operations.modal.clientSection') }}</h4>
+                    <div class="form-grid">
+                      <label>
+                        <span>{{ t('admin.operations.modal.clientName') }}</span>
+                        <input v-model="taskForm.clientName" type="text" required />
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.clientPhone') }}</span>
+                        <input v-model="taskForm.clientPhone" type="tel" />
+                      </label>
+                      <label class="span-2">
+                        <span>{{ t('admin.operations.modal.clientAddress') }}</span>
+                        <input v-model="taskForm.clientAddress" type="text" />
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.clientCity') }}</span>
+                        <input v-model="taskForm.clientCity" type="text" />
+                      </label>
+                      <label class="span-2">
+                        <span>{{ t('admin.operations.modal.adminNotes') }}</span>
+                        <textarea v-model="taskForm.adminNotes" rows="3"></textarea>
+                      </label>
+                    </div>
+                  </section>
                 </div>
 
                 <footer class="modal-footer">
-                  <button type="button" class="ghost-btn" @click="showTaskModal = false">
-                    {{ t('common.cancel') }}
-                  </button>
+                  <button type="button" class="ghost-btn" @click="showTaskModal = false">{{ t('common.cancel') }}</button>
                   <button type="submit" class="primary-btn">
                     {{ editingTask ? t('admin.operations.modal.submitUpdate') : t('admin.operations.modal.submitCreate') }}
+                  </button>
+                </footer>
+              </form>
+            </div>
+          </div>
+
+          <div v-if="showOperatorModal" class="modal-overlay" @click.self="showOperatorModal = false">
+            <div class="ops-modal ops-modal-sm" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <div>
+                  <p class="modal-kicker">{{ t('admin.operations.title') }}</p>
+                  <h3>{{ editingOperator ? t('admin.operations.operatorForm.editTitle') : t('admin.operations.operatorForm.title') }}</h3>
+                </div>
+                <button type="button" class="close-btn" :aria-label="t('common.close')" @click="showOperatorModal = false">×</button>
+              </header>
+              <form class="task-form" @submit.prevent="submitOperatorForm">
+                <div class="modal-body">
+                  <div class="form-grid">
+                    <label class="span-2">
+                      <span>{{ t('admin.operations.operatorForm.name') }}</span>
+                      <input v-model="operatorForm.name" type="text" required />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.role') }}</span>
+                      <input v-model="operatorForm.role" type="text" />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.city') }}</span>
+                      <input v-model="operatorForm.city" type="text" />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.phone') }}</span>
+                      <input v-model="operatorForm.phone" type="tel" />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.email') }}</span>
+                      <input v-model="operatorForm.email" type="email" />
+                    </label>
+                  </div>
+                </div>
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showOperatorModal = false">{{ t('common.cancel') }}</button>
+                  <button type="submit" class="primary-btn">
+                    {{ editingOperator ? t('admin.operations.operatorForm.saveChanges') : t('admin.operations.operatorForm.save') }}
                   </button>
                 </footer>
               </form>
@@ -1383,10 +1430,11 @@ import { useAdmin } from '../composables/useAdmin'
 import { useOperatorAdmin } from '../composables/useOperatorAdmin'
 import { useLocale } from '../composables/useLocale'
 import { useToast } from '../composables/useToast'
+import { getApiErrorMessage } from '../api/client'
 import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import FollowupCard from '../components/adminDashboard/FollowupCard.vue'
-import ProjectTimeline from '../components/adminDashboard/ProjectTimeline.vue'
+import ProjectCatalogPicker from '../components/adminDashboard/ProjectCatalogPicker.vue'
 import { resolveProductImage, resolveMediaUrl } from '../utils/productImage'
 import {
   objectToLines,
@@ -1414,10 +1462,8 @@ import {
 
 import {
   getWorkflowSteps,
-  extractClientMessage,
   getCurrentPhase,
   getFollowupStepNumber,
-  parseLegacyOrderSummary,
   phaseToCompletedSteps,
   projectStatusLabel
 } from '../utils/projectSteps'
@@ -1441,6 +1487,10 @@ const {
   fetchProjects,
   updateProject,
   fetchProjectTraces,
+  fetchProjectMessages,
+  postProjectMessage,
+  fetchQuotes,
+  createProject,
   fetchProducts,
   updateProduct,
   createProduct,
@@ -1473,6 +1523,18 @@ const projectSaving = ref(false)
 const projectFormError = ref('')
 const projectForm = ref(emptyProjectForm())
 const projectTraces = ref([])
+const projectMessages = ref([])
+const selectedQuoteIds = ref([])
+const availableQuotes = ref([])
+const showCreateProject = ref(false)
+const creatingProject = ref(false)
+const createProjectForm = ref(emptyCreateProject())
+const projectLines = ref([])
+const projectInstallations = ref([])
+const projectMaintenances = ref([])
+const createCatalogPickerRef = ref(null)
+const replyDraft = ref('')
+const replySending = ref(false)
 const tracesLoading = ref(false)
 const projectSaveSuccess = ref('')
 const noteSuggestions = computed(() => {
@@ -1555,22 +1617,66 @@ const followupOnHoldCount = computed(() => projects.value.filter((project) => pr
 
 const followupCompletedCount = computed(() => projects.value.filter((project) => project.status === 'completed').length)
 
-const editingOrderLines = computed(() => editingProject.value?.rfq_ticket?.items || [])
+const editingQuotes = computed(() => editingProject.value?.rfq_tickets || (editingProject.value?.rfq_ticket ? [editingProject.value.rfq_ticket] : []))
 
-const editingOrderTotal = computed(() => {
-  const total = editingProject.value?.rfq_ticket?.quoted_total
-  return total != null && total !== '' ? Number(total) : null
+const clientQuotes = computed(() => {
+  const clientId = Number(editingProject.value?.id_client)
+  if (!clientId) return []
+  return availableQuotes.value.filter((quote) => Number(quote.id_client) === clientId)
 })
 
-const legacyOrderSummary = computed(() => {
-  if (editingOrderLines.value.length) return null
-  return parseLegacyOrderSummary(editingProject.value?.description)
+const createClientQuotes = computed(() => {
+  const clientId = Number(createProjectForm.value.id_client)
+  if (!clientId) return []
+  return availableQuotes.value.filter((quote) => Number(quote.id_client) === clientId)
 })
+
+function emptyCreateProject() {
+  return {
+    name: '',
+    id_client: '',
+    location: '',
+    description: '',
+    quote_ids: [],
+    lines: [],
+    installations: [],
+    maintenances: []
+  }
+}
+
+function blankInstallation() {
+  return { id: null, name: '', location: '', energy_type: '', price: '', scheduled_at: '', description: '' }
+}
+
+function blankMaintenance() {
+  return { id: null, type: '', price: '', scheduled_at: '', description: '' }
+}
+
+async function loadCatalogForPicker(filters = {}) {
+  if (!adminCategories.value.length) {
+    adminCategories.value = await fetchCategories()
+  }
+  await fetchProducts({ sort: 'title', ...filters })
+}
+
+function cleanServices(rows, key) {
+  return rows
+    .filter((row) => String(row[key] || '').trim())
+    .map((row) => ({
+      id: row.id || null,
+      name: row.name,
+      type: row.type,
+      location: row.location || null,
+      energy_type: row.energy_type || null,
+      description: row.description || null,
+      scheduled_at: row.scheduled_at || null,
+      price: row.price === '' || row.price == null ? null : Number(row.price)
+    }))
+}
 
 function emptyProjectForm() {
   return {
     location: '',
-    client_message: '',
     current_phase: 'premier_contact',
     on_hold: false,
     admin_notes: ''
@@ -1582,6 +1688,10 @@ const {
   operators: opsOperators,
   stats: opsStats,
   createTask: createOpsTask,
+  updateTask: updateOpsTask,
+  createOperator: createOpsOperator,
+  updateOperator: updateOpsOperator,
+  deleteOperator: deleteOpsOperator,
   updateTaskStatus: updateOpsTaskStatus,
   reassignTask: reassignOpsTask,
   deleteTask: deleteOpsTask,
@@ -1589,9 +1699,12 @@ const {
   reloadOperations
 } = useOperatorAdmin()
 
-const operationsSubtab = ref('calendar')
+const opsSection = ref('jobs')
 const selectedCalendarDate = ref('2026-09-15')
 const showTaskModal = ref(false)
+const showOperatorModal = ref(false)
+const editingOperator = ref(null)
+const operatorForm = ref({ name: '', role: '', phone: '', email: '', city: '' })
 const editingTask = ref(null)
 
 const taskForm = ref({
@@ -1611,6 +1724,8 @@ const taskForm = ref({
 
 const opsFilterType = ref('all')
 const opsFilterStatus = ref('all')
+const opsFilterPerson = ref('all')
+const opsFilterDate = ref('')
 const opsSearch = ref('')
 
 const calendarDays = computed(() => {
@@ -1637,9 +1752,58 @@ const filteredOpsTasks = computed(() => {
       task.id.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
       task.client.name.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
       task.operatorName.toLowerCase().includes(opsSearch.value.toLowerCase())
-    return matchType && matchStatus && matchSearch
+    const matchPerson = opsFilterPerson.value === 'all' || task.operatorId === opsFilterPerson.value
+    const matchDate = !opsFilterDate.value || task.scheduledDate === opsFilterDate.value
+    return matchType && matchStatus && matchPerson && matchDate && matchSearch
   })
 })
+
+function openCreateOperatorModal() {
+  editingOperator.value = null
+  operatorForm.value = { name: '', role: '', phone: '', email: '', city: '' }
+  showOperatorModal.value = true
+}
+
+function openEditOperatorModal(operator) {
+  editingOperator.value = operator
+  operatorForm.value = {
+    name: operator.name,
+    role: operator.role,
+    phone: operator.phone,
+    email: operator.email,
+    city: operator.city
+  }
+  showOperatorModal.value = true
+}
+
+async function submitOperatorForm() {
+  if (!operatorForm.value.name.trim() || !operatorForm.value.email.trim()) {
+    toast.error('Name and email are required.')
+    return
+  }
+  try {
+    if (editingOperator.value) {
+      await updateOpsOperator(editingOperator.value.id, operatorForm.value)
+      toast.success('Operator updated.')
+    } else {
+      const result = await createOpsOperator(operatorForm.value)
+      const password = result.temporary_password
+      toast.success(password ? `Operator added. Temporary password: ${password}` : 'Operator added.', 8000)
+    }
+    showOperatorModal.value = false
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not save operator.'))
+  }
+}
+
+async function handleDeleteOperator(operatorId) {
+  if (!confirm(t('admin.operations.deleteOperatorConfirm'))) return
+  try {
+    await deleteOpsOperator(operatorId)
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not remove operator.'))
+  }
+}
 
 function openCreateTaskModal(opId = null) {
   editingTask.value = null
@@ -1679,30 +1843,26 @@ function openEditTaskModal(task) {
   showTaskModal.value = true
 }
 
-function submitTaskForm() {
+async function submitTaskForm() {
   if (!taskForm.value.title || !taskForm.value.operatorId) return
-  if (editingTask.value) {
-    reassignOpsTask(editingTask.value.id, taskForm.value.operatorId)
-    editingTask.value.title = taskForm.value.title
-    editingTask.value.type = taskForm.value.type
-    editingTask.value.priority = taskForm.value.priority
-    editingTask.value.scheduledDate = taskForm.value.scheduledDate
-    editingTask.value.timeSlot = taskForm.value.timeSlot
-    editingTask.value.client.name = taskForm.value.clientName
-    editingTask.value.client.phone = taskForm.value.clientPhone
-    editingTask.value.client.email = taskForm.value.clientEmail
-    editingTask.value.client.address = taskForm.value.clientAddress
-    editingTask.value.client.city = taskForm.value.clientCity
-    editingTask.value.adminNotes = taskForm.value.adminNotes
-  } else {
-    createOpsTask(taskForm.value)
+  try {
+    if (editingTask.value) {
+      await updateOpsTask(editingTask.value.id, taskForm.value)
+    } else {
+      await createOpsTask(taskForm.value)
+    }
+    showTaskModal.value = false
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not save job.'))
   }
-  showTaskModal.value = false
 }
 
-function handleDeleteTask(taskId) {
-  if (confirm('Are you sure you want to delete this task assignment?')) {
-    deleteOpsTask(taskId)
+async function handleDeleteTask(taskId) {
+  if (!confirm('Are you sure you want to delete this task assignment?')) return
+  try {
+    await deleteOpsTask(taskId)
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not delete job.'))
   }
 }
 
@@ -1714,6 +1874,36 @@ function getOpsTypeLabel(type) {
     study: t('admin.operations.types.study')
   }
   return map[type] || type
+}
+
+function opsStatusLabel(status) {
+  const map = {
+    assigned: t('admin.operations.list.assigned'),
+    in_progress: t('admin.operations.list.inProgress'),
+    on_hold: t('admin.operations.list.onHold'),
+    completed: t('admin.operations.list.completed')
+  }
+  return map[status] || status
+}
+
+function opsPriorityLabel(priority) {
+  const map = {
+    low: t('admin.operations.modal.priorityLow'),
+    medium: t('admin.operations.modal.priorityMedium'),
+    high: t('admin.operations.modal.priorityHigh'),
+    urgent: t('admin.operations.modal.priorityUrgent')
+  }
+  return map[priority] || priority
+}
+
+function operatorInitials(name) {
+  return String(name || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
 }
 
 function getDutyStatusLabel(status) {
@@ -1736,7 +1926,16 @@ const tabs = computed(() => {
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
     { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
-    { id: 'operations', label: t('admin.tabs.operations'), icon: 'operations', badge: opsStats.value?.inProgress || null }
+    {
+      id: 'operations',
+      label: t('admin.tabs.operations'),
+      icon: 'operations',
+      badge: opsStats.value?.inProgress || null,
+      children: [
+        { id: 'jobs', label: t('admin.operations.menu.jobs') },
+        { id: 'operators', label: t('admin.operations.menu.operators') }
+      ]
+    }
   ]
 })
 
@@ -1810,13 +2009,42 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+const missionMenuOpen = ref(false)
+
 const switchTab = async (tabId) => {
   activeTab.value = tabId
+  if (tabId !== 'operations') missionMenuOpen.value = false
   if (tabId === 'overview') await loadOverview()
   if (tabId === 'orders') await loadOrders()
   if (tabId === 'marketplace') await loadMarketplace()
   if (tabId === 'projects') await loadProjects()
   if (tabId === 'clients') await loadClients()
+  if (tabId === 'operations') await loadOperations()
+}
+
+const toggleMissionMenu = async () => {
+  missionMenuOpen.value = !missionMenuOpen.value
+  if (missionMenuOpen.value && activeTab.value !== 'operations') {
+    await switchTab('operations')
+    missionMenuOpen.value = true
+  }
+}
+
+const openOpsSection = async (section) => {
+  opsSection.value = section
+  if (activeTab.value !== 'operations') {
+    await switchTab('operations')
+    return
+  }
+  await loadOperations()
+}
+
+const loadOperations = async () => {
+  try {
+    await reloadOperations()
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not load missions.'))
+  }
 }
 
 const loadOverview = async () => {
@@ -2193,15 +2421,41 @@ const openProjectDrawer = async (project) => {
   editingProject.value = project
   projectForm.value = {
     location: project.location || '',
-    client_message: extractClientMessage(project.description),
     current_phase: getCurrentPhase(project),
     on_hold: project.status === 'on_hold',
     admin_notes: project.admin_notes || ''
   }
+  selectedQuoteIds.value = (project.rfq_tickets || []).map((quote) => quote.id)
+  projectLines.value = (project.lines || []).map((line) => ({ ...line }))
+  projectInstallations.value = (project.installations || []).map((row) => ({ ...row, price: row.price ?? '' }))
+  projectMaintenances.value = (project.maintenances || []).map((row) => ({ ...row, price: row.price ?? '' }))
+  availableQuotes.value = await fetchQuotes()
+  await loadCatalogForPicker()
+  replyDraft.value = ''
   showProjectDrawer.value = true
   tracesLoading.value = true
-  projectTraces.value = await fetchProjectTraces(project.id)
+  const [traces, messages] = await Promise.all([
+    fetchProjectTraces(project.id),
+    fetchProjectMessages(project.id)
+  ])
+  projectTraces.value = traces
+  projectMessages.value = messages
   tracesLoading.value = false
+}
+
+const sendProjectReply = async () => {
+  const body = replyDraft.value.trim()
+  if (!editingProject.value || !body || replySending.value) return
+  replySending.value = true
+  try {
+    const message = await postProjectMessage(editingProject.value.id, body)
+    projectMessages.value = [...projectMessages.value, message]
+    replyDraft.value = ''
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not send the reply.'))
+  } finally {
+    replySending.value = false
+  }
 }
 
 const closeProjectDrawer = () => {
@@ -2209,7 +2463,13 @@ const closeProjectDrawer = () => {
   editingProject.value = null
   projectFormError.value = ''
   projectSaveSuccess.value = ''
+  selectedQuoteIds.value = []
+  projectLines.value = []
+  projectInstallations.value = []
+  projectMaintenances.value = []
   projectTraces.value = []
+  projectMessages.value = []
+  replyDraft.value = ''
 }
 
 function appendInternalNote(text) {
@@ -2221,10 +2481,18 @@ const buildProjectPayload = () => {
   const form = projectForm.value
   return {
     location: form.location,
-    description: form.client_message?.trim() || null,
     admin_notes: form.admin_notes || null,
     completed_steps: phaseToCompletedSteps(form.current_phase),
-    on_hold: form.on_hold
+    on_hold: form.on_hold,
+    quote_ids: selectedQuoteIds.value,
+    lines: projectLines.value.map((line) => ({
+      id_product: line.id_product,
+      title: line.title,
+      quantity: Number(line.quantity) || 1,
+      unit_price: Number(line.unit_price)
+    })),
+    installations: cleanServices(projectInstallations.value, 'name'),
+    maintenances: cleanServices(projectMaintenances.value, 'type')
   }
 }
 
@@ -2239,6 +2507,10 @@ const handleSaveProject = async () => {
 
   if (result) {
     editingProject.value = result.project
+    selectedQuoteIds.value = (result.project.rfq_tickets || []).map((quote) => quote.id)
+    projectLines.value = (result.project.lines || []).map((line) => ({ ...line }))
+    projectInstallations.value = (result.project.installations || []).map((row) => ({ ...row, price: row.price ?? '' }))
+    projectMaintenances.value = (result.project.maintenances || []).map((row) => ({ ...row, price: row.price ?? '' }))
     projectTraces.value = result.traces || []
     projectSaveSuccess.value = t('admin.projects.saved')
     await loadProjects()
@@ -2249,7 +2521,46 @@ const handleSaveProject = async () => {
 }
 
 const loadProjects = async () => {
-  await fetchProjects(projectFilter.value ? { status: projectFilter.value } : {})
+  await Promise.all([
+    fetchProjects(projectFilter.value ? { status: projectFilter.value } : {}),
+    fetchUsers()
+  ])
+  availableQuotes.value = await fetchQuotes()
+}
+
+const openCreateProject = async () => {
+  createProjectForm.value = emptyCreateProject()
+  showCreateProject.value = true
+  if (!users.value.length) await fetchUsers()
+  availableQuotes.value = await fetchQuotes()
+  await loadCatalogForPicker()
+  createCatalogPickerRef.value?.resetFilters()
+}
+
+const submitCreateProject = async () => {
+  creatingProject.value = true
+  const result = await createProject({
+    name: createProjectForm.value.name.trim(),
+    id_client: Number(createProjectForm.value.id_client),
+    location: createProjectForm.value.location.trim() || null,
+    description: createProjectForm.value.description.trim() || null,
+    quote_ids: createProjectForm.value.quote_ids,
+    lines: createProjectForm.value.lines.map((line) => ({
+      id_product: line.id_product,
+      title: line.title,
+      quantity: Number(line.quantity) || 1,
+      unit_price: Number(line.unit_price)
+    })),
+    installations: cleanServices(createProjectForm.value.installations, 'name'),
+    maintenances: cleanServices(createProjectForm.value.maintenances, 'type')
+  })
+  creatingProject.value = false
+  if (result.success) {
+    showCreateProject.value = false
+    await loadProjects()
+  } else {
+    toast.error(result.error || 'Could not create project.')
+  }
 }
 
 const loadClients = async () => {
@@ -2452,6 +2763,48 @@ const handleStockChange = async (product, stock) => {
   color: #4ade80;
 }
 
+.nav-caret {
+  margin-left: auto;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+
+.nav-caret.open {
+  transform: rotate(180deg);
+}
+
+.nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.55rem 0.85rem;
+  padding: 0.2rem 0 0.2rem 0.75rem;
+  border-left: 1px solid rgba(74, 222, 128, 0.28);
+}
+
+.nav-sub-btn {
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: rgba(240, 253, 244, 0.62);
+  font-size: 0.84rem;
+  font-weight: 650;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.nav-sub-btn:hover,
+.nav-sub-btn.active {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
 .nav-icon {
   display: flex;
   align-items: center;
@@ -2468,11 +2821,14 @@ const handleStockChange = async (product, stock) => {
   white-space: nowrap;
 }
 
-.status-pill.project.completed { background: #dcfce7; color: #15803d; }
-.status-pill.project.on_hold { background: #fef3c7; color: #b45309; }
-.status-pill.project.premier_contact { background: #dbeafe; color: #1d4ed8; }
-.status-pill.project.data_collection { background: #ede9fe; color: #6d28d9; }
-.status-pill.project.energy_data { background: #cffafe; color: #0e7490; }
+.status-pill.project.completed,
+.status-pill.project.on_hold,
+.status-pill.project.premier_contact,
+.status-pill.project.data_collection,
+.status-pill.project.energy_data {
+  background: #f5f5f4;
+  color: #44403c;
+}
 
 .nav-badge {
   margin-left: auto;
@@ -3368,13 +3724,13 @@ const handleStockChange = async (product, stock) => {
   gap: 0.15rem;
   padding: 0.85rem 1rem;
   border-radius: 14px;
-  background: linear-gradient(180deg, #f8fcf9, #f3faf6);
-  border: 1px solid rgba(34, 197, 94, 0.12);
+  background: #fff;
+  border: 1px solid #e7e5e4;
 }
 
 .followup-stat strong {
   font-size: 1.35rem;
-  color: #052e16;
+  color: #1c1917;
   line-height: 1;
 }
 
@@ -3422,14 +3778,14 @@ const handleStockChange = async (product, stock) => {
 }
 
 .phase-option:hover {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: #f8fcf9;
+  border-color: #d6d3d1;
+  background: #fafaf9;
 }
 
 .phase-option.selected {
-  border-color: #16a34a;
-  background: #f0fdf4;
-  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.25);
+  border-color: #1c1917;
+  background: #fafaf9;
+  box-shadow: none;
 }
 
 .phase-index {
@@ -3441,15 +3797,15 @@ const handleStockChange = async (product, stock) => {
   justify-content: center;
   font-size: 0.78rem;
   font-weight: 800;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   flex-shrink: 0;
 }
 
 .phase-option.selected .phase-index {
-  background: #052e16;
-  border-color: #052e16;
+  background: #1c1917;
+  border-color: #1c1917;
   color: #fff;
 }
 
@@ -3479,6 +3835,17 @@ const handleStockChange = async (product, stock) => {
   color: #6b7280;
 }
 
+.workflow-section,
+.internal-section,
+.order-recap,
+.site-section,
+.client-update-section {
+  padding: 1.35rem 1.4rem;
+  border-radius: 16px;
+  border: 1px solid #e7e5e4;
+  background: #fff;
+}
+
 .workflow-section {
   gap: 0.85rem;
 }
@@ -3495,9 +3862,9 @@ const handleStockChange = async (product, stock) => {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   border-radius: 999px;
   padding: 0.22rem 0.55rem;
   white-space: nowrap;
@@ -3514,7 +3881,8 @@ const handleStockChange = async (product, stock) => {
 }
 
 .followup-btn {
-  width: 100%;
+  width: auto;
+  margin-left: auto;
 }
 
 .read-only-block {
@@ -3536,19 +3904,16 @@ const handleStockChange = async (product, stock) => {
 }
 
 .order-recap {
-  padding: 1rem 1.05rem;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #fafafa 0%, #f5f7f6 100%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
 }
 
 .order-total {
   flex-shrink: 0;
   font-size: 0.92rem;
   font-weight: 800;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  color: #1c1917;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   border-radius: 999px;
   padding: 0.3rem 0.65rem;
 }
@@ -3602,16 +3967,90 @@ const handleStockChange = async (product, stock) => {
   color: #374151;
 }
 
-.site-section,
-.client-update-section {
-  padding: 1rem 1.05rem;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+.site-section {
   background: #fff;
 }
 
+.client-update-section h3 {
+  margin: 0;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 280px;
+  overflow: auto;
+  margin-bottom: 0.85rem;
+}
+
+.thread-empty {
+  margin: 0;
+  color: #a8a29e;
+  font-size: 0.84rem;
+}
+
+.thread-item {
+  max-width: 85%;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
+}
+
+.thread-item.team {
+  margin-left: auto;
+  background: #1c1917;
+  border-color: #1c1917;
+  color: #fff;
+}
+
+.thread-item header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+}
+
+.thread-item header time,
+.thread-item.client header strong {
+  color: #78716c;
+  font-weight: 600;
+}
+
+.thread-item.team header strong,
+.thread-item.team header time {
+  color: #d6d3d1;
+}
+
+.thread-item p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.thread-compose {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.thread-compose textarea {
+  width: 100%;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.thread-compose .primary-btn {
+  justify-self: end;
+}
+
 .site-section {
-  background: linear-gradient(180deg, #fff 0%, #f8fcf9 100%);
+  background: #fff;
 }
 
 .rg-tag,
@@ -3632,17 +4071,17 @@ const handleStockChange = async (product, stock) => {
 }
 
 .visibility-badge {
-  color: #1e3a8a;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
 }
 
 .client-message-preview {
   margin-top: 0.15rem;
   padding: 0.85rem 0.95rem;
   border-radius: 12px;
-  background: #f8fcf9;
-  border: 1px dashed rgba(34, 197, 94, 0.35);
+  background: #fafaf9;
+  border: 1px dashed #d6d3d1;
 }
 
 .preview-label {
@@ -3652,7 +4091,7 @@ const handleStockChange = async (product, stock) => {
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #16a34a;
+  color: #78716c;
 }
 
 .client-message-preview p {
@@ -3670,10 +4109,9 @@ const handleStockChange = async (product, stock) => {
 }
 
 .internal-section {
-  padding: 1rem 1.05rem;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
 .team-badge {
@@ -3709,14 +4147,14 @@ const handleStockChange = async (product, stock) => {
 }
 
 .note-chip:hover {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: #f8fcf9;
+  border-color: #d6d3d1;
+  background: #fafaf9;
 }
 
 .trace-panel {
-  margin-top: 1rem;
+  margin-top: 0.35rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid #e7e5e4;
 }
 
 .trace-panel-head {
@@ -3736,9 +4174,9 @@ const handleStockChange = async (product, stock) => {
 .trace-count {
   font-size: 0.68rem;
   font-weight: 800;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   border-radius: 999px;
   padding: 0.12rem 0.4rem;
 }
@@ -3764,7 +4202,7 @@ const handleStockChange = async (product, stock) => {
   padding: 0.75rem 0.85rem;
   border-radius: 12px;
   background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid #e7e5e4;
 }
 
 .trace-meta {
@@ -3814,7 +4252,7 @@ const handleStockChange = async (product, stock) => {
   content: '•';
   position: absolute;
   left: 0;
-  color: #16a34a;
+  color: #a8a29e;
 }
 
 .trace-empty {
@@ -3868,6 +4306,162 @@ const handleStockChange = async (product, stock) => {
 
 .project-drawer {
   width: min(680px, 100vw);
+}
+
+.project-drawer .drawer-section {
+  padding: 1.5rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.quote-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.quote-picks label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+}
+
+.quote-picks small {
+  color: #78716c;
+}
+
+.line-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.55fr 0.7fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.line-list {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.line-list li,
+.service-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  background: #fafaf9;
+}
+
+.line-list li {
+  grid-template-columns: 1.4fr 0.6fr 0.8fr auto auto;
+  align-items: center;
+}
+
+.service-card label span,
+.modal-group h4 {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.78rem;
+  color: #57534e;
+}
+
+.modal-group .section-head,
+.drawer-section .section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.project-create-overlay {
+  padding: 1rem 1.25rem;
+}
+
+.project-create-modal {
+  width: min(1240px, calc(100vw - 2.5rem));
+  max-height: min(94vh, 980px);
+}
+
+.project-create-body {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.project-create-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.project-create-sidebar > h4 {
+  margin: 0;
+}
+
+.project-create-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.project-create-services {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.line-pick-wide {
+  grid-template-columns: 1.2fr 1.4fr 0.55fr 0.75fr auto;
+}
+
+.line-list-wide li {
+  grid-template-columns: minmax(0, 1.6fr) 0.55fr 0.75fr auto auto;
+}
+
+@media (max-width: 1024px) {
+  .project-create-body {
+    grid-template-columns: 1fr;
+  }
+
+  .project-create-sidebar {
+    position: static;
+  }
+
+  .project-create-services {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .project-create-modal {
+    width: 100%;
+    max-height: 96vh;
+  }
+
+  .line-pick-wide {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .line-list-wide li {
+    grid-template-columns: 1fr;
+  }
 }
 
 .drawer-section {
@@ -4680,6 +5274,45 @@ const handleStockChange = async (product, stock) => {
   align-items: center;
 }
 
+.ops-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.person-chip {
+  border: 1px solid rgba(5, 46, 22, 0.12);
+  background: #fff;
+  color: #052e16;
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.person-chip.active {
+  background: #052e16;
+  color: #f0fdf4;
+  border-color: #052e16;
+}
+
+.person-chip.add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-style: dashed;
+  color: #15803d;
+}
+
+.filter-group input[type='date'] {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+}
+
 .ops-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -5031,6 +5664,25 @@ const handleStockChange = async (product, stock) => {
   gap: 1.25rem;
 }
 
+.add-op-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 220px;
+  border: 1.5px dashed rgba(22, 163, 74, 0.45);
+  background: #f8fcf9;
+  color: #15803d;
+  cursor: pointer;
+  font: inherit;
+}
+
+.add-op-card:hover {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
 .op-roster-card {
   background: #ffffff;
   border: 1px solid rgba(5, 46, 22, 0.08);
@@ -5147,6 +5799,25 @@ const handleStockChange = async (product, stock) => {
   justify-content: center;
 }
 
+/* Jobs list */
+.ops-simple-stats {
+  display: flex;
+  gap: 1.25rem;
+  margin: -0.5rem 0 1.15rem;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.ops-simple-stats strong {
+  color: #052e16;
+  font-size: 1.05rem;
+  margin-right: 0.25rem;
+}
+
+.ops-simple-toolbar {
+  margin-bottom: 1rem;
+}
+
 /* Tasks Queue View */
 .queue-toolbar {
   display: flex;
@@ -5162,12 +5833,121 @@ const handleStockChange = async (product, stock) => {
   gap: 0.75rem;
 }
 
-.filter-group select {
+.filter-group select,
+.filter-group input[type="date"] {
   padding: 0.55rem 0.85rem;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 10px;
   font-size: 0.85rem;
   background: #ffffff;
+  color: #0f172a;
+}
+
+.ops-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+}
+
+.job-grid,
+.op-manage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+.job-card,
+.op-manage-card {
+  background: #fff;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  padding: 1.35rem 1.4rem;
+}
+
+.ops-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #44403c;
+  background: #f5f5f4;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.ops-quiet {
+  font-size: 0.75rem;
+  color: #78716c;
+}
+
+.job-card-top,
+.job-card-actions,
+.op-manage-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.job-card h3,
+.op-manage-card h3 {
+  margin: 0.7rem 0 0.2rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.job-client,
+.op-manage-head p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.job-meta,
+.op-manage-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: #334155;
+  font-size: 0.82rem;
+}
+
+.job-card-actions,
+.op-manage-foot {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.op-manage-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.op-manage-head h3 { margin: 0; }
+
+.op-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #f5f5f4;
+  color: #292524;
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .ops-task-title {
@@ -5204,78 +5984,199 @@ const handleStockChange = async (product, stock) => {
 .prio-badge.medium { color: #d97706; }
 .prio-badge.low { color: #16a34a; }
 
-/* Modal Form Styles */
+/* Modal */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
+  inset: 0;
+  background: rgba(2, 13, 7, 0.45);
+  backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: 1.25rem;
 }
 
 .ops-modal {
-  background: #ffffff;
+  background: #fff;
   border-radius: 18px;
-  width: 100%;
-  max-width: 650px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-  padding: 1.5rem;
+  width: min(720px, 100%);
+  max-height: min(86vh, 820px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(2, 13, 7, 0.22);
+  overflow: hidden;
+}
+
+.ops-modal-sm {
+  width: min(520px, 100%);
+}
+
+.ops-modal .task-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #e5e7eb;
-  padding-bottom: 0.85rem;
-  margin-bottom: 1.25rem;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem 1rem;
+  border-bottom: 1px solid rgba(5, 46, 22, 0.08);
+}
+
+.modal-kicker {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #16a34a;
 }
 
 .modal-header h3 {
-  font-size: 1.1rem;
+  margin: 0;
+  font-size: 1.2rem;
   font-weight: 800;
   color: #052e16;
 }
 
 .close-btn {
-  background: transparent;
-  border: none;
-  font-size: 1.5rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  background: #f8faf9;
+  color: #052e16;
+  font-size: 1.25rem;
+  line-height: 1;
   cursor: pointer;
-  color: #9ca3af;
 }
 
-.task-form {
+.close-btn:hover {
+  background: #eef4f0;
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding: 1.1rem 1.25rem 0.4rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.form-section-title {
-  font-size: 0.82rem;
+.modal-group {
+  background: #f8faf9;
+  border: 1px solid rgba(5, 46, 22, 0.06);
+  border-radius: 14px;
+  padding: 0.9rem 0.95rem 1rem;
+}
+
+.modal-group h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
   font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #16a34a;
-  margin-top: 0.5rem;
+  color: #15803d;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.ops-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.ops-modal input,
+.ops-modal select,
+.ops-modal textarea {
+  width: 100%;
+  border: 1px solid rgba(5, 46, 22, 0.12);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+  color: #052e16;
+}
+
+.ops-modal input:focus,
+.ops-modal select:focus,
+.ops-modal textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.priority-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.priority-pills {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.priority-pill {
+  border: 1px solid rgba(5, 46, 22, 0.1);
+  background: #fff;
+  color: #374151;
+  border-radius: 999px;
+  padding: 0.32rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.priority-pill.active {
+  background: #1c1917;
+  color: #fff;
+  border-color: #1c1917;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  border-top: 1px solid #e5e7eb;
-  padding-top: 1rem;
-  margin-top: 1rem;
+  gap: 0.65rem;
+  padding: 0.9rem 1.25rem 1.1rem;
+  border-top: 1px solid rgba(5, 46, 22, 0.08);
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .form-grid,
+  .form-grid .span-2 {
+    grid-template-columns: 1fr;
+    grid-column: auto;
+  }
+
+  .priority-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>
 
