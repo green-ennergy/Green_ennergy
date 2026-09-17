@@ -31,8 +31,8 @@
 
       <p class="hero-login animate-fade-up delay-400">
         <template v-if="isLoggedIn">
-          <router-link :to="isAdmin ? '/admin' : '/dashboard'">
-            {{ isAdmin ? t('nav.admin') : t('nav.dashboard') }}
+          <router-link :to="{ name: homeRoute }">
+            {{ homeRoute === 'admin' ? t('nav.admin') : homeRoute === 'operator' ? t('nav.operator') : t('nav.dashboard') }}
           </router-link>
         </template>
         <template v-else>
@@ -65,7 +65,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuth } from '../../composables/useAuth'
 
 const { t } = useI18n()
-const { isLoggedIn, isAdmin } = useAuth()
+const { isLoggedIn, homeRoute } = useAuth()
 
 const features = [
   { label: 'No hidden fees' },

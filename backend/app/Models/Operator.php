@@ -16,6 +16,14 @@ class Operator extends Model
 
     protected $fillable = [
         'id_user',
+        'role',
+        'city',
+        'duty_status',
+        'specialties',
+    ];
+
+    protected $casts = [
+        'specialties' => 'array',
     ];
 
     public function user(): BelongsTo
@@ -31,5 +39,10 @@ class Operator extends Model
     public function maintenances(): HasMany
     {
         return $this->hasMany(Maintenance::class, 'id_operator', 'id_operator');
+    }
+
+    public function missions(): HasMany
+    {
+        return $this->hasMany(Mission::class, 'id_operator', 'id_operator');
     }
 }

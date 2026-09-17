@@ -23,18 +23,10 @@
       <div class="nav-actions">
         <template v-if="isLoggedIn">
           <router-link
-            v-if="isAdmin"
-            to="/admin"
+            :to="{ name: homeRoute }"
             class="nav-signin"
           >
-            {{ t('nav.admin') }}
-          </router-link>
-          <router-link
-            v-else
-            to="/dashboard"
-            class="nav-signin"
-          >
-            {{ t('nav.dashboard') }}
+            {{ spaceLabel }}
           </router-link>
           <button type="button" class="btn nav-login get-consultation" @click="handleLogout">
             {{ t('common.signOut') }}
@@ -72,11 +64,8 @@
         <li><router-link to="/store" @click="isMenuOpen = false">{{ t('nav.store') }}</router-link></li>
         <li><router-link to="/#faq" @click="isMenuOpen = false">{{ t('nav.faq') }}</router-link></li>
         <li><router-link to="/#about" @click="isMenuOpen = false">{{ t('nav.about') }}</router-link></li>
-        <li v-if="isLoggedIn && isAdmin">
-          <router-link to="/admin" @click="isMenuOpen = false">{{ t('nav.admin') }}</router-link>
-        </li>
-        <li v-else-if="isLoggedIn">
-          <router-link to="/dashboard" @click="isMenuOpen = false">{{ t('nav.dashboard') }}</router-link>
+        <li v-if="isLoggedIn">
+          <router-link :to="{ name: homeRoute }" @click="isMenuOpen = false">{{ spaceLabel }}</router-link>
         </li>
         <li v-if="isLoggedIn">
           <button type="button" class="mobile-auth-btn" @click="handleLogout">{{ t('common.signOut') }}</button>
@@ -98,7 +87,12 @@ import { useAuth } from '../../composables/useAuth'
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const { isLoggedIn, isAdmin, logoutUser } = useAuth()
+const { isLoggedIn, homeRoute, logoutUser } = useAuth()
+const spaceLabel = computed(() => {
+  if (homeRoute.value === 'admin') return t('nav.admin')
+  if (homeRoute.value === 'operator') return t('nav.operator')
+  return t('nav.dashboard')
+})
 
 const isScrolled = ref(false)
 const isMenuOpen = ref(false)

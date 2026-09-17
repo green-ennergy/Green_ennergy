@@ -16,11 +16,14 @@ class Installation extends Model
 
     protected $fillable = [
         'name', 'energy_type', 'location', 'status', 'creation_date',
+        'description', 'price', 'scheduled_at',
         'id_project', 'id_operator', 'id_client',
     ];
 
     protected $casts = [
         'creation_date' => 'datetime',
+        'scheduled_at' => 'datetime',
+        'price' => 'float',
     ];
 
     public function project(): BelongsTo

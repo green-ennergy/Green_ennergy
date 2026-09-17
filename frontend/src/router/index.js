@@ -5,23 +5,7 @@ const routes = [
   {
     path: '/',
     name: 'home',
-    component: () => import('../views/HomeView.vue')
-  },
-  {
-    path: '/services',
-    name: 'services',
-    component: () => import('../views/ServicesView.vue')
-  },
-  {
-    path: '/services/:id',
-    name: 'service-detail',
-    component: () => import('../views/ServiceDetailView.vue'),
-    props: true
-  },
-  {
-    path: '/dashboard',
-    name: 'dashboard',
-    component: () => import('../views/UserDashboardView.vue')
+    component: () => import('../views/HomeView.vue'),
   },
   {
     path: '/projects/:id',
@@ -37,43 +21,34 @@ const routes = [
   {
     path: '/admin',
     name: 'admin',
-    component: () => import('../views/AdminDashboardView.vue')
-  },
-  {
-    path: '/store',
-    name: 'store',
-    component: () => import('../views/StoreView.vue')
+    component: () => import('../views/AdminDashboardView.vue'),
   },
   {
     path: '/operator',
     name: 'operator',
-    component: () => import('../views/OperatorDashboardView.vue')
+    component: () => import('../views/OperatorDashboardView.vue'),
   },
   {
-    path: '/about',
-    name: 'about',
-    component: () => import('../views/AboutView.vue')
+    path: '/store',
+    name: 'store',
+    component: () => import('../views/StoreView.vue'),
   },
   {
-    path: '/partners',
-    name: 'partners',
-    component: () => import('../views/PartnersView.vue')
+    path: '/store/:id',
+    name: 'product-detail',
+    component: () => import('../views/ProductDetailView.vue'),
+    props: true,
   },
   {
-    path: '/privacy',
-    name: 'privacy-policy',
-    component: () => import('../views/PrivacyPolicyView.vue')
-  },
-  {
-    path: '/terms',
-    name: 'terms-and-conditions',
-    component: () => import('../views/TermsView.vue')
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../views/ClientFollowupView.vue')
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
-    component: () => import('../views/NotFoundView.vue')
-  }
+    component: () => import('../views/NotFoundView.vue'),
+  },
 ]
 
 const router = createRouter({
@@ -87,11 +62,16 @@ const router = createRouter({
       return { el: to.hash, top: 80, behavior: 'smooth' }
     }
     return { top: 0, behavior: 'instant' }
-  }
+  },
 })
 
 router.beforeEach((to, from, next) => {
-  const { isLoggedIn, isAdmin } = useAuth()
+  const { isLoggedIn, isAdmin, isOperator, homeRoute } = useAuth()
+
+  if (to.name === 'login' && isLoggedIn.value) {
+    next({ name: homeRoute.value })
+    return
+  }
 
   if (to.name === 'dashboard') {
     if (!isLoggedIn.value) {
@@ -102,6 +82,10 @@ router.beforeEach((to, from, next) => {
       next({ name: 'admin' })
       return
     }
+    if (isOperator.value) {
+      next({ name: 'operator' })
+      return
+    }
   }
 
   if (to.name === 'admin') {
@@ -110,7 +94,18 @@ router.beforeEach((to, from, next) => {
       return
     }
     if (!isAdmin.value) {
-      next({ name: 'dashboard' })
+      next({ name: isOperator.value ? 'operator' : 'dashboard' })
+      return
+    }
+  }
+
+  if (to.name === 'operator') {
+    if (!isLoggedIn.value) {
+      next({ name: 'login' })
+      return
+    }
+    if (!isOperator.value) {
+      next({ name: isAdmin.value ? 'admin' : 'dashboard' })
       return
     }
   }

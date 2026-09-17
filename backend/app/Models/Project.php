@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
@@ -33,6 +34,21 @@ class Project extends Model
         return $this->belongsTo(Client::class, 'id_client', 'id_client');
     }
 
+    public function traces(): HasMany
+    {
+        return $this->hasMany(ProjectTrace::class, 'id_project', 'id_project')->orderByDesc('created_at');
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(ProjectMessage::class, 'id_project', 'id_project')->orderBy('created_at');
+    }
+
+    public function latestMessage(): HasOne
+    {
+        return $this->hasOne(ProjectMessage::class, 'id_project', 'id_project')->latestOfMany('created_at');
+    }
+
     public function attachments(): HasMany
     {
         return $this->hasMany(Attachment::class, 'id_project', 'id_project');
@@ -46,5 +62,10 @@ class Project extends Model
     public function installations(): HasMany
     {
         return $this->hasMany(Installation::class, 'id_project', 'id_project');
+    }
+
+    public function maintenances(): HasMany
+    {
+        return $this->hasMany(Maintenance::class, 'id_project', 'id_project');
     }
 }

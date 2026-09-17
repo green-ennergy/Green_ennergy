@@ -107,7 +107,8 @@
     } = useI18n()
     const {
         loginUser,
-        registerUser
+        registerUser,
+        homeRoute
     } = useAuth()
 
     const isLoginMode = ref(true)
@@ -169,13 +170,7 @@
             const result = await loginUser(email.value, password.value)
             isLoading.value = false
             if (result.success) {
-                if (result.user?.role === 'admin') {
-                    router.push('/admin')
-                } else if (result.user?.role === 'operator') {
-                    router.push('/operator')
-                } else {
-                    router.push('/dashboard')
-                }
+                router.push({ name: homeRoute.value })
             } else {
                 alertType.value = 'error'
                 alertMessage.value = result.error || 'Login failed'

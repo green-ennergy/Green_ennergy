@@ -8,7 +8,7 @@
 
         <div class="badge-row">
 
-          <span v-if="project.rfq_ticket" class="pill pill-quote">{{ project.rfq_ticket.ticket_number }}</span>
+          <span v-for="ticket in (project.rfq_tickets || (project.rfq_ticket ? [project.rfq_ticket] : []))" :key="ticket.id" class="pill pill-quote">{{ ticket.ticket_number }}</span>
 
           <span v-if="variant === 'admin' && project.user" class="pill pill-client">
 
@@ -16,6 +16,9 @@
 
           </span>
 
+          <span v-if="project.lines?.length" class="pill pill-quote">{{ t('admin.projects.productsPill', { count: project.lines.length }) }}</span>
+          <span v-if="project.installations?.length" class="pill pill-quote">{{ t('admin.projects.installationsPill', { count: project.installations.length }) }}</span>
+          <span v-if="project.maintenances?.length" class="pill pill-quote">{{ t('admin.projects.maintenancesPill', { count: project.maintenances.length }) }}</span>
           <span class="pill pill-status" :class="project.status">{{ statusLabel }}</span>
 
         </div>
@@ -190,7 +193,7 @@ const currentStep = computed(() => getStepMeta(currentPhase.value))
 
 const stepHint = computed(() => getFollowupHint(props.project, props.variant))
 
-const clientMessage = computed(() => projectClientMessage(props.project))
+const clientMessage = computed(() => props.project?.latest_message?.body || projectClientMessage(props.project))
 
 const statusLabel = computed(() => projectStatusLabel(props.project?.status))
 
@@ -846,12 +849,80 @@ function pipelineClass(stepKey, index) {
 
 :deep(.card-footer .followup-btn) {
 
-  width: 100%;
+  width: auto;
 
-  min-height: 2.5rem;
+  margin-left: auto;
+
+  min-height: 2.25rem;
 
   border-radius: 12px;
 
+}
+
+.followup-card.admin {
+  gap: 1.1rem;
+  padding: 1.45rem 1.5rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.followup-card.admin .pill,
+.followup-card.admin .pill-quote,
+.followup-card.admin .pill-client,
+.followup-card.admin .pill-status,
+.followup-card.admin .pill-status.on_hold,
+.followup-card.admin .pill-status.completed,
+.followup-card.admin .pill-status.premier_contact,
+.followup-card.admin .pill-status.data_collection,
+.followup-card.admin .pill-status.energy_data {
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
+}
+
+.followup-card.admin .card-intro h3,
+.followup-card.admin .step-badge-num,
+.followup-card.admin .progress-labels strong,
+.followup-card.admin .step-badge-of,
+.followup-card.admin .callout-label,
+.followup-card.admin .callout-hold strong {
+  color: #1c1917;
+}
+
+.followup-card.admin .step-badge,
+.followup-card.admin.tone-on_hold .step-badge,
+.followup-card.admin.tone-completed .step-badge {
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
+}
+
+.followup-card.admin .progress-fill,
+.followup-card.admin.tone-on_hold .progress-fill,
+.followup-card.admin.tone-completed .progress-fill {
+  background: #1c1917;
+}
+
+.followup-card.admin .pipeline-step,
+.followup-card.admin .pipeline-step.done,
+.followup-card.admin .pipeline-step.upcoming {
+  background: #f5f5f4;
+  color: #a8a29e;
+  box-shadow: none;
+}
+
+.followup-card.admin .pipeline-step.active,
+.followup-card.admin .pipeline-step.hold {
+  background: #1c1917;
+  color: #fff;
+  box-shadow: none;
+}
+
+.followup-card.admin .callout,
+.followup-card.admin .callout-active,
+.followup-card.admin .callout-hold {
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
 }
 
 
