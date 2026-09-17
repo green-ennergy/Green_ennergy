@@ -62,30 +62,31 @@ const router = createRouter({
 })
 
 
+// Bypass login / Auth guard (commented out as requested - no deletion)
 router.beforeEach((to, from, next) => {
-  const { isLoggedIn, isAdmin } = useAuth()
-
-  if (to.name === 'dashboard' || to.name === 'client-project-detail') {
-    if (!isLoggedIn.value) {
-      next({ name: 'login' })
-      return
-    }
-    if (isAdmin.value) {
-      next({ name: 'admin' })
-      return
-    }
-  }
-
-  if (to.name === 'admin') {
-    if (!isLoggedIn.value) {
-      next({ name: 'login' })
-      return
-    }
-    if (!isAdmin.value) {
-      next({ name: 'dashboard' })
-      return
-    }
-  }
+  // const { isLoggedIn, isAdmin } = useAuth()
+  //
+  // if (to.name === 'dashboard' || to.name === 'client-project-detail') {
+  //   if (!isLoggedIn.value) {
+  //     next({ name: 'login' })
+  //     return
+  //   }
+  //   if (isAdmin.value) {
+  //     next({ name: 'admin' })
+  //     return
+  //   }
+  // }
+  //
+  // if (to.name === 'admin') {
+  //   if (!isLoggedIn.value) {
+  //     next({ name: 'login' })
+  //     return
+  //   }
+  //   if (!isAdmin.value) {
+  //     next({ name: 'dashboard' })
+  //     return
+  //   }
+  // }
 
   next()
 })

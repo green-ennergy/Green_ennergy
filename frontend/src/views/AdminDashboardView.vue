@@ -728,6 +728,12 @@
             </table>
           </div>
         </section>
+
+        <!-- AI-Analysis -->
+        <section v-if="activeTab === 'ai-analysis'">
+          <Aianalysispanel />
+        </section>
+
       </main>
     </div>
   </div>
@@ -740,12 +746,12 @@ import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useAdmin } from '../composables/useAdmin'
 import { useLocale } from '../composables/useLocale'
-import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
+import AdminIcon from '../components/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
-import FollowupCard from '../components/adminDashboard/FollowupCard.vue'
-import ProjectTimeline from '../components/adminDashboard/ProjectTimeline.vue'
+import FollowupCard from '../components/FollowupCard.vue'
+import ProjectTimeline from '../components/ProjectTimeline.vue'
 import { resolveProductImage } from '../utils/productImage'
-import RfqQuoteEditor from '../components/adminDashboard/RfqQuoteEditor.vue'
+import RfqQuoteEditor from '../components/RfqQuoteEditor.vue'
 import {
   buildQuoteLinesFromRfq,
   formatMoney,
@@ -758,13 +764,11 @@ import {
   rfqPdfErrorMessage,
   getRfqStatusSteps
 } from '../utils/rfqQuote'
-
 import {
   formatTraceChange,
   formatTraceSummary,
   traceActorLabel
 } from '../utils/projectTrace'
-
 import {
   getWorkflowSteps,
   extractClientMessage,
@@ -774,6 +778,7 @@ import {
   phaseToCompletedSteps,
   projectStatusLabel
 } from '../utils/projectSteps'
+import Aianalysispanel from '@/components/AIPart/Aianalysispanel.vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -902,7 +907,8 @@ const tabs = computed(() => {
     { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: stats.value?.totals?.pending_rfqs || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
     { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
-    { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' }
+    { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
+    { id: 'ai-analysis', label: t('admin.tabs.aiAnalysis'), icon: 'ai' }
   ]
 })
 
@@ -969,6 +975,7 @@ const switchTab = async (tabId) => {
   if (tabId === 'marketplace') await loadMarketplace()
   if (tabId === 'projects') await loadProjects()
   if (tabId === 'clients') await loadClients()
+  if (tabId === 'ai-analysis') await loadAiAnalysis()
 }
 
 const loadOverview = async () => {
@@ -1305,12 +1312,12 @@ const handleStockChange = async (product, stock) => {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 800;
   letter-spacing: 1.5px;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .brand-sub {
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #4ade80;
   font-weight: 700;
   text-transform: uppercase;
@@ -1324,7 +1331,7 @@ const handleStockChange = async (product, stock) => {
 }
 
 .admin-name {
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   opacity: 0.85;
 }
 
