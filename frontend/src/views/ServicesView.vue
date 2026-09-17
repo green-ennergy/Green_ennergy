@@ -2,9 +2,7 @@
   <div class="services-page">
     <!-- Header Hero -->
     <header class="services-hero">
-      <div class="hero-bg-orb" aria-hidden="true"></div>
-      <div class="container hero-content">
-        <span class="badge-accent">Energy Agency Services</span>
+      <div class="container">
         <h1 class="hero-title">{{ t('services.heroTitle') }}</h1>
         <p class="hero-subtitle">{{ t('services.heroSubtitle') }}</p>
       </div>
@@ -225,16 +223,10 @@ function submitRequest() {
 }
 
 .services-hero {
-  background: linear-gradient(160deg, #020d07 0%, #052e16 100%);
-  color: #ffffff;
-  padding: 4.5rem 1.5rem 3.5rem;
+  background: linear-gradient(rgba(2, 13, 7, 0.88), rgba(2, 13, 7, 0.92)), url('/login_backdrop_1779051950394.png') center/cover;
+  color: #f0fdf4;
+  padding: 7.5rem 0 5.5rem;
   text-align: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.hero-bg-orb {
-  display: none;
 }
 
 .card-actions {
@@ -302,17 +294,17 @@ function submitRequest() {
 
 .hero-title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(2rem, 4vw, 3.2rem);
-  font-weight: 800;
-  margin-bottom: 0.85rem;
-  line-height: 1.1;
+  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+  font-weight: 500;
   color: #ffffff;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
 }
 
 .hero-subtitle {
-  font-size: 1.1rem;
-  color: #94a3b8;
-  max-width: 680px;
+  color: rgba(240, 253, 244, 0.85);
+  font-size: 1.05rem;
+  max-width: 580px;
   margin: 0 auto;
   line-height: 1.6;
 }

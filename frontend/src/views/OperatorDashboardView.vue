@@ -689,6 +689,10 @@ const handleLogout = async () => {
 }
 
 /* Operator Main */
+.panel{
+  padding-top: 0px;
+}
+
 .operator-main {
   padding: 2rem 2.5rem;
 }

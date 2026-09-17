@@ -1,14 +1,7 @@
-﻿<template>
+<template>
   <div class="legal-page">
     <header class="legal-hero">
-      <div class="container hero-content">
-        <router-link to="/" class="back-link">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          Retour à l'accueil
-        </router-link>
-        <span class="badge-accent">Conditions Générales</span>
+      <div class="container">
         <h1 class="hero-title">Conditions Générales d'Utilisation et de Vente</h1>
         <p class="hero-subtitle">
           Régissant l'utilisation des services de dimensionnement, vente d'équipements photovoltaïques et maintenance d'Energy Agency.
@@ -93,9 +86,10 @@
 }
 
 .legal-hero {
-  background: linear-gradient(160deg, #020d07 0%, #052e16 100%);
-  color: #ffffff;
-  padding: 4.5rem 1.5rem 3.5rem;
+  background: linear-gradient(rgba(2, 13, 7, 0.88), rgba(2, 13, 7, 0.92)), url('/login_backdrop_1779051950394.png') center/cover;
+  color: #f0fdf4;
+  padding: 7.5rem 0 5.5rem;
+  text-align: center;
 }
 
 .container {
@@ -104,64 +98,37 @@
   padding: 0 1.5rem;
 }
 
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #4ade80;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 1.25rem;
-  transition: opacity 0.2s;
-}
-
-.back-link:hover {
-  opacity: 0.8;
-}
-
-.badge-accent {
-  display: inline-block;
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.25rem 0.85rem;
-  border-radius: 999px;
-  text-transform: uppercase;
-  margin-bottom: 0.75rem;
-}
-
 .hero-title {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(2rem, 4vw, 2.8rem);
-  font-weight: 800;
-  margin: 0 0 0.5rem 0;
+  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+  font-weight: 500;
   color: #ffffff !important;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
 }
 
 .hero-subtitle {
+  color: rgba(240, 253, 244, 0.85);
   font-size: 1.05rem;
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0;
+  max-width: 580px;
+  margin: 0 auto;
   line-height: 1.6;
 }
 
 .legal-main {
-  padding: 3.5rem 1.5rem 5rem;
+  padding: 2rem 1.5rem 3.5rem;
 }
 
 .legal-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 20px;
-  padding: 3rem 2.5rem;
+  padding: 2rem 2rem;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
 }
 
 .legal-section {
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .legal-section:last-child {

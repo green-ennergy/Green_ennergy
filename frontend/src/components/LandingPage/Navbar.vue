@@ -104,7 +104,15 @@ const isScrolled = ref(false)
 const isMenuOpen = ref(false)
 
 const isLightNavbar = computed(() => {
-  return route && route.path && route.path.startsWith('/store')
+  if (!route || !route.path) return false
+  return (
+    route.path.startsWith('/store') ||
+    route.path.startsWith('/services') ||
+    route.path.startsWith('/partners') ||
+    route.path.startsWith('/about') ||
+    route.path.startsWith('/privacy') ||
+    route.path.startsWith('/terms')
+  )
 })
 
 const handleScroll = () => {

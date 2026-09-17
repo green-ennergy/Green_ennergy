@@ -2,8 +2,7 @@
   <div class="about-page">
     <!-- Hero Header -->
     <header class="about-hero">
-      <div class="container hero-content">
-        <span class="badge-accent">Energy Agency</span>
+      <div class="container">
         <h1 class="hero-title">À Propos de Notre Agence</h1>
         <p class="hero-subtitle">
           Pionniers de la transition énergétique solaire et de l'autonomie électrique depuis plus de 10 ans.
@@ -182,9 +181,9 @@ const certifications = [
 }
 
 .about-hero {
-  background: linear-gradient(160deg, #020d07 0%, #052e16 100%);
-  color: #ffffff;
-  padding: 5rem 1.5rem 4rem;
+  background: linear-gradient(rgba(2, 13, 7, 0.88), rgba(2, 13, 7, 0.92)), url('/login_backdrop_1779051950394.png') center/cover;
+  color: #f0fdf4;
+  padding: 7.5rem 0 5.5rem;
   text-align: center;
 }
 
@@ -194,35 +193,25 @@ const certifications = [
   padding: 0 1.5rem;
 }
 
-.badge-accent {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  font-size: 0.78rem;
-  font-weight: 700;
-  padding: 0.25rem 0.85rem;
-  border-radius: 999px;
-  text-transform: uppercase;
-}
-
 .hero-title {
   font-family: 'Space Grotesk', sans-serif;
   font-size: clamp(2.2rem, 4.5vw, 3.2rem);
-  font-weight: 800;
-  margin: 1rem 0 0.5rem;
+  font-weight: 500;
   color: #ffffff !important;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
 }
 
 .hero-subtitle {
-  font-size: 1.1rem;
-  color: rgba(255, 255, 255, 0.85);
-  max-width: 680px;
+  color: rgba(240, 253, 244, 0.85);
+  font-size: 1.05rem;
+  max-width: 580px;
   margin: 0 auto;
   line-height: 1.6;
 }
 
 .about-main {
-  padding: 4rem 1.5rem;
+  padding: 2.5rem 1.5rem 4rem;
 }
 
 .about-grid {
@@ -245,7 +234,7 @@ const certifications = [
   text-transform: uppercase;
   letter-spacing: 0.5px;
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 2rem;
 }
 
 .about-text-card h2 {
@@ -355,12 +344,12 @@ const certifications = [
 
 /* Timeline */
 .timeline-section {
-  margin-top: 5rem;
+  margin-top: 2.75rem;
 }
 
 .timeline-head {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .timeline-head h2 {
@@ -417,12 +406,12 @@ const certifications = [
 
 /* Team */
 .team-section {
-  margin-top: 5rem;
+  margin-top: 2.75rem;
 }
 
 .team-head {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .team-head h2 {
@@ -499,12 +488,12 @@ const certifications = [
 
 /* Certifications */
 .certs-section {
-  margin-top: 5rem;
+  margin-top: 2.75rem;
 }
 
 .certs-head {
   text-align: center;
-  margin-bottom: 2.5rem;
+  margin-bottom: 1.5rem;
 }
 
 .certs-head h2 {
@@ -548,11 +537,11 @@ const certifications = [
 
 /* CTA */
 .about-cta-box {
-  margin-top: 5rem;
+  margin-top: 2.75rem;
   background: linear-gradient(135deg, #052e16 0%, #020d07 100%);
   color: #ffffff;
   border-radius: 24px;
-  padding: 3.5rem 2rem;
+  padding: 2.5rem 1.5rem;
   text-align: center;
 }
 

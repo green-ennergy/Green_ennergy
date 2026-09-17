@@ -11,13 +11,8 @@
     <div class="marquee-wrapper" aria-label="Partner logos">
       <div class="marquee-track" aria-hidden="true">
         <div class="partner-logo" v-for="(p, i) in [...partners, ...partners]" :key="i">
-          <div class="logo-ph-box">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
-              <circle cx="8.5" cy="8.5" r="1.5"/>
-              <polyline points="21 15 16 10 5 21"/>
-            </svg>
-            <span class="logo-ph-title">Logo Partenaire</span>
+          <div class="logo-brand-box">
+            <img :src="p.logo" :alt="p.name" class="brand-logo-img" />
           </div>
         </div>
       </div>
@@ -38,14 +33,16 @@
 
 <script setup>
 const partners = [
-  { name: 'Deye',      color: '#4a90e2' },
-  { name: 'JinkoSolar', color: '#2e7d32' },
-  { name: 'SAMSUNG',   color: '#1565c0' },
-  { name: 'LG',        color: '#c62828' },
-  { name: 'LONGi',     color: '#d32f2f' },
-  { name: 'HUAWEI',    color: '#e53935' },
-  { name: 'SunPower',  color: '#ff8f00' },
-  { name: 'Enphase',   color: '#00796b' },
+  { name: 'SAMSUNG',        logo: '/logos/samsung.svg' },
+  { name: 'Deye',           logo: '/logos/deye.svg' },
+  { name: 'HUAWEI',         logo: '/logos/huawei.svg' },
+  { name: 'LG',             logo: '/logos/lg.svg' },
+  { name: 'JinkoSolar',     logo: '/logos/jinko.svg' },
+  { name: 'LONGi',          logo: '/logos/longi.svg' },
+  { name: 'SunPower',       logo: '/logos/sunpower.svg' },
+  { name: 'Enphase',        logo: '/logos/enphase.svg' },
+  { name: 'Canadian Solar', logo: '/logos/canadian.svg' },
+  { name: 'SMA',            logo: '/logos/sma.svg' },
 ]
 </script>
 
@@ -114,29 +111,37 @@ const partners = [
   opacity: 1;
 }
 
-.logo-ph-box {
+.logo-brand-box {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  background: rgba(0, 0, 0, 0.03);
-  border: 1px dashed rgba(0, 0, 0, 0.15);
-  padding: 0.6rem 1.25rem;
-  border-radius: 12px;
-  color: var(--text-muted);
-  transition: all 0.2s;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.65rem 1.5rem;
+  border-radius: 14px;
+  height: 52px;
+  min-width: 130px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s;
 }
 
-.partner-logo:hover .logo-ph-box {
-  background: rgba(74, 222, 128, 0.08);
-  border-color: #16a34a;
-  color: #16a34a;
+.partner-logo:hover .logo-brand-box {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.12);
+  border-color: rgba(22, 163, 74, 0.3);
 }
 
-.logo-ph-title {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1rem;
-  font-weight: 700;
-  white-space: nowrap;
+.brand-logo-img {
+  height: 28px;
+  max-width: 120px;
+  object-fit: contain;
+  display: block;
+  filter: grayscale(15%);
+  transition: filter 0.25s;
+}
+
+.partner-logo:hover .brand-logo-img {
+  filter: grayscale(0%);
 }
 
 /* ─── Footer link ───────────────────────────────────────── */
