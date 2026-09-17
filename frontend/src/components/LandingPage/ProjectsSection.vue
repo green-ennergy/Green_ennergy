@@ -50,10 +50,6 @@
           </div>
         </div>
       </div>
-      
-      <div class="text-center animate-fade-up delay-300" style="margin-top: 3rem;">
-        <a href="#" class="btn btn-secondary" style="color: var(--text-main); border-color: rgba(0,0,0,0.1);">View All Projects</a>
-      </div>
     </div>
   </section>
 </template>

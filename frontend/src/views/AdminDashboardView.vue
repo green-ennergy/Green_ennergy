@@ -1150,6 +1150,135 @@
           </div>
         </section>
 
+        <!-- Services Management -->
+        <section v-if="activeTab === 'services'" class="panel">
+          <header class="panel-header">
+            <div>
+              <h1>Gestion des Services</h1>
+              <p>Activer, désactiver et modifier les tarifs, durées et descriptions des services solaires.</p>
+            </div>
+          </header>
+
+          <div class="ops-services-config-view">
+            <div class="config-grid">
+              <div
+                v-for="srv in servicesConfig"
+                :key="srv.id"
+                :class="['service-config-card', { disabled: !srv.enabled }]"
+              >
+                <div class="card-head">
+                  <div>
+                    <span class="cat-tag">{{ srv.category }}</span>
+                    <h3>{{ srv.title }}</h3>
+                  </div>
+
+                  <!-- Toggle Switch -->
+                  <div class="toggle-switch-wrap">
+                    <label class="switch">
+                      <input
+                        type="checkbox"
+                        :checked="srv.enabled"
+                        @change="toggleServiceEnabled(srv.id)"
+                      />
+                      <span class="slider round"></span>
+                    </label>
+                    <span :class="['toggle-lbl', srv.enabled ? 'enabled' : 'disabled']">
+                      {{ srv.enabled ? 'Actif' : 'Désactivé' }}
+                    </span>
+                  </div>
+                </div>
+
+                <p class="config-desc">{{ srv.desc }}</p>
+
+                <div class="config-meta">
+                  <span>⏱️ Durée: <strong>{{ srv.estimatedDuration }}</strong></span>
+                  <span>💰 Tarif: <strong>{{ srv.startingPrice }}</strong></span>
+                </div>
+
+                <div class="card-footer-actions">
+                  <button type="button" class="edit-service-btn full" @click="openEditServiceModal(srv)">
+                    <AdminIcon name="edit" size="14" />
+                    <span>Modifier les détails</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Liste des Opérateurs -->
+        <section v-if="activeTab === 'operators'" class="panel operators-panel">
+          <header class="panel-header">
+            <div>
+              <h1>Liste des Opérateurs</h1>
+              <p>Gestion de la flotte des techniciens de terrain et affectation rapide des missions.</p>
+            </div>
+            <button class="primary-btn" @click="openCreateOperatorModal()">
+              <AdminIcon name="plus" size="16" />
+              <span>Ajouter un opérateur</span>
+            </button>
+          </header>
+
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Opérateur</th>
+                  <th>Région / Ville</th>
+                  <th>Téléphone</th>
+                  <th>Statut de Service</th>
+                  <th>Missions Actives</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="op in opsOperators" :key="op.id">
+                  <td>
+                    <div class="op-table-profile">
+                      <div class="op-mini-avatar" :style="{ backgroundColor: op.avatarColor }">
+                        {{ op.name.substring(0, 2).toUpperCase() }}
+                      </div>
+                      <div>
+                        <strong>{{ op.name }}</strong><br />
+                        <small class="text-muted">{{ op.role }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ op.city }}</td>
+                  <td>{{ op.phone }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      :class="['duty-badge', getDutyStatusClass(op.dutyStatus)]"
+                      @click="toggleOperatorDuty(op.id)"
+                      title="Cliquer pour changer le statut"
+                      style="border: none; cursor: pointer;"
+                    >
+                      ● {{ getDutyStatusLabel(op.dutyStatus) }}
+                    </button>
+                  </td>
+                  <td>
+                    <span class="workload-tag">{{ getOperatorActiveTaskCount(op.id) }} Actives</span>
+                  </td>
+                  <td class="col-actions">
+                    <div class="row-actions">
+                      <button type="button" class="action-btn" @click="openCreateTaskModal(op.id)" title="Assigner Tâche">
+                        <AdminIcon name="plus" size="15" />
+                      </button>
+                      <button type="button" class="action-btn" @click="openEditOperatorModal(op)" title="Modifier l'opérateur">
+                        <AdminIcon name="edit" size="15" />
+                      </button>
+                      <button type="button" class="action-btn danger" @click="handleDeleteOperator(op.id)" title="Supprimer l'opérateur">
+                        <AdminIcon name="trash" size="15" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- Operations Dispatch -->
         <section v-if="activeTab === 'operations'" class="panel ops-panel">
           <header class="panel-header ops-header">
@@ -1359,7 +1488,10 @@
                         <textarea v-model="taskForm.adminNotes" rows="3"></textarea>
                       </label>
                     </div>
-                  </section>
+                    <h4>{{ task.title }}</h4>
+                    <p class="agenda-op">👤 {{ (task.operatorName && task.operatorName.trim()) ? task.operatorName : 'Non assigné' }}</p>
+                    <p class="agenda-time">⏰ {{ task.timeSlot }}</p>
+                  </div>
                 </div>
 
                 <footer class="modal-footer">
@@ -1428,6 +1560,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useAdmin } from '../composables/useAdmin'
 import { useOperatorAdmin } from '../composables/useOperatorAdmin'
+import { useServices } from '../composables/useServices'
 import { useLocale } from '../composables/useLocale'
 import { useToast } from '../composables/useToast'
 import { getApiErrorMessage } from '../api/client'
@@ -1695,6 +1828,10 @@ const {
   updateTaskStatus: updateOpsTaskStatus,
   reassignTask: reassignOpsTask,
   deleteTask: deleteOpsTask,
+  addOperator,
+  updateOperator,
+  deleteOperator,
+  toggleOperatorDuty,
   getOperatorActiveTaskCount,
   reloadOperations
 } = useOperatorAdmin()
@@ -1918,13 +2055,41 @@ function getDutyStatusClass(status) {
   return 'duty-offduty'
 }
 
+const showEditServiceModal = ref(false)
+const editingService = ref(null)
+const serviceForm = ref({
+  title: '',
+  startingPrice: '',
+  estimatedDuration: '',
+  desc: '',
+  enabled: true
+})
+
+function openEditServiceModal(srv) {
+  editingService.value = srv
+  serviceForm.value = {
+    title: srv.title,
+    startingPrice: srv.startingPrice,
+    estimatedDuration: srv.estimatedDuration,
+    desc: srv.desc,
+    enabled: srv.enabled
+  }
+  showEditServiceModal.value = true
+}
+
+function submitServiceForm() {
+  if (!editingService.value) return
+  updateService(editingService.value.id, serviceForm.value)
+  showEditServiceModal.value = false
+}
+
 const tabs = computed(() => {
   locale.value
   return [
     { id: 'overview', label: t('admin.tabs.overview'), icon: 'overview' },
-    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: stats.value?.totals?.pending_rfqs || null },
+    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: (stats.value?.totals?.pending_rfqs || 0) + (serviceRequests.value?.length || 0) || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
-    { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
+    { id: 'services', label: t('admin.tabs.services') || 'Services', icon: 'services' },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
     {
       id: 'operations',
@@ -2857,6 +3022,10 @@ const handleStockChange = async (product, stock) => {
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.operators-panel .panel-header {
+  margin-bottom: 0.85rem;
 }
 
 .panel-header h1 {
@@ -6177,6 +6346,408 @@ const handleStockChange = async (product, stock) => {
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+/* Service Admin Controls & Realization Progress CSS */
+.ops-services-config-view .config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.service-config-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.service-config-card.disabled {
+  background: #f8fafc;
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.service-config-card .card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.cat-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #16a34a;
+  text-transform: uppercase;
+}
+
+.service-config-card h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0.2rem 0 0 0;
+}
+
+.toggle-switch-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: #16a34a;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.toggle-lbl {
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.toggle-lbl.enabled { color: #16a34a; }
+.toggle-lbl.disabled { color: #b45309; }
+
+.config-desc {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.config-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  background: #f8fafc;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.realization-summary {
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.steps-mini-list {
+  padding-left: 1.2rem;
+  margin: 0.35rem 0 0 0;
+}
+
+/* Service Requests Phase Controls */
+.assign-op-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.assign-op-box select {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.phase-badge-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 130px;
+}
+
+.phase-num {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.mini-progress-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mini-fill {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 999px;
+}
+
+.phase-step-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.phase-step-buttons span {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.step-btn-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.step-toggle-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-weight: 800;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.step-toggle-btn.active {
+  background: #052e16;
+  color: #4ade80;
+  border-color: #052e16;
+}
+
+/* Operator Table Profile & Service Editing */
+.op-table-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-footer-actions {
+  margin-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.85rem;
+}
+
+.edit-service-btn {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-service-btn:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.ghost-btn.full {
+  width: 100%;
+  justify-content: center;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* Modals styled in 'Demande ce service' design */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1.25rem;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.modal-card.modal-lg {
+  max-width: 720px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0;
+}
+
+.modal-sub {
+  font-size: 0.88rem;
+  color: #16a34a;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+
+.close-btn {
+  background: #f1f5f9;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.form-section-head {
+  border-left: 3px solid #16a34a;
+  padding-left: 0.65rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.form-section-head h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #052e16;
+  margin: 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-row label.full {
+  flex: 100%;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #0f172a;
+  background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  outline: none;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.25rem;
+  margin-top: 0.75rem;
 }
 </style>
 

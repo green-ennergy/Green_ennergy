@@ -27,6 +27,7 @@ export default {
   },
   nav: {
     store: 'المتجر',
+    services: 'الخدمات',
     admin: 'مساحة الإدارة',
     operator: 'مساحة التقني',
     dashboard: 'مساحة العميل',
@@ -110,9 +111,10 @@ export default {
       overview: 'نظرة عامة',
       orders: 'الطلبات و RFQ',
       marketplace: 'المنتجات',
-      projects: 'المشاريع',
+      services: 'الخدمات',
       clients: 'العملاء',
-      operations: 'المهام'
+      operators: 'التقنيون',
+      operations: 'إدارة العمليات'
     },
     overview: {
       title: 'نظرة عامة على العمليات',
@@ -693,6 +695,32 @@ export default {
       title: 'لم يتم العثور على مهام تطابق الفلتر',
       sub: 'جرّب تغيير نوع المهمة أو الحالة أو مسح كلمة البحث.',
       clearFilters: 'إعادة ضبط الفلاتر'
+    }
+  },
+  services: {
+    heroTitle: 'خدمات الطاقة الشمسية والمجددة الاحترافية',
+    heroSubtitle: 'من التركيب والصيانة المتكاملة إلى تدقيق الكهرباء المجاني وتوصيل المعدات السريع.',
+    ourServices: 'عروض خدماتنا الميدانية',
+    requestService: 'طلب الخدمة',
+    viewDetails: 'عرض التفاصيل والاحتساب',
+    disabledNotice: 'تخضع هذه الخدمة حالياً لتحديثات الطاقة الاستيعابية وهي متوقفة مؤقتاً.',
+    requestModalTitle: 'تقديم طلب خدمة ميدانية',
+    requestModalSubtitle: 'أدخل تفاصيل موقعك وسيقوم فريقنا الهندسي بمراجعة الطلب وتعيين تقني خلال ساعتين.',
+    form: {
+      fullName: 'الاسم الكامل / الشركة',
+      email: 'البريد الإلكتروني',
+      phone: 'رقم الهاتف',
+      city: 'المدينة / المنطقة',
+      address: 'عنوان الموقع أو التركيب',
+      preferredDate: 'التاريخ المفضل للخدمة',
+      notes: 'تفاصيل الموقع ونطاق الخدمة المطلوب',
+      submitBtn: 'إرسال طلب الخدمة'
+    },
+    realization: {
+      title: 'مؤشر تتبع مراحل الإنجاز (Progress Bar)',
+      currentPhase: 'المرحلة الحالية للإنجاز',
+      phaseStep: 'الخطوة {step} من 5',
+      historyTitle: 'سجل نشاط وتحديثات الخدمة'
     }
   }
 }

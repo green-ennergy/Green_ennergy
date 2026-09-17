@@ -20,13 +20,13 @@
       </p>
 
       <div class="hero-actions animate-fade-up delay-300">
-        <a href="#" class="hero-btn-primary" id="hero-cta-primary">
+        <router-link to="/services/consultation" class="hero-btn-primary" id="hero-cta-primary">
           Get Free Consultation
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
-        </a>
-        <a href="/store" class="hero-btn-ghost" id="hero-cta-store">Explore Store</a>
+        </router-link>
+        <router-link to="/store" class="hero-btn-ghost" id="hero-cta-store">Explore Store</router-link>
       </div>
 
       <p class="hero-login animate-fade-up delay-400">

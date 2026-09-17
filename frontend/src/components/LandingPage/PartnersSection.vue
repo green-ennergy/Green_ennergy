@@ -10,20 +10,22 @@
     <!-- Marquee track (no container constraint) -->
     <div class="marquee-wrapper" aria-label="Partner logos">
       <div class="marquee-track" aria-hidden="true">
-        <div class="partner-logo" v-for="p in [...partners, ...partners]" :key="p.name + Math.random()">
-          <span :style="{ color: p.color }" class="logo-text">{{ p.name }}</span>
+        <div class="partner-logo" v-for="(p, i) in [...partners, ...partners]" :key="i">
+          <div class="logo-brand-box">
+            <img :src="p.logo" :alt="p.name" class="brand-logo-img" />
+          </div>
         </div>
       </div>
     </div>
 
     <div class="container">
       <div class="partners-footer">
-        <a href="#" class="partners-cta" id="partners-learn-more">
+        <router-link to="/partners" class="partners-cta" id="partners-learn-more">
           Learn More About Our Partners
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
-        </a>
+        </router-link>
       </div>
     </div>
   </section>
@@ -31,21 +33,23 @@
 
 <script setup>
 const partners = [
-  { name: 'Deye',      color: '#4a90e2' },
-  { name: 'JinkoSolar', color: '#2e7d32' },
-  { name: 'SAMSUNG',   color: '#1565c0' },
-  { name: 'LG',        color: '#c62828' },
-  { name: 'LONGi',     color: '#d32f2f' },
-  { name: 'HUAWEI',    color: '#e53935' },
-  { name: 'SunPower',  color: '#ff8f00' },
-  { name: 'Enphase',   color: '#00796b' },
+  { name: 'SAMSUNG',        logo: '/logos/samsung.svg' },
+  { name: 'Deye',           logo: '/logos/deye.svg' },
+  { name: 'HUAWEI',         logo: '/logos/huawei.svg' },
+  { name: 'LG',             logo: '/logos/lg.svg' },
+  { name: 'JinkoSolar',     logo: '/logos/jinko.svg' },
+  { name: 'LONGi',          logo: '/logos/longi.svg' },
+  { name: 'SunPower',       logo: '/logos/sunpower.svg' },
+  { name: 'Enphase',        logo: '/logos/enphase.svg' },
+  { name: 'Canadian Solar', logo: '/logos/canadian.svg' },
+  { name: 'SMA',            logo: '/logos/sma.svg' },
 ]
 </script>
 
 <style scoped>
 .partners-section {
   background-color: var(--bg-section);
-  padding-top: 0;
+  padding: 5rem 0 4rem;
   overflow: hidden;
 }
 
@@ -97,7 +101,7 @@ const partners = [
   align-items: center;
   gap: 0.5rem;
   padding: 0 0.5rem;
-  opacity: 0.6;
+  opacity: 0.75;
   transition: opacity 0.25s;
   cursor: default;
   flex-shrink: 0;
@@ -107,18 +111,37 @@ const partners = [
   opacity: 1;
 }
 
-.logo-text {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  white-space: nowrap;
-  filter: grayscale(40%);
+.logo-brand-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.65rem 1.5rem;
+  border-radius: 14px;
+  height: 52px;
+  min-width: 130px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s;
+}
+
+.partner-logo:hover .logo-brand-box {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.12);
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+.brand-logo-img {
+  height: 28px;
+  max-width: 120px;
+  object-fit: contain;
+  display: block;
+  filter: grayscale(15%);
   transition: filter 0.25s;
 }
 
-.partner-logo:hover .logo-text {
-  filter: grayscale(0);
+.partner-logo:hover .brand-logo-img {
+  filter: grayscale(0%);
 }
 
 /* ─── Footer link ───────────────────────────────────────── */

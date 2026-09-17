@@ -73,7 +73,7 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  if (to.name === 'dashboard' || to.name === 'client-project-detail') {
+  if (to.name === 'dashboard') {
     if (!isLoggedIn.value) {
       next({ name: 'login' })
       return

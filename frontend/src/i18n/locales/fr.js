@@ -27,6 +27,7 @@ export default {
   },
   nav: {
     store: 'Boutique',
+    services: 'Services',
     admin: 'Espace admin',
     operator: 'Espace opérateur',
     dashboard: 'Espace client',
@@ -108,11 +109,12 @@ export default {
     console: 'Console opérations',
     tabs: {
       overview: 'Vue d’ensemble',
-      orders: 'Commandes & RFQ',
+      orders: 'Commandes et RFQ',
       marketplace: 'Produits',
-      projects: 'Projets',
+      services: 'Services',
       clients: 'Clients',
-      operations: 'Missions'
+      operators: 'Opérateurs',
+      operations: 'Gestion opérations'
     },
     overview: {
       title: 'Vue d’ensemble',
@@ -693,6 +695,32 @@ export default {
       title: 'Aucune tâche ne correspond à vos filtres',
       sub: 'Modifiez vos filtres de type, statut ou effacez la recherche.',
       clearFilters: 'Réinitialiser les filtres'
+    }
+  },
+  services: {
+    heroTitle: 'Services Solaires & Énergies Renouvelables',
+    heroSubtitle: 'De l’installation clé en main et la maintenance aux audits d’électricité gratuits et livraisons express.',
+    ourServices: 'Nos Offres de Services',
+    requestService: 'Demander ce service',
+    viewDetails: 'Voir détails & dimensionnement',
+    disabledNotice: 'Ce service fait actuellement l’objet d’une mise à niveau de capacité et est temporairement suspendu.',
+    requestModalTitle: 'Soumettre une Demande de Service',
+    requestModalSubtitle: 'Renseignez les coordonnées de votre site et notre équipe technique traitera votre demande sous 2 heures.',
+    form: {
+      fullName: 'Nom Complet / Raison Sociale',
+      email: 'Adresse Email',
+      phone: 'Numéro de Téléphone',
+      city: 'Ville / Région',
+      address: 'Adresse du site ou d’installation',
+      preferredDate: 'Date d’intervention souhaitée',
+      notes: 'Remarques sur le besoin ou le site',
+      submitBtn: 'Envoyer la demande de service'
+    },
+    realization: {
+      title: 'Suivi de la Barre de Réalisation',
+      currentPhase: 'Phase Actuelle de Réalisation',
+      phaseStep: 'Étape {step} sur 5',
+      historyTitle: 'Journal d’Activité de la Mission'
     }
   }
 }

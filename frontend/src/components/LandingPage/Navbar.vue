@@ -14,8 +14,10 @@
       <!-- Desktop links -->
       <ul class="nav-links" role="list">
         <li><router-link to="/store" class="nav-link">{{ t('nav.store') }}</router-link></li>
+        <li><router-link to="/services" class="nav-link">{{ t('nav.services') }}</router-link></li>
+        <li><router-link to="/partners" class="nav-link">Partenaires</router-link></li>
+        <li><router-link to="/about" class="nav-link">{{ t('nav.about') }}</router-link></li>
         <li><router-link to="/#faq" class="nav-link">{{ t('nav.faq') }}</router-link></li>
-        <li><router-link to="/#about" class="nav-link">{{ t('nav.about') }}</router-link></li>
       </ul>
 
       <div class="nav-actions">
@@ -96,7 +98,15 @@ const isScrolled = ref(false)
 const isMenuOpen = ref(false)
 
 const isLightNavbar = computed(() => {
-  return route && route.path && route.path.startsWith('/store')
+  if (!route || !route.path) return false
+  return (
+    route.path.startsWith('/store') ||
+    route.path.startsWith('/services') ||
+    route.path.startsWith('/partners') ||
+    route.path.startsWith('/about') ||
+    route.path.startsWith('/privacy') ||
+    route.path.startsWith('/terms')
+  )
 })
 
 const handleScroll = () => {

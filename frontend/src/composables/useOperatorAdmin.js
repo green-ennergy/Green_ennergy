@@ -82,6 +82,50 @@ export function useOperatorAdmin() {
     })
   }
 
+  function addOperator(opData) {
+    const newId = `OP-${105 + operators.value.length}`
+    const colors = ['#16a34a', '#0284c7', '#9333ea', '#ea580c', '#eab308', '#ec4899']
+    const newOp = {
+      id: newId,
+      name: opData.name || '',
+      role: opData.role || 'Technicien Solaire',
+      phone: opData.phone || '',
+      email: opData.email || '',
+      city: opData.city || 'Casablanca',
+      specialties: opData.specialties || ['installation'],
+      dutyStatus: opData.dutyStatus || 'onDuty',
+      avatarColor: colors[operators.value.length % colors.length],
+      completedTasksCount: 0,
+      rating: 5.0
+    }
+    operators.value.push(newOp)
+    saveOperators()
+    return newOp
+  }
+
+  function updateOperator(id, opData) {
+    const op = operators.value.find(o => o.id === id)
+    if (op) {
+      Object.assign(op, opData)
+      saveOperators()
+    }
+  }
+
+  function deleteOperator(id) {
+    operators.value = operators.value.filter(o => o.id !== id)
+    saveOperators()
+  }
+
+  function toggleOperatorDuty(id) {
+    const op = operators.value.find(o => o.id === id)
+    if (op) {
+      if (op.dutyStatus === 'onDuty') op.dutyStatus = 'onBreak'
+      else if (op.dutyStatus === 'onBreak') op.dutyStatus = 'offDuty'
+      else op.dutyStatus = 'onDuty'
+      saveOperators()
+    }
+  }
+
   return {
     tasks,
     operators,
@@ -95,8 +139,13 @@ export function useOperatorAdmin() {
     updateTaskStatus,
     reassignTask,
     deleteTask,
+    addOperator,
+    updateOperator,
+    deleteOperator,
+    toggleOperatorDuty,
     getOperatorActiveTaskCount,
     reloadOperations: fetchOperations,
     getApiErrorMessage
   }
 }
+

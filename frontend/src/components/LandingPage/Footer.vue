@@ -77,8 +77,8 @@
       <div class="footer-bottom animate-fade-up delay-400">
         <p>&copy; 2026 Energy Agency. All rights reserved.</p>
         <div class="footer-legal">
-          <a href="#">Privacy Policy</a>
-          <a href="#">Terms of Service</a>
+          <router-link to="/privacy">Privacy Policy</router-link>
+          <router-link to="/terms">Terms of Service</router-link>
         </div>
       </div>
     </div>

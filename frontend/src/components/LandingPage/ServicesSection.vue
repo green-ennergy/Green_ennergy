@@ -33,12 +33,12 @@
             </li>
           </ul>
 
-          <a href="#" class="service-link" :id="`service-learn-${i}`">
+          <router-link :to="s.route" class="service-link" :id="`service-learn-${i}`">
             Learn more
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
-          </a>
+          </router-link>
 
           <div class="card-glow" aria-hidden="true"></div>
         </div>
@@ -54,21 +54,24 @@ const services = [
     desc: 'Premium tier-1 solar panels, inverters, and battery storage systems from our trusted manufacturing partners.',
     bullets: ['Tier-1 solar panels', 'Smart inverters', 'Battery storage', 'Competitive pricing'],
     featured: false,
-    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+    route: '/store',
+    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>`,
   },
   {
     title: 'Installation',
     desc: 'Professional, permitted, and inspected installations by our certified in-house engineering team. Typically completed in 1-2 days.',
     bullets: ['Certified engineers', '1-2 day install', 'Permit handling', 'Grid connection'],
     featured: true,
-    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+    route: '/services/installation',
+    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
   },
   {
     title: 'Maintenance',
     desc: 'Ongoing monitoring, cleaning, and preventative maintenance to keep your system operating at peak performance year after year.',
     bullets: ['24/7 monitoring', 'Annual cleaning', 'Performance reports', '25yr warranty support'],
     featured: false,
-    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`,
+    route: '/services/maintenance',
+    icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>`,
   },
 ]
 </script>

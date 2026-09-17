@@ -1,0 +1,7 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 40" fill="none">
+  <g transform="translate(8, 7)">
+    <path d="M2 13 A11 11 0 0 1 20 4 L16 13 Z" fill="#FFC800"/>
+    <path d="M2 13 A11 11 0 0 0 20 22 L16 13 Z" fill="#D81E05"/>
+  </g>
+  <text x="38" y="27" fill="#1C2B39" font-family="'Space Grotesk', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="20" letter-spacing="2">SMA</text>
+</svg>

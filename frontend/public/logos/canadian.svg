@@ -1,0 +1,7 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 40" fill="none">
+  <g transform="translate(8, 7)">
+    <path d="M13 2 L15 8 L21 7 L17 12 L20 17 L14 16 L13 23 L12 16 L6 17 L9 12 L5 7 L11 8 Z" fill="#CC0000"/>
+  </g>
+  <text x="36" y="21" fill="#CC0000" font-family="'Space Grotesk', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="13" letter-spacing="1">CANADIAN</text>
+  <text x="36" y="32" fill="#333333" font-family="'Space Grotesk', 'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="11" letter-spacing="1.5">SOLAR</text>
+</svg>
