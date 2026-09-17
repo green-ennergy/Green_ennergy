@@ -1187,7 +1187,7 @@
                       <span :class="['status-pill', task.status]">{{ task.status }}</span>
                     </div>
                     <h4>{{ task.title }}</h4>
-                    <p class="agenda-op">👤 {{ task.operatorName }}</p>
+                    <p class="agenda-op">👤 {{ (task.operatorName && task.operatorName.trim()) ? task.operatorName : 'Non assigné' }}</p>
                     <p class="agenda-time">⏰ {{ task.timeSlot }}</p>
                   </div>
                 </div>

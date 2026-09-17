@@ -17,11 +17,18 @@
         <div class="marquee-wrapper" aria-label="Logos des partenaires">
           <div class="marquee-track">
             <div
-              v-for="p in [...partnerList, ...partnerList]"
-              :key="p.name + Math.random()"
+              v-for="(p, idx) in [...partnerList, ...partnerList]"
+              :key="idx"
               class="partner-chip"
             >
-              <span :style="{ color: p.color }" class="chip-name">{{ p.name }}</span>
+              <div class="chip-img-ph">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span class="ph-txt">Logo Partenaire</span>
+              </div>
               <span class="chip-cat">{{ p.category }}</span>
             </div>
           </div>
@@ -38,8 +45,13 @@
         <div class="partners-grid">
           <article v-for="p in partnerList" :key="p.name" class="partner-card">
             <div class="card-head">
-              <div class="logo-box" :style="{ borderColor: p.color + '40', backgroundColor: p.color + '10' }">
-                <span :style="{ color: p.color }" class="logo-title">{{ p.name }}</span>
+              <div class="logo-box-ph">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <span class="logo-ph-txt">Logo Partenaire</span>
               </div>
               <span class="cat-tag">{{ p.category }}</span>
             </div>
@@ -238,9 +250,17 @@ const partnerList = [
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-.chip-name {
-  font-weight: 800;
-  font-size: 1rem;
+.chip-img-ph {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #16a34a;
+}
+
+.ph-txt {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #1e293b;
 }
 
 .chip-cat {
@@ -301,15 +321,21 @@ const partnerList = [
   margin-bottom: 1rem;
 }
 
-.logo-box {
-  padding: 0.5rem 1rem;
+.logo-box-ph {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.9rem;
   border-radius: 12px;
-  border: 1px solid;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
 }
 
-.logo-title {
-  font-weight: 800;
-  font-size: 1.1rem;
+.logo-ph-txt {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #334155;
 }
 
 .cat-tag {

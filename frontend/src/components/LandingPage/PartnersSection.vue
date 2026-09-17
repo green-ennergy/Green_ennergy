@@ -10,8 +10,15 @@
     <!-- Marquee track (no container constraint) -->
     <div class="marquee-wrapper" aria-label="Partner logos">
       <div class="marquee-track" aria-hidden="true">
-        <div class="partner-logo" v-for="p in [...partners, ...partners]" :key="p.name + Math.random()">
-          <span :style="{ color: p.color }" class="logo-text">{{ p.name }}</span>
+        <div class="partner-logo" v-for="(p, i) in [...partners, ...partners]" :key="i">
+          <div class="logo-ph-box">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
+              <circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+            <span class="logo-ph-title">Logo Partenaire</span>
+          </div>
         </div>
       </div>
     </div>
@@ -45,7 +52,7 @@ const partners = [
 <style scoped>
 .partners-section {
   background-color: var(--bg-section);
-  padding-top: 0;
+  padding: 5rem 0 4rem;
   overflow: hidden;
 }
 
@@ -97,7 +104,7 @@ const partners = [
   align-items: center;
   gap: 0.5rem;
   padding: 0 0.5rem;
-  opacity: 0.6;
+  opacity: 0.75;
   transition: opacity 0.25s;
   cursor: default;
   flex-shrink: 0;
@@ -107,18 +114,29 @@ const partners = [
   opacity: 1;
 }
 
-.logo-text {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 1.4rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  white-space: nowrap;
-  filter: grayscale(40%);
-  transition: filter 0.25s;
+.logo-ph-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px dashed rgba(0, 0, 0, 0.15);
+  padding: 0.6rem 1.25rem;
+  border-radius: 12px;
+  color: var(--text-muted);
+  transition: all 0.2s;
 }
 
-.partner-logo:hover .logo-text {
-  filter: grayscale(0);
+.partner-logo:hover .logo-ph-box {
+  background: rgba(74, 222, 128, 0.08);
+  border-color: #16a34a;
+  color: #16a34a;
+}
+
+.logo-ph-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 /* ─── Footer link ───────────────────────────────────────── */

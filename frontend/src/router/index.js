@@ -60,6 +60,16 @@ const routes = [
     component: () => import('../views/PartnersView.vue')
   },
   {
+    path: '/privacy',
+    name: 'privacy-policy',
+    component: () => import('../views/PrivacyPolicyView.vue')
+  },
+  {
+    path: '/terms',
+    name: 'terms-and-conditions',
+    component: () => import('../views/TermsView.vue')
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('../views/NotFoundView.vue')
