@@ -922,6 +922,135 @@
           </div>
         </section>
 
+        <!-- Services Management -->
+        <section v-if="activeTab === 'services'" class="panel">
+          <header class="panel-header">
+            <div>
+              <h1>Gestion des Services</h1>
+              <p>Activer, désactiver et modifier les tarifs, durées et descriptions des services solaires.</p>
+            </div>
+          </header>
+
+          <div class="ops-services-config-view">
+            <div class="config-grid">
+              <div
+                v-for="srv in servicesConfig"
+                :key="srv.id"
+                :class="['service-config-card', { disabled: !srv.enabled }]"
+              >
+                <div class="card-head">
+                  <div>
+                    <span class="cat-tag">{{ srv.category }}</span>
+                    <h3>{{ srv.title }}</h3>
+                  </div>
+
+                  <!-- Toggle Switch -->
+                  <div class="toggle-switch-wrap">
+                    <label class="switch">
+                      <input
+                        type="checkbox"
+                        :checked="srv.enabled"
+                        @change="toggleServiceEnabled(srv.id)"
+                      />
+                      <span class="slider round"></span>
+                    </label>
+                    <span :class="['toggle-lbl', srv.enabled ? 'enabled' : 'disabled']">
+                      {{ srv.enabled ? 'Actif' : 'Désactivé' }}
+                    </span>
+                  </div>
+                </div>
+
+                <p class="config-desc">{{ srv.desc }}</p>
+
+                <div class="config-meta">
+                  <span>⏱️ Durée: <strong>{{ srv.estimatedDuration }}</strong></span>
+                  <span>💰 Tarif: <strong>{{ srv.startingPrice }}</strong></span>
+                </div>
+
+                <div class="card-footer-actions">
+                  <button type="button" class="edit-service-btn full" @click="openEditServiceModal(srv)">
+                    <AdminIcon name="edit" size="14" />
+                    <span>Modifier les détails</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Liste des Opérateurs -->
+        <section v-if="activeTab === 'operators'" class="panel operators-panel">
+          <header class="panel-header">
+            <div>
+              <h1>Liste des Opérateurs</h1>
+              <p>Gestion de la flotte des techniciens de terrain et affectation rapide des missions.</p>
+            </div>
+            <button class="primary-btn" @click="openCreateOperatorModal()">
+              <AdminIcon name="plus" size="16" />
+              <span>Ajouter un opérateur</span>
+            </button>
+          </header>
+
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Opérateur</th>
+                  <th>Région / Ville</th>
+                  <th>Téléphone</th>
+                  <th>Statut de Service</th>
+                  <th>Missions Actives</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="op in opsOperators" :key="op.id">
+                  <td>
+                    <div class="op-table-profile">
+                      <div class="op-mini-avatar" :style="{ backgroundColor: op.avatarColor }">
+                        {{ op.name.substring(0, 2).toUpperCase() }}
+                      </div>
+                      <div>
+                        <strong>{{ op.name }}</strong><br />
+                        <small class="text-muted">{{ op.role }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ op.city }}</td>
+                  <td>{{ op.phone }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      :class="['duty-badge', getDutyStatusClass(op.dutyStatus)]"
+                      @click="toggleOperatorDuty(op.id)"
+                      title="Cliquer pour changer le statut"
+                      style="border: none; cursor: pointer;"
+                    >
+                      ● {{ getDutyStatusLabel(op.dutyStatus) }}
+                    </button>
+                  </td>
+                  <td>
+                    <span class="workload-tag">{{ getOperatorActiveTaskCount(op.id) }} Actives</span>
+                  </td>
+                  <td class="col-actions">
+                    <div class="row-actions">
+                      <button type="button" class="action-btn" @click="openCreateTaskModal(op.id)" title="Assigner Tâche">
+                        <AdminIcon name="plus" size="15" />
+                      </button>
+                      <button type="button" class="action-btn" @click="openEditOperatorModal(op)" title="Modifier l'opérateur">
+                        <AdminIcon name="edit" size="15" />
+                      </button>
+                      <button type="button" class="action-btn danger" @click="handleDeleteOperator(op.id)" title="Supprimer l'opérateur">
+                        <AdminIcon name="trash" size="15" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <!-- Operations Dispatch -->
         <section v-if="activeTab === 'operations'" class="panel ops-panel">
           <header class="panel-header ops-header">
@@ -935,72 +1064,21 @@
             </button>
           </header>
 
-          <!-- Operations KPI Summary -->
-          <div class="ops-kpis">
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap green">
-                <AdminIcon name="clients" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.totalOps }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.totalOps') }}</span>
-              </div>
-            </div>
-
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap blue">
-                <AdminIcon name="user-check" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.onDutyOps }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.onDutyOps') }}</span>
-              </div>
-            </div>
-
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap orange">
-                <AdminIcon name="clock" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.inProgress }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.inProgress') }}</span>
-              </div>
-            </div>
-
-            <div class="ops-kpi-card">
-              <div class="kpi-icon-wrap purple">
-                <AdminIcon name="operations" size="20" />
-              </div>
-              <div>
-                <span class="kpi-num">{{ opsStats.totalTasks }}</span>
-                <span class="kpi-lbl">{{ t('admin.operations.kpis.totalTasks') }}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Operations Navigation Subtabs -->
+          <!-- Operations Navigation Subtabs (KPIs removed for clean, minimal view) -->
           <div class="ops-nav-tabs">
             <button
               :class="['ops-subtab-btn', { active: operationsSubtab === 'calendar' }]"
               @click="operationsSubtab = 'calendar'"
             >
               <AdminIcon name="calendar" size="16" />
-              <span>{{ t('admin.operations.subtabs.calendar') }}</span>
-            </button>
-            <button
-              :class="['ops-subtab-btn', { active: operationsSubtab === 'operators' }]"
-              @click="operationsSubtab = 'operators'"
-            >
-              <AdminIcon name="clients" size="16" />
-              <span>{{ t('admin.operations.subtabs.operators') }}</span>
-              <span class="tab-badge">{{ opsOperators.length }}</span>
+              <span>Planning & Calendrier</span>
             </button>
             <button
               :class="['ops-subtab-btn', { active: operationsSubtab === 'tasksQueue' }]"
               @click="operationsSubtab = 'tasksQueue'"
             >
               <AdminIcon name="orders" size="16" />
-              <span>{{ t('admin.operations.subtabs.tasksQueue') }}</span>
+              <span>Toutes les tâches</span>
               <span class="tab-badge">{{ opsTasks.length }}</span>
             </button>
             <button
@@ -1008,16 +1086,8 @@
               @click="operationsSubtab = 'serviceRequests'"
             >
               <AdminIcon name="operations" size="16" />
-              <span>Service Requests & Progress</span>
+              <span>Demandes & Suivi Réalisation</span>
               <span class="tab-badge">{{ serviceRequests.length }}</span>
-            </button>
-            <button
-              :class="['ops-subtab-btn', { active: operationsSubtab === 'serviceConfig' }]"
-              @click="operationsSubtab = 'serviceConfig'"
-            >
-              <AdminIcon name="edit" size="16" />
-              <span>Manage Services (Enable/Disable)</span>
-              <span class="tab-badge">{{ availableServices.length }}/{{ servicesConfig.length }}</span>
             </button>
           </div>
 
@@ -1214,7 +1284,6 @@
                     <th>Task ID</th>
                     <th>Type</th>
                     <th>Title & Client</th>
-                    <th>Assigned Operator</th>
                     <th>Schedule</th>
                     <th>Priority</th>
                     <th>Status</th>
@@ -1230,11 +1299,6 @@
                     <td>
                       <strong class="ops-task-title">{{ t.title }}</strong>
                       <div class="ops-task-sub">📍 {{ t.client.name }} — {{ t.client.city }}</div>
-                    </td>
-                    <td>
-                      <div class="op-table-cell">
-                        👤 {{ t.operatorName }}
-                      </div>
                     </td>
                     <td>
                       <div class="time-cell">
@@ -1260,7 +1324,7 @@
                     </td>
                   </tr>
                   <tr v-if="filteredOpsTasks.length === 0">
-                    <td colspan="8" class="text-center py-4">No tasks found matching your filters.</td>
+                    <td colspan="7" class="text-center py-4">No tasks found matching your filters.</td>
                   </tr>
                 </tbody>
               </table>
@@ -1393,125 +1457,244 @@
               </div>
             </div>
           </div>
-
-          <!-- TASK ASSIGNMENT & EDIT MODAL -->
-          <div v-if="showTaskModal" class="modal-overlay" @click.self="showTaskModal = false">
-            <div class="modal-card ops-modal">
-              <header class="modal-header">
-                <h3>{{ editingTask ? t('admin.operations.modal.editTitle') : t('admin.operations.modal.createTitle') }}</h3>
-                <button class="close-btn" @click="showTaskModal = false">×</button>
-              </header>
-
-              <form @submit.prevent="submitTaskForm" class="task-form">
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.taskType') }}</span>
-                    <select v-model="taskForm.type" required>
-                      <option value="installation">Installation (New Equipment)</option>
-                      <option value="maintenance">Maintenance (Diagnostics & Repair)</option>
-                      <option value="delivery">Delivery (New Order)</option>
-                      <option value="study">Make a Study (Audit & Sizing)</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.selectOperator') }}</span>
-                    <select v-model="taskForm.operatorId" required>
-                      <option v-for="op in opsOperators" :key="op.id" :value="op.id">
-                        {{ op.name }} ({{ op.role }})
-                      </option>
-                    </select>
-                  </label>
-                </div>
-
-                <div class="form-row">
-                  <label class="full-width">
-                    <span>{{ t('admin.operations.modal.taskTitle') }}</span>
-                    <input
-                      v-model="taskForm.title"
-                      type="text"
-                      placeholder="e.g. 10 kWp Solar Installation & Inverter Commissioning"
-                      required
-                    />
-                  </label>
-                </div>
-
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.priority') }}</span>
-                    <select v-model="taskForm.priority">
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.scheduledDate') }}</span>
-                    <input v-model="taskForm.scheduledDate" type="date" required />
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.timeSlot') }}</span>
-                    <select v-model="taskForm.timeSlot">
-                      <option value="08:30 - 11:30">08:30 - 11:30</option>
-                      <option value="09:00 - 13:00">09:00 - 13:00</option>
-                      <option value="10:30 - 12:30">10:30 - 12:30</option>
-                      <option value="14:00 - 17:00">14:00 - 17:00</option>
-                    </select>
-                  </label>
-                </div>
-
-                <div class="form-section-title">Client & Location Details</div>
-
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientName') }}</span>
-                    <input v-model="taskForm.clientName" type="text" placeholder="Client Name or Business" required />
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientPhone') }}</span>
-                    <input v-model="taskForm.clientPhone" type="text" placeholder="+212 6..." />
-                  </label>
-                </div>
-
-                <div class="form-row">
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientAddress') }}</span>
-                    <input v-model="taskForm.clientAddress" type="text" placeholder="Full street address..." />
-                  </label>
-
-                  <label>
-                    <span>{{ t('admin.operations.modal.clientCity') }}</span>
-                    <input v-model="taskForm.clientCity" type="text" placeholder="Casablanca, Rabat, etc." />
-                  </label>
-                </div>
-
-                <div class="form-row">
-                  <label class="full-width">
-                    <span>{{ t('admin.operations.modal.adminNotes') }}</span>
-                    <textarea
-                      v-model="taskForm.adminNotes"
-                      rows="3"
-                      placeholder="Special instructions for field operator, site access notes, equipment instructions..."
-                    ></textarea>
-                  </label>
-                </div>
-
-                <footer class="modal-footer">
-                  <button type="button" class="ghost-btn" @click="showTaskModal = false">
-                    {{ t('common.cancel') }}
-                  </button>
-                  <button type="submit" class="primary-btn">
-                    {{ editingTask ? t('admin.operations.modal.submitUpdate') : t('admin.operations.modal.submitCreate') }}
-                  </button>
-                </footer>
-              </form>
-            </div>
-          </div>
         </section>
+
+        <!-- TASK ASSIGNMENT & EDIT MODAL (Demande ce service style) -->
+        <div v-if="showTaskModal" class="modal-overlay" @click.self="showTaskModal = false">
+          <div class="modal-card modal-lg">
+            <header class="modal-header">
+              <div>
+                <h3>{{ editingTask ? t('admin.operations.modal.editTitle') : t('admin.operations.modal.createTitle') }}</h3>
+                <p class="modal-sub">Affectation et planification de mission terrain</p>
+              </div>
+              <button class="close-btn" @click="showTaskModal = false">×</button>
+            </header>
+
+            <form @submit.prevent="submitTaskForm" class="request-form">
+              <div class="form-section-head">
+                <h4>Informations de la mission</h4>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  <span>{{ t('admin.operations.modal.taskType') }}</span>
+                  <select v-model="taskForm.type" required>
+                    <option value="installation">Installation (Nouvel Équipement)</option>
+                    <option value="maintenance">Maintenance (Diagnostic & Réparation)</option>
+                    <option value="delivery">Livraison (Nouvelle Commande)</option>
+                    <option value="study">Étude Électrique (Audit & Dimensionnement)</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>{{ t('admin.operations.modal.selectOperator') }}</span>
+                  <select v-model="taskForm.operatorId" required>
+                    <option v-for="op in opsOperators" :key="op.id" :value="op.id">
+                      {{ op.name }} ({{ op.role }})
+                    </option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label class="full">
+                  <span>{{ t('admin.operations.modal.taskTitle') }}</span>
+                  <input
+                    v-model="taskForm.title"
+                    type="text"
+                    placeholder="ex: Installation 10 kWp & Mise en service Onduleur"
+                    required
+                  />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  <span>{{ t('admin.operations.modal.priority') }}</span>
+                  <select v-model="taskForm.priority">
+                    <option value="low">Basse</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="high">Haute</option>
+                    <option value="urgent">Urgente</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>{{ t('admin.operations.modal.scheduledDate') }}</span>
+                  <input v-model="taskForm.scheduledDate" type="date" required />
+                </label>
+
+                <label>
+                  <span>{{ t('admin.operations.modal.timeSlot') }}</span>
+                  <select v-model="taskForm.timeSlot">
+                    <option value="08:30 - 11:30">08:30 - 11:30</option>
+                    <option value="09:00 - 13:00">09:00 - 13:00</option>
+                    <option value="10:30 - 12:30">10:30 - 12:30</option>
+                    <option value="14:00 - 17:00">14:00 - 17:00</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-section-head">
+                <h4>Coordonnées Client & Localisation</h4>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  <span>{{ t('admin.operations.modal.clientName') }}</span>
+                  <input v-model="taskForm.clientName" type="text" placeholder="Nom du client ou entreprise" required />
+                </label>
+
+                <label>
+                  <span>{{ t('admin.operations.modal.clientPhone') }}</span>
+                  <input v-model="taskForm.clientPhone" type="text" placeholder="+212 6..." />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  <span>{{ t('admin.operations.modal.clientAddress') }}</span>
+                  <input v-model="taskForm.clientAddress" type="text" placeholder="Adresse du site..." />
+                </label>
+
+                <label>
+                  <span>{{ t('admin.operations.modal.clientCity') }}</span>
+                  <input v-model="taskForm.clientCity" type="text" placeholder="Casablanca, Rabat, etc." />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label class="full">
+                  <span>{{ t('admin.operations.modal.adminNotes') }}</span>
+                  <textarea
+                    v-model="taskForm.adminNotes"
+                    rows="3"
+                    placeholder="Consignes particulières pour l'opérateur, accès au site..."
+                  ></textarea>
+                </label>
+              </div>
+
+              <footer class="modal-footer">
+                <button type="button" class="ghost-btn" @click="showTaskModal = false">
+                  {{ t('common.cancel') }}
+                </button>
+                <button type="submit" class="primary-btn">
+                  {{ editingTask ? t('admin.operations.modal.submitUpdate') : t('admin.operations.modal.submitCreate') }}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+
+        <!-- SERVICE EDIT MODAL (Demande ce service style) -->
+        <div v-if="showEditServiceModal" class="modal-overlay" @click.self="showEditServiceModal = false">
+          <div class="modal-card">
+            <header class="modal-header">
+              <div>
+                <h3>Modifier le service solaire</h3>
+                <p class="modal-sub">{{ editingService?.title }}</p>
+              </div>
+              <button class="close-btn" @click="showEditServiceModal = false">×</button>
+            </header>
+
+            <form @submit.prevent="submitServiceForm" class="request-form">
+              <div class="form-row">
+                <label class="full">
+                  <span>Titre du service</span>
+                  <input v-model="serviceForm.title" type="text" required />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  <span>Tarif à partir de</span>
+                  <input v-model="serviceForm.startingPrice" type="text" placeholder="e.g. 4,500 MAD" required />
+                </label>
+                <label>
+                  <span>Durée estimée</span>
+                  <input v-model="serviceForm.estimatedDuration" type="text" placeholder="e.g. 1-3 Jours" required />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label class="full">
+                  <span>Description du service</span>
+                  <textarea v-model="serviceForm.desc" rows="4" required></textarea>
+                </label>
+              </div>
+
+              <footer class="modal-footer">
+                <button type="button" class="ghost-btn" @click="showEditServiceModal = false">
+                  {{ t('common.cancel') }}
+                </button>
+                <button type="submit" class="primary-btn">
+                  Enregistrer les modifications
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
+
+        <!-- OPERATOR ADD / EDIT MODAL (Demande ce service style) -->
+        <div v-if="showOperatorModal" class="modal-overlay" @click.self="showOperatorModal = false">
+          <div class="modal-card">
+            <header class="modal-header">
+              <div>
+                <h3>{{ editingOperator ? 'Modifier l\'opérateur' : 'Ajouter un nouvel opérateur' }}</h3>
+                <p class="modal-sub">Gestion des techniciens & membres d'équipe de terrain</p>
+              </div>
+              <button class="close-btn" @click="showOperatorModal = false">×</button>
+            </header>
+
+            <form @submit.prevent="submitOperatorForm" class="request-form">
+              <div class="form-row">
+                <label>
+                  <span>Nom Complet</span>
+                  <input v-model="operatorForm.name" type="text" placeholder="ex: Mehdi Bennani" required />
+                </label>
+                <label>
+                  <span>Rôle / Spécialité</span>
+                  <input v-model="operatorForm.role" type="text" placeholder="ex: Technicien PV Senior" required />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  <span>Téléphone</span>
+                  <input v-model="operatorForm.phone" type="text" placeholder="+212 661 000 000" required />
+                </label>
+                <label>
+                  <span>Email Pro</span>
+                  <input v-model="operatorForm.email" type="email" placeholder="m.bennani@greenenergy.ma" />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  <span>Région / Ville</span>
+                  <input v-model="operatorForm.city" type="text" placeholder="Casablanca, Rabat..." required />
+                </label>
+                <label>
+                  <span>Statut Initial</span>
+                  <select v-model="operatorForm.dutyStatus">
+                    <option value="onDuty">On Duty (En Service)</option>
+                    <option value="onBreak">On Break (En Pause)</option>
+                    <option value="offDuty">Off Duty (Hors Service)</option>
+                  </select>
+                </label>
+              </div>
+
+              <footer class="modal-footer">
+                <button type="button" class="ghost-btn" @click="showOperatorModal = false">
+                  {{ t('common.cancel') }}
+                </button>
+                <button type="submit" class="primary-btn">
+                  {{ editingOperator ? 'Enregistrer les modifications' : 'Créer l\'opérateur' }}
+                </button>
+              </footer>
+            </form>
+          </div>
+        </div>
       </main>
     </div>
   </div>
@@ -1729,9 +1912,69 @@ const {
   updateTaskStatus: updateOpsTaskStatus,
   reassignTask: reassignOpsTask,
   deleteTask: deleteOpsTask,
+  addOperator,
+  updateOperator,
+  deleteOperator,
+  toggleOperatorDuty,
   getOperatorActiveTaskCount,
   reloadOperations
 } = useOperatorAdmin()
+
+const showOperatorModal = ref(false)
+const editingOperator = ref(null)
+const operatorForm = ref({
+  name: '',
+  role: '',
+  phone: '',
+  email: '',
+  city: 'Casablanca',
+  dutyStatus: 'onDuty'
+})
+
+function openCreateOperatorModal() {
+  editingOperator.value = null
+  operatorForm.value = {
+    name: '',
+    role: 'Technicien Solaire',
+    phone: '+212 6',
+    email: '',
+    city: 'Casablanca',
+    dutyStatus: 'onDuty'
+  }
+  showOperatorModal.value = true
+}
+
+function openEditOperatorModal(op) {
+  editingOperator.value = op
+  operatorForm.value = {
+    name: op.name,
+    role: op.role,
+    phone: op.phone,
+    email: op.email || '',
+    city: op.city,
+    dutyStatus: op.dutyStatus
+  }
+  showOperatorModal.value = true
+}
+
+function submitOperatorForm() {
+  if (!operatorForm.value.name.trim()) return
+  if (editingOperator.value) {
+    updateOperator(editingOperator.value.id, operatorForm.value)
+    toast.success('Opérateur mis à jour avec succès')
+  } else {
+    addOperator(operatorForm.value)
+    toast.success('Nouvel opérateur ajouté avec succès')
+  }
+  showOperatorModal.value = false
+}
+
+function handleDeleteOperator(opId) {
+  if (confirm('Êtes-vous sûr de vouloir supprimer cet opérateur ?')) {
+    deleteOperator(opId)
+    toast.success('Opérateur supprimé')
+  }
+}
 
 const {
   servicesConfig,
@@ -1883,15 +2126,44 @@ function getDutyStatusClass(status) {
   return 'duty-offduty'
 }
 
+const showEditServiceModal = ref(false)
+const editingService = ref(null)
+const serviceForm = ref({
+  title: '',
+  startingPrice: '',
+  estimatedDuration: '',
+  desc: '',
+  enabled: true
+})
+
+function openEditServiceModal(srv) {
+  editingService.value = srv
+  serviceForm.value = {
+    title: srv.title,
+    startingPrice: srv.startingPrice,
+    estimatedDuration: srv.estimatedDuration,
+    desc: srv.desc,
+    enabled: srv.enabled
+  }
+  showEditServiceModal.value = true
+}
+
+function submitServiceForm() {
+  if (!editingService.value) return
+  updateService(editingService.value.id, serviceForm.value)
+  showEditServiceModal.value = false
+}
+
 const tabs = computed(() => {
   locale.value
   return [
     { id: 'overview', label: t('admin.tabs.overview'), icon: 'overview' },
-    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: stats.value?.totals?.pending_rfqs || null },
+    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: (stats.value?.totals?.pending_rfqs || 0) + (serviceRequests.value?.length || 0) || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
-    { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
+    { id: 'services', label: t('admin.tabs.services') || 'Services', icon: 'services' },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
-    { id: 'operations', label: t('admin.tabs.operations'), icon: 'operations', badge: opsStats.value?.inProgress || null }
+    { id: 'operators', label: t('admin.tabs.operators') || 'Opérateurs', icon: 'operators', badge: opsOperators.value?.length || null },
+    { id: 'operations', label: t('admin.tabs.operations'), icon: 'calendar', badge: opsStats.value?.inProgress || null }
   ]
 })
 
@@ -2656,6 +2928,10 @@ const handleStockChange = async (product, stock) => {
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.operators-panel .panel-header {
+  margin-bottom: 0.85rem;
 }
 
 .panel-header h1 {
@@ -5642,6 +5918,197 @@ input:checked + .slider:before {
   background: #052e16;
   color: #4ade80;
   border-color: #052e16;
+}
+
+/* Operator Table Profile & Service Editing */
+.op-table-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-footer-actions {
+  margin-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.85rem;
+}
+
+.edit-service-btn {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-service-btn:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.ghost-btn.full {
+  width: 100%;
+  justify-content: center;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* Modals styled in 'Demande ce service' design */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1.25rem;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.modal-card.modal-lg {
+  max-width: 720px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0;
+}
+
+.modal-sub {
+  font-size: 0.88rem;
+  color: #16a34a;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+
+.close-btn {
+  background: #f1f5f9;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.form-section-head {
+  border-left: 3px solid #16a34a;
+  padding-left: 0.65rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.form-section-head h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #052e16;
+  margin: 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-row label.full {
+  flex: 100%;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #0f172a;
+  background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  outline: none;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.25rem;
+  margin-top: 0.75rem;
 }
 </style>
 

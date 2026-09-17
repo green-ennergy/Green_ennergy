@@ -45,12 +45,12 @@
             <p class="section-desc" style="margin-top: 1rem;">
               With over a decade of expertise and 500+ successful installations, we deliver end-to-end solar solutions — from consultation and custom design through to installation and ongoing maintenance.
             </p>
-            <a href="#" class="about-cta" id="about-learn-more">
+            <router-link to="/about" class="about-cta" id="about-learn-more">
               Learn more about us
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
-            </a>
+            </router-link>
           </div>
         </div>
 

@@ -232,16 +232,28 @@ function submitRequest() {
 .detail-hero {
   background: linear-gradient(160deg, #020d07 0%, #052e16 100%);
   color: #ffffff;
-  padding: 3rem 1.5rem 3.5rem;
+  padding: 6.5rem 1.5rem 3.5rem;
 }
 
 .back-link {
   color: #4ade80;
   text-decoration: none;
   font-weight: 700;
-  font-size: 0.9rem;
-  display: inline-block;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   margin-bottom: 1.5rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.back-link:hover {
+  background: rgba(74, 222, 128, 0.2);
+  color: #a7f3d0;
 }
 
 .service-badge-row {
@@ -281,12 +293,13 @@ function submitRequest() {
   font-family: 'Space Grotesk', sans-serif;
   font-size: clamp(2rem, 3.5vw, 3rem);
   font-weight: 800;
+  color: #ffffff;
   margin-bottom: 0.75rem;
 }
 
 .hero-desc {
   font-size: 1.1rem;
-  color: #94a3b8;
+  color: rgba(240, 253, 244, 0.85);
   max-width: 750px;
   line-height: 1.6;
   margin-bottom: 2rem;

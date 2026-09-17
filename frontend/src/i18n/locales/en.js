@@ -108,11 +108,12 @@ export default {
     console: 'Operations Console',
     tabs: {
       overview: 'Overview',
-      orders: 'Orders & RFQ',
+      orders: 'Orders & RFQs',
       marketplace: 'Products',
-      projects: 'Projects',
+      services: 'Services',
       clients: 'Clients',
-      operations: 'Operations Dispatch'
+      operators: 'Operators',
+      operations: 'Operations Management'
     },
     overview: {
       title: 'Operations Overview',

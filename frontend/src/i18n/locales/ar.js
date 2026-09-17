@@ -110,8 +110,9 @@ export default {
       overview: 'نظرة عامة',
       orders: 'الطلبات و RFQ',
       marketplace: 'المنتجات',
-      projects: 'المشاريع',
+      services: 'الخدمات',
       clients: 'العملاء',
+      operators: 'التقنيون',
       operations: 'إدارة العمليات'
     },
     overview: {

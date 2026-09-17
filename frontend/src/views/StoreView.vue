@@ -399,20 +399,25 @@ const closeSuccessModal = () => {
 .store-hero {
   background: linear-gradient(rgba(2, 13, 7, 0.88), rgba(2, 13, 7, 0.92)), url('/login_backdrop_1779051950394.png') center/cover;
   color: #f0fdf4;
-  padding: 5rem 0 3.5rem;
+  padding: 7.5rem 0 5.5rem;
   text-align: center;
 }
 
 .store-hero h1 {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
-  margin-bottom: 0.75rem;
+  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
 }
 
 .store-hero p {
-  color: rgba(240, 253, 244, 0.75);
-  max-width: 520px;
+  color: rgba(240, 253, 244, 0.85);
+  font-size: 1.05rem;
+  max-width: 580px;
   margin: 0 auto;
+  line-height: 1.6;
 }
 
 .store-main {

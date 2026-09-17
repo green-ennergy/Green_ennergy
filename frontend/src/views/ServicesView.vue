@@ -234,14 +234,56 @@ function submitRequest() {
 }
 
 .hero-bg-orb {
-  position: absolute;
-  top: -50px;
-  right: -50px;
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, rgba(74, 222, 128, 0.25) 0%, transparent 70%);
-  border-radius: 50%;
-  pointer-events: none;
+  display: none;
+}
+
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.primary-btn {
+  width: 100%;
+  background: #16a34a;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.primary-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.ghost-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
 }
 
 .badge-accent {
@@ -264,6 +306,7 @@ function submitRequest() {
   font-weight: 800;
   margin-bottom: 0.85rem;
   line-height: 1.1;
+  color: #ffffff;
 }
 
 .hero-subtitle {
@@ -447,56 +490,6 @@ function submitRequest() {
   border-radius: 8px;
   margin-bottom: 1rem;
   font-weight: 600;
-}
-
-.card-actions {
-  display: flex;
-  gap: 0.65rem;
-}
-
-.primary-btn {
-  flex: 1;
-  background: #16a34a;
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  padding: 0.65rem 1rem;
-  font-weight: 700;
-  font-size: 0.88rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.4rem;
-  transition: background 0.2s;
-}
-
-.primary-btn:hover:not(:disabled) {
-  background: #15803d;
-}
-
-.primary-btn:disabled {
-  background: #94a3b8;
-  cursor: not-allowed;
-}
-
-.ghost-btn {
-  background: transparent;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-  border-radius: 10px;
-  padding: 0.65rem 0.85rem;
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.2s;
-}
-
-.ghost-btn:hover {
-  background: #f1f5f9;
 }
 
 /* Modal */

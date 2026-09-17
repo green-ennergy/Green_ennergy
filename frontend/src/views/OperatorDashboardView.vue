@@ -74,10 +74,6 @@
         <OperatorIcon name="alert" :size="18" />
         <span>{{ t('operator.duty.offDutyNotice') || 'You are currently marked as Off Duty. Set status to "On Duty" when ready to receive new dispatch updates.' }}</span>
       </div>
-
-      <!-- KPI Summary Grid -->
-      <OperatorKpiGrid :stats="stats" />
-
       <!-- TAB 1: TASKS HUB -->
       <section v-if="currentTab === 'tasks'" class="panel">
         <header class="panel-header">

@@ -18,12 +18,12 @@
 
     <div class="container">
       <div class="partners-footer">
-        <a href="#" class="partners-cta" id="partners-learn-more">
+        <router-link to="/partners" class="partners-cta" id="partners-learn-more">
           Learn More About Our Partners
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
-        </a>
+        </router-link>
       </div>
     </div>
   </section>

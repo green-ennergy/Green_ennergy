@@ -215,6 +215,18 @@ export function useServices() {
     }
   }
 
+  function updateService(serviceId, data) {
+    const srv = servicesConfig.value.find(s => s.id === serviceId)
+    if (srv) {
+      if (data.title !== undefined) srv.title = data.title
+      if (data.startingPrice !== undefined) srv.startingPrice = data.startingPrice
+      if (data.estimatedDuration !== undefined) srv.estimatedDuration = data.estimatedDuration
+      if (data.desc !== undefined) srv.desc = data.desc
+      if (data.enabled !== undefined) srv.enabled = data.enabled
+      saveConfig()
+    }
+  }
+
   function createServiceRequest(data) {
     const srv = getServiceById(data.serviceId)
     const newReq = {
@@ -302,6 +314,7 @@ export function useServices() {
     availableServices,
     getServiceById,
     toggleServiceEnabled,
+    updateService,
     createServiceRequest,
     acceptAndAssignRequest,
     updateRequestPhase,
