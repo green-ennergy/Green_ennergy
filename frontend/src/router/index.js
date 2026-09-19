@@ -11,12 +11,12 @@ const routes = [
     path: '/projects/:id',
     name: 'project-detail',
     component: () => import('../views/ProjectDetailView.vue'),
-    props: true
+    props: true,
   },
   {
     path: '/login',
     name: 'login',
-    component: () => import('../views/LoginView.vue')
+    component: () => import('../views/LoginView.vue'),
   },
   {
     path: '/admin',
@@ -40,9 +40,44 @@ const routes = [
     props: true,
   },
   {
+    path: '/services',
+    name: 'services',
+    component: () => import('../views/ServicesView.vue'),
+  },
+  {
+    path: '/services/:id',
+    name: 'service-detail',
+    component: () => import('../views/ServiceDetailView.vue'),
+    props: true,
+  },
+  {
+    path: '/about',
+    name: 'about',
+    component: () => import('../views/AboutView.vue'),
+  },
+  {
+    path: '/partners',
+    name: 'partners',
+    component: () => import('../views/PartnersView.vue'),
+  },
+  {
+    path: '/privacy',
+    name: 'privacy',
+    component: () => import('../views/PrivacyPolicyView.vue'),
+  },
+  {
+    path: '/terms',
+    name: 'terms',
+    component: () => import('../views/TermsView.vue'),
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
-    component: () => import('../views/ClientFollowupView.vue')
+    component: () => import('../views/ClientFollowupView.vue'),
+  },
+  {
+    path: '/dashboard/projects/:id',
+    redirect: (to) => ({ name: 'dashboard', query: { project: to.params.id } }),
   },
   {
     path: '/:pathMatch(.*)*',
@@ -75,7 +110,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.name === 'dashboard') {
     if (!isLoggedIn.value) {
-      next({ name: 'login' })
+      next({ name: 'login', query: { redirect: to.fullPath } })
       return
     }
     if (isAdmin.value) {
@@ -90,7 +125,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.name === 'admin') {
     if (!isLoggedIn.value) {
-      next({ name: 'login' })
+      next({ name: 'login', query: { redirect: to.fullPath } })
       return
     }
     if (!isAdmin.value) {
@@ -101,7 +136,7 @@ router.beforeEach((to, from, next) => {
 
   if (to.name === 'operator') {
     if (!isLoggedIn.value) {
-      next({ name: 'login' })
+      next({ name: 'login', query: { redirect: to.fullPath } })
       return
     }
     if (!isOperator.value) {

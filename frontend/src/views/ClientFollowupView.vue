@@ -52,12 +52,13 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api, { getApiErrorMessage } from '../api/client'
 import { useAuth } from '../composables/useAuth'
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
 const { logoutUser } = useAuth()
 
@@ -71,14 +72,24 @@ const loadError = ref('')
 async function loadProjects() {
   const response = await api.get('/projects')
   projects.value = response.data.data || response.data || []
-  if (!selectedId.value && projects.value[0]) {
-    await openProject(projects.value[0])
+
+  const fromQuery = route.query.project
+  const preferred = fromQuery
+    ? projects.value.find((project) => String(project.id) === String(fromQuery))
+    : null
+
+  const next = preferred || projects.value[0]
+  if (next) {
+    await openProject(next)
   }
 }
 
 async function openProject(project) {
   selectedId.value = project.id
   draft.value = ''
+  if (String(route.query.project || '') !== String(project.id)) {
+    router.replace({ name: 'dashboard', query: { project: project.id } })
+  }
   const response = await api.get(`/projects/${project.id}/messages`)
   messages.value = response.data.messages || []
 }

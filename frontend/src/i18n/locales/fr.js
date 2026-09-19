@@ -111,10 +111,11 @@ export default {
       overview: 'Vue d’ensemble',
       orders: 'Commandes et RFQ',
       marketplace: 'Produits',
+      projects: 'Projets',
       services: 'Services',
       clients: 'Clients',
       operators: 'Opérateurs',
-      operations: 'Gestion opérations'
+      operations: 'Missions'
     },
     overview: {
       title: 'Vue d’ensemble',
@@ -140,6 +141,11 @@ export default {
       emptyDesc: 'Les projets apparaissent après confirmation du devis par le client.',
       goOrders: 'Aller aux commandes →',
       updateFollowup: 'Mettre à jour le suivi',
+      backToList: 'Retour aux projets',
+      noInstallations: 'Aucune installation. Ajoutez-en une si besoin.',
+      noMaintenances: 'Aucune maintenance pour le moment.',
+      noStoreProducts: 'Aucun produit du catalogue sur ce projet.',
+      unnamedProduct: 'Produit',
       active: 'Suivis actifs',
       onHold: 'En pause',
       completed: 'Terminés',
@@ -151,10 +157,23 @@ export default {
       createTitle: 'Nouveau projet',
       projectName: 'Nom',
       selectClient: 'Client',
+      selectClientPlaceholder: 'Choisir un client…',
+      createEssentials: 'Informations du projet',
+      createEssentialsHint: 'Nom, client et localisation du suivi.',
       assignQuotes: 'Devis',
-      noQuotes: 'Aucun devis pour ce client.',
+      assignQuotesHint: 'Lier des devis existants pour ce client (optionnel).',
+      pickClientFirst: 'Choisissez un client pour voir les devis disponibles.',
+      noQuotes: 'Aucun devis pour ce client. Vous pouvez quand même ajouter des produits ci-dessous.',
       description: 'Détails',
+      descriptionPlaceholder: 'Notes optionnelles sur le projet…',
+      createServices: 'Services (optionnel)',
+      createServicesHint: 'Ajoutez installation ou maintenance seulement si besoin maintenant.',
       storeProducts: 'Produits du catalogue',
+      additionalProducts: 'Produits complémentaires',
+      additionalProductsHint: 'Articles du catalogue en plus du devis — affichés comme les lignes RFQ ci-dessus.',
+      noAdditionalProducts: 'Aucun produit complémentaire. Ajoutez ce dont le client a encore besoin.',
+      pickProductTitle: 'Choisir un produit',
+      addProduct: 'Ajouter un produit',
       pickProduct: 'Choisir un produit',
       addLine: 'Ajouter',
       unitPrice: 'Prix unitaire',
@@ -169,6 +188,15 @@ export default {
       remove: 'Retirer',
       selectedProducts: 'Produits sélectionnés',
       enterPrice: 'Indiquez un prix unitaire avant d’ajouter.',
+      productAdded: '« {name} » ajouté au projet.',
+      outOfStock: 'Ce produit est en rupture de stock.',
+      qtyExceedsStock: 'La quantité ne peut pas dépasser le stock ({stock}).',
+      stockAvailable: 'Stock : {count}',
+      priceMismatchWarnRfq: 'Différent du devis ({existing}).',
+      priceMismatchWarnList: 'Différent du prix en liste ({existing}).',
+      lockLine: 'Verrouiller prix et quantité',
+      unlockLine: 'Déverrouiller pour modifier',
+      unlockToEdit: 'Déverrouillez ce produit avant de le modifier ou de le retirer.',
       productsPill: '{count} produits',
       installationsPill: '{count} installations',
       maintenancesPill: '{count} maintenances',
@@ -492,37 +520,37 @@ export default {
   },
   followup: {
     steps: {
-      premier_contact: {
-        label: 'Premier contact',
-        short: 'Contact',
-        clientHint: 'Notre équipe confirme votre demande et collecte les informations initiales du projet.',
-        adminHint: 'Collecter localisation, type de projet et besoin énergétique estimé.'
+      quote_confirmed: {
+        label: 'Devis confirmé',
+        short: 'Devis',
+        clientHint: 'Votre devis est confirmé. Notre équipe prépare la suite.',
+        adminHint: 'Devis accepté — confirmer le périmètre, les produits et les infos client.'
       },
-      data_collection: {
-        label: 'Collecte des données',
-        short: 'Collecte',
-        clientHint: 'Notre équipe recueille les informations du site nécessaires à votre projet.',
-        adminHint: 'Compléter les données : analyse de facture ou inventaire hors réseau.'
+      order_prep: {
+        label: 'Commande / préparation',
+        short: 'Prépa',
+        clientHint: 'Votre commande est en préparation (produits et planification).',
+        adminHint: 'Préparer les produits catalogue, la logistique et le planning chantier.'
       },
-      energy_data: {
-        label: 'Données énergétiques',
-        short: 'Énergie',
-        clientHint: 'Notre équipe analyse vos besoins énergétiques avant la phase suivante.',
-        adminHint: 'Valider les données énergétiques avant visite ou étude technique.'
+      installation: {
+        label: 'Installation',
+        short: 'Install.',
+        clientHint: 'Les travaux d’installation sont en cours ou planifiés sur site.',
+        adminHint: 'Réaliser ou suivre l’installation et les interventions terrain.'
       },
       completed: {
-        label: 'Terminé',
+        label: 'Réception / terminé',
         short: 'Terminé',
-        clientHint: 'Votre suivi est terminé. Notre équipe reste disponible si besoin.',
-        adminHint: 'Marquer la fin de la livraison ou de la prestation.'
+        clientHint: 'La livraison est terminée. Notre équipe reste disponible si besoin.',
+        adminHint: 'Marquer la réception / le transfert comme terminé.'
       }
     },
     status: {
       on_hold: 'En pause',
-      premier_contact: 'Premier contact',
-      data_collection: 'Collecte des données',
-      energy_data: 'Données énergétiques',
-      completed: 'Terminé'
+      quote_confirmed: 'Devis confirmé',
+      order_prep: 'Commande / préparation',
+      installation: 'Installation',
+      completed: 'Réception / terminé'
     },
     currentStep: 'Étape en cours',
     onHoldTitle: 'En pause',

@@ -111,10 +111,11 @@ export default {
       overview: 'نظرة عامة',
       orders: 'الطلبات و RFQ',
       marketplace: 'المنتجات',
+      projects: 'المشاريع',
       services: 'الخدمات',
       clients: 'العملاء',
       operators: 'التقنيون',
-      operations: 'إدارة العمليات'
+      operations: 'المهام'
     },
     overview: {
       title: 'نظرة عامة على العمليات',
@@ -140,6 +141,11 @@ export default {
       emptyDesc: 'تظهر المشاريع بعد تأكيد العميل للعرض.',
       goOrders: 'الذهاب إلى الطلبات ←',
       updateFollowup: 'تحديث المتابعة',
+      backToList: 'العودة إلى المشاريع',
+      noInstallations: 'لا توجد تركيبات بعد. أضف واحدة عند الحاجة.',
+      noMaintenances: 'لا توجد صيانات بعد.',
+      noStoreProducts: 'لا منتجات من المتجر على هذا المشروع بعد.',
+      unnamedProduct: 'منتج',
       active: 'متابعات نشطة',
       onHold: 'متوقفة',
       completed: 'مكتملة',
@@ -151,10 +157,23 @@ export default {
       createTitle: 'مشروع جديد',
       projectName: 'الاسم',
       selectClient: 'العميل',
+      selectClientPlaceholder: 'اختر عميلاً…',
+      createEssentials: 'بيانات المشروع',
+      createEssentialsHint: 'الاسم والعميل والموقع للمتابعة.',
       assignQuotes: 'عروض الأسعار',
-      noQuotes: 'لا عروض لهذا العميل.',
+      assignQuotesHint: 'ربط عروض موجودة لهذا العميل (اختياري).',
+      pickClientFirst: 'اختر عميلاً لعرض العروض المتاحة.',
+      noQuotes: 'لا عروض لهذا العميل. يمكنك إضافة منتجات من الكتالوج أدناه.',
       description: 'التفاصيل',
+      descriptionPlaceholder: 'ملاحظات اختيارية عن المشروع…',
+      createServices: 'خدمات (اختياري)',
+      createServicesHint: 'أضف تركيباً أو صيانة فقط عند الحاجة الآن.',
       storeProducts: 'منتجات المتجر',
+      additionalProducts: 'منتجات إضافية',
+      additionalProductsHint: 'منتجات من الكتالوج بعد عرض السعر — بنفس أسلوب بنود الـ RFQ أعلاه.',
+      noAdditionalProducts: 'لا منتجات إضافية بعد. أضف ما يحتاجه العميل أيضاً.',
+      pickProductTitle: 'اختر منتجاً',
+      addProduct: 'إضافة منتج',
       pickProduct: 'اختر منتجاً',
       addLine: 'إضافة',
       unitPrice: 'سعر الوحدة',
@@ -169,6 +188,15 @@ export default {
       remove: 'حذف',
       selectedProducts: 'المنتجات المختارة',
       enterPrice: 'أدخل سعر الوحدة قبل الإضافة.',
+      productAdded: 'تمت إضافة « {name} » إلى المشروع.',
+      outOfStock: 'هذا المنتج غير متوفر في المخزون.',
+      qtyExceedsStock: 'الكمية لا يمكن أن تتجاوز المخزون ({stock}).',
+      stockAvailable: 'المخزون: {count}',
+      priceMismatchWarnRfq: 'يختلف عن العرض ({existing}).',
+      priceMismatchWarnList: 'يختلف عن سعر القائمة ({existing}).',
+      lockLine: 'قفل السعر والكمية',
+      unlockLine: 'إلغاء القفل للتعديل',
+      unlockToEdit: 'ألغِ القفل قبل تعديل هذا المنتج أو حذفه.',
       productsPill: '{count} منتجات',
       installationsPill: '{count} تركيبات',
       maintenancesPill: '{count} صيانات',
@@ -492,37 +520,37 @@ export default {
   },
   followup: {
     steps: {
-      premier_contact: {
-        label: 'التواصل الأول',
-        short: 'تواصل',
-        clientHint: ' يؤكد طلبك ويجمع المعلومات الأولية للمشروع.',
-        adminHint: 'جمع الموقع ونوع المشروع والحاجة التقديرية للطاقة.'
+      quote_confirmed: {
+        label: 'تأكيد العرض',
+        short: 'عرض',
+        clientHint: 'تم تأكيد عرض السعر. فريقنا يجهّز الخطوات التالية.',
+        adminHint: 'العرض مقبول — تأكيد النطاق والمنتجات وبيانات العميل.'
       },
-      data_collection: {
-        label: 'جمع البيانات',
-        short: 'جمع',
-        clientHint: ' يجمع معلومات الموقع اللازمة لمشروعك.',
-        adminHint: 'إكمال بيانات الموقع: فاتورة الكهرباء أو جرد المعدات.'
+      order_prep: {
+        label: 'الطلب / التحضير',
+        short: 'تحضير',
+        clientHint: 'يتم تحضير طلبك (المنتجات والجدولة).',
+        adminHint: 'تحضير منتجات الكتالوج واللوجستيات وتخطيط الموقع.'
       },
-      energy_data: {
-        label: 'البيانات الطاقوية',
-        short: 'طاقة',
-        clientHint: ' يراجع احتياجاتك الطاقوية قبل المرحلة التالية.',
-        adminHint: 'التحقق من البيانات قبل الزيارة الميدانية أو الدراسة.'
+      installation: {
+        label: 'التركيب',
+        short: 'تركيب',
+        clientHint: 'أعمال التركيب جارية أو مجدولة في الموقع.',
+        adminHint: 'تنفيذ أو متابعة التركيب والأعمال الميدانية.'
       },
       completed: {
-        label: 'مكتمل',
+        label: 'التسليم / مكتمل',
         short: 'مكتمل',
-        clientHint: 'اكتملت المتابعة.  متاح عند الحاجة.',
-        adminHint: 'تحديد اكتمال التسليم أو التسليم للعميل.'
+        clientHint: 'اكتمل التسليم. فريقنا متاح عند الحاجة.',
+        adminHint: 'تعليم اكتمال الاستلام / التسليم للعميل.'
       }
     },
     status: {
       on_hold: 'متوقف',
-      premier_contact: 'التواصل الأول',
-      data_collection: 'جمع البيانات',
-      energy_data: 'البيانات الطاقوية',
-      completed: 'مكتمل'
+      quote_confirmed: 'تأكيد العرض',
+      order_prep: 'الطلب / التحضير',
+      installation: 'التركيب',
+      completed: 'التسليم / مكتمل'
     },
     currentStep: 'المرحلة الحالية',
     onHoldTitle: 'متوقف',

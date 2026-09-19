@@ -657,9 +657,9 @@
             <div class="header-actions">
               <select v-model="projectFilter" @change="loadProjects" class="filter-select">
                 <option value="">{{ t('admin.projects.allPhases') }}</option>
-                <option value="premier_contact">{{ t('followup.steps.premier_contact.label') }}</option>
-                <option value="data_collection">{{ t('followup.steps.data_collection.label') }}</option>
-                <option value="energy_data">{{ t('followup.steps.energy_data.label') }}</option>
+                <option value="quote_confirmed">{{ t('followup.steps.quote_confirmed.label') }}</option>
+                <option value="order_prep">{{ t('followup.steps.order_prep.label') }}</option>
+                <option value="installation">{{ t('followup.steps.installation.label') }}</option>
                 <option value="completed">{{ t('followup.steps.completed.label') }}</option>
                 <option value="on_hold">{{ t('followup.status.on_hold') }}</option>
               </select>
@@ -707,141 +707,94 @@
             </FollowupCard>
           </div>
 
-          <div v-if="showProjectDrawer && editingProject" class="drawer-overlay" @click.self="closeProjectDrawer">
-            <aside class="product-drawer project-drawer">
-              <header class="drawer-header">
-                <div>
-                  <p class="drawer-eyebrow">{{ t('admin.drawer.followup') }}</p>
+          <div v-if="showProjectDrawer && editingProject" class="project-workspace">
+            <header class="project-workspace-header">
+              <div class="project-workspace-title">
+                <button type="button" class="pw-back" @click="closeProjectDrawer">
+                  ← {{ t('admin.projects.backToList') }}
+                </button>
+                <div class="pw-title-row">
                   <h2>{{ editingProject.name }}</h2>
-                  <p v-if="editingQuotes.length" class="drawer-sub">
-                    {{ editingQuotes.map((quote) => quote.ticket_number).join(' · ') }}
-                    <template v-if="editingProject.user"> · {{ editingProject.user.company || editingProject.user.name }}</template>
-                  </p>
+                  <span class="pw-status" :class="editingProject.status">
+                    {{ projectStatusLabel(editingProject.status) }}
+                  </span>
                 </div>
-                <button type="button" class="drawer-close" @click="closeProjectDrawer">×</button>
-              </header>
+                <div class="pw-meta">
+                  <span v-if="editingProject.user" class="pw-chip">
+                    {{ editingProject.user.company || editingProject.user.name }}
+                  </span>
+                  <span
+                    v-for="ticket in editingQuotes"
+                    :key="ticket.id"
+                    class="pw-chip"
+                  >{{ ticket.ticket_number }}</span>
+                  <span class="pw-chip muted">
+                    {{ t('admin.drawer.stepCounter', { current: previewStepNumber, total: projectStepDefs.length }) }}
+                  </span>
+                </div>
+              </div>
+            </header>
 
-              <form class="drawer-form" @submit.prevent="handleSaveProject">
-                <div class="drawer-layout">
-                  <section v-for="ticket in editingQuotes" :key="ticket.id" class="drawer-section order-recap">
-                    <div class="section-head">
+            <form class="project-workspace-form" @submit.prevent="handleSaveProject">
+              <div class="project-workspace-layout">
+                <aside class="pw-rail">
+                  <section class="drawer-section workflow-section">
+                    <div class="wf-head">
                       <div>
-                        <h3>{{ ticket.ticket_number }}</h3>
+                        <p class="wf-kicker">{{ t('admin.drawer.workflowPhase') }}</p>
+                        <h3 class="wf-title">
+                          {{ projectForm.on_hold ? t('followup.onHoldTitle') : (projectStepDefs[previewStepNumber - 1]?.label || '') }}
+                        </h3>
                       </div>
-                      <span v-if="ticket.quoted_total != null" class="order-total">{{ formatMoney(ticket.quoted_total) }}</span>
+                      <span class="phase-counter">{{ previewStepNumber }}/{{ projectStepDefs.length }}</span>
                     </div>
-                    <table v-if="ticket.items?.length" class="order-lines-table">
-                      <thead>
-                        <tr>
-                          <th>{{ t('rfq.table.item') }}</th>
-                          <th>{{ t('common.quantity') }}</th>
-                          <th>{{ t('common.total') }}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="item in ticket.items" :key="item.id">
-                          <td>{{ rfqItemLabel(item) }}</td>
-                          <td>{{ item.quantity }}</td>
-                          <td>{{ item.line_total != null ? formatMoney(item.line_total) : '—' }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </section>
 
-                  <section class="drawer-section">
-                    <h3>{{ t('admin.projects.assignQuotes') }}</h3>
-                    <div class="quote-picks">
-                      <label v-for="quote in clientQuotes" :key="quote.id">
-                        <input v-model="selectedQuoteIds" type="checkbox" :value="quote.id" />
-                        <span>{{ quote.ticket_number }}</span>
-                        <small>{{ quote.company || '—' }}</small>
-                      </label>
-                      <p v-if="!clientQuotes.length" class="thread-empty">{{ t('admin.projects.noQuotes') }}</p>
+                    <div class="wf-progress" aria-hidden="true">
+                      <span
+                        class="wf-progress-fill"
+                        :style="{ width: `${(previewStepNumber / projectStepDefs.length) * 100}%` }"
+                      />
                     </div>
-                  </section>
 
-                  <section class="drawer-section drawer-section-wide">
-                    <h3>{{ t('admin.projects.storeProducts') }}</h3>
-                    <ProjectCatalogPicker
-                      v-model="projectLines"
-                      :products="products"
-                      :categories="adminCategories"
-                      :loading="isLoading && !products.length"
-                      @refresh="loadCatalogForPicker"
-                    />
-                  </section>
+                    <ol class="wf-steps">
+                      <li
+                        v-for="(step, index) in projectStepDefs"
+                        :key="step.key"
+                        class="wf-step"
+                        :class="{
+                          done: !projectForm.on_hold && index + 1 < previewStepNumber,
+                          current: !projectForm.on_hold && projectForm.current_phase === step.key,
+                          muted: projectForm.on_hold || index + 1 > previewStepNumber
+                        }"
+                      >
+                        <button
+                          type="button"
+                          class="wf-step-btn"
+                          @click="projectForm.current_phase = step.key; projectForm.on_hold = false"
+                        >
+                          <span class="wf-dot" aria-hidden="true">
+                            <span v-if="!projectForm.on_hold && index + 1 < previewStepNumber" class="wf-check">✓</span>
+                            <span v-else>{{ index + 1 }}</span>
+                          </span>
+                          <span class="wf-step-copy">
+                            <span class="wf-step-name">{{ step.label }}</span>
+                            <span
+                              v-if="projectForm.current_phase === step.key && !projectForm.on_hold"
+                              class="wf-step-hint"
+                            >{{ step.adminHint }}</span>
+                          </span>
+                        </button>
+                      </li>
+                    </ol>
 
-                  <section class="drawer-section">
-                    <div class="section-head">
-                      <h3>{{ t('admin.projects.installations') }}</h3>
-                      <button type="button" class="ghost-btn" @click="projectInstallations.push(blankInstallation())">{{ t('admin.projects.addInstallation') }}</button>
-                    </div>
-                    <div v-for="(row, index) in projectInstallations" :key="row.id || index" class="service-card">
-                      <label>
-                        <span>{{ t('admin.projects.projectName') }}</span>
-                        <input v-model="row.name" type="text" />
-                      </label>
-                      <div class="service-grid">
-                        <label>
-                          <span>{{ t('admin.drawer.location') }}</span>
-                          <input v-model="row.location" type="text" />
-                        </label>
-                        <label>
-                          <span>{{ t('admin.projects.energyType') }}</span>
-                          <input v-model="row.energy_type" type="text" />
-                        </label>
-                        <label>
-                          <span>{{ t('admin.projects.price') }}</span>
-                          <input v-model="row.price" type="number" min="0" step="0.01" />
-                        </label>
-                        <label>
-                          <span>{{ t('admin.projects.scheduled') }}</span>
-                          <input v-model="row.scheduled_at" type="datetime-local" />
-                        </label>
-                      </div>
-                      <label>
-                        <span>{{ t('admin.projects.description') }}</span>
-                        <textarea v-model="row.description" rows="2"></textarea>
-                      </label>
-                      <button type="button" class="ghost-btn" @click="projectInstallations.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
-                    </div>
-                  </section>
-
-                  <section class="drawer-section">
-                    <div class="section-head">
-                      <h3>{{ t('admin.projects.maintenances') }}</h3>
-                      <button type="button" class="ghost-btn" @click="projectMaintenances.push(blankMaintenance())">{{ t('admin.projects.addMaintenance') }}</button>
-                    </div>
-                    <div v-for="(row, index) in projectMaintenances" :key="row.id || index" class="service-card">
-                      <div class="service-grid">
-                        <label>
-                          <span>{{ t('admin.projects.serviceType') }}</span>
-                          <input v-model="row.type" type="text" />
-                        </label>
-                        <label>
-                          <span>{{ t('admin.projects.price') }}</span>
-                          <input v-model="row.price" type="number" min="0" step="0.01" />
-                        </label>
-                        <label>
-                          <span>{{ t('admin.projects.scheduled') }}</span>
-                          <input v-model="row.scheduled_at" type="datetime-local" />
-                        </label>
-                      </div>
-                      <label>
-                        <span>{{ t('admin.projects.description') }}</span>
-                        <textarea v-model="row.description" rows="2"></textarea>
-                      </label>
-                      <button type="button" class="ghost-btn" @click="projectMaintenances.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
-                    </div>
+                    <label class="hold-toggle" :class="{ active: projectForm.on_hold }">
+                      <input type="checkbox" v-model="projectForm.on_hold" />
+                      <span>{{ t('admin.drawer.putOnHold') }}</span>
+                    </label>
                   </section>
 
                   <section class="drawer-section site-section">
-                    <div class="section-head">
-                      <div>
-                        <h3>{{ t('admin.drawer.installationSite') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.siteHint') }}</p>
-                      </div>
-                    </div>
+                    <h3>{{ t('admin.drawer.installationSite') }}</h3>
                     <div class="drawer-fields">
                       <label>
                         {{ t('admin.drawer.location') }}
@@ -855,193 +808,356 @@
                     </div>
                   </section>
 
-                  <section class="drawer-section client-update-section">
-                    <h3>{{ t('admin.drawer.messagesTitle') }}</h3>
-                    <div class="thread">
-                      <p v-if="!projectMessages.length" class="thread-empty">{{ t('admin.drawer.emptyThread') }}</p>
-                      <article
-                        v-for="message in projectMessages"
-                        :key="message.id"
-                        class="thread-item"
-                        :class="message.author"
-                      >
-                        <header>
-                          <strong>{{ message.author === 'client' ? (message.user?.name || t('admin.drawer.clientLabel')) : (message.user?.name || t('admin.drawer.teamLabel')) }}</strong>
-                          <time>{{ formatDate(message.created_at) }}</time>
-                        </header>
-                        <p>{{ message.body }}</p>
-                      </article>
-                    </div>
-                    <div class="thread-compose">
-                      <textarea
-                        v-model="replyDraft"
-                        rows="3"
-                        :placeholder="t('admin.drawer.replyPlaceholder')"
-                        @keydown.enter.exact.prevent="sendProjectReply"
-                      ></textarea>
-                      <button type="button" class="primary-btn" :disabled="replySending || !replyDraft.trim()" @click="sendProjectReply">
-                        {{ t('admin.drawer.sendReply') }}
-                      </button>
-                    </div>
-                  </section>
-
-                  <section class="drawer-section workflow-section">
-                    <div class="section-title-row">
-                      <h3>{{ t('admin.drawer.workflowPhase') }}</h3>
-                      <span class="phase-counter">{{ t('admin.drawer.stepCounter', { current: previewStepNumber, total: projectStepDefs.length }) }}</span>
-                    </div>
-
-                    <div class="phase-picker">
-                      <button
-                        v-for="(step, index) in projectStepDefs"
-                        :key="step.key"
-                        type="button"
-                        class="phase-option"
-                        :class="{ selected: projectForm.current_phase === step.key && !projectForm.on_hold }"
-                        @click="projectForm.current_phase = step.key"
-                      >
-                        <span class="phase-index">{{ index + 1 }}</span>
-                        <span class="phase-copy">
-                          <span class="phase-name">{{ step.label }}</span>
-                          <span class="phase-hint">{{ step.adminHint }}</span>
-                        </span>
-                      </button>
-                    </div>
-
-                    <label class="hold-toggle">
-                      <input type="checkbox" v-model="projectForm.on_hold" />
-                      <span>{{ t('admin.drawer.putOnHold') }}</span>
-                    </label>
-                  </section>
-
-                  <section class="drawer-section internal-section">
-                    <div class="section-head">
-                      <h3>{{ t('admin.drawer.internalNotes') }}</h3>
-                      <span class="team-badge">{{ t('admin.drawer.teamBadge') }}</span>
-                    </div>
-
-                    <div class="note-suggestions">
-                      <button
-                        v-for="suggestion in noteSuggestions"
-                        :key="suggestion"
-                        type="button"
-                        class="note-chip"
-                        @click="appendInternalNote(suggestion)"
-                      >
-                        + {{ suggestion }}
-                      </button>
-                    </div>
-
-                    <div class="drawer-fields">
-                      <label>
-                        {{ t('admin.drawer.notes') }}
-                        <textarea
-                          v-model="projectForm.admin_notes"
-                          rows="5"
-                          :placeholder="t('admin.drawer.notesPlaceholder')"
-                        ></textarea>
+                  <section class="drawer-section">
+                    <h3>{{ t('admin.projects.assignQuotes') }}</h3>
+                    <div class="quote-picks">
+                      <label v-for="quote in clientQuotes" :key="quote.id">
+                        <input v-model="selectedQuoteIds" type="checkbox" :value="quote.id" />
+                        <span>{{ quote.ticket_number }}</span>
+                        <small>{{ quote.company || '—' }}</small>
                       </label>
+                      <p v-if="!clientQuotes.length" class="thread-empty">{{ t('admin.projects.noQuotes') }}</p>
                     </div>
+                  </section>
+                </aside>
 
-                    <div class="trace-panel">
-                      <div class="trace-panel-head">
-                        <h4>{{ t('admin.drawer.activityLog') }}</h4>
-                        <span class="trace-count" v-if="projectTraces.length">{{ projectTraces.length }}</span>
+                <div class="pw-main">
+                  <section v-for="ticket in editingQuotes" :key="ticket.id" class="drawer-section order-recap">
+                    <div class="section-head">
+                      <div>
+                        <p class="pw-kicker">{{ t('admin.drawer.followup') }}</p>
+                        <h3>{{ ticket.ticket_number }}</h3>
+                      </div>
+                      <span v-if="ticket.quoted_total != null" class="order-total">{{ formatMoney(ticket.quoted_total) }}</span>
+                    </div>
+                    <table v-if="ticket.items?.length" class="order-lines-table">
+                      <thead>
+                        <tr>
+                          <th>{{ t('rfq.table.item') }}</th>
+                          <th>{{ t('common.quantity') }}</th>
+                          <th>{{ t('admin.projects.unitPrice') }}</th>
+                          <th>{{ t('common.total') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="item in ticket.items" :key="item.id">
+                          <td>{{ rfqItemLabel(item) }}</td>
+                          <td>{{ item.quantity }}</td>
+                          <td>{{ item.unit_price != null ? formatMoney(Number(item.unit_price)) : '—' }}</td>
+                          <td>{{ item.line_total != null ? formatMoney(item.line_total) : '—' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </section>
+
+                  <section class="drawer-section">
+                    <ProjectCatalogPicker
+                      :model-value="projectLines"
+                      :products="products"
+                      :categories="adminCategories"
+                      :loading="isLoading && !products.length"
+                      :price-references="projectPriceReferences"
+                      @update:model-value="onProjectLinesUpdate"
+                      @refresh="loadCatalogForPicker"
+                    />
+                  </section>
+
+                  <div class="pw-services">
+                    <section class="drawer-section">
+                      <div class="section-head">
+                        <h3>{{ t('admin.projects.installations') }}</h3>
+                        <button
+                          type="button"
+                          class="action-btn"
+                          :title="t('admin.projects.addInstallation')"
+                          :aria-label="t('admin.projects.addInstallation')"
+                          @click="projectInstallations.push(blankInstallation())"
+                        >
+                          <AdminIcon name="plus" :size="15" />
+                        </button>
+                      </div>
+                      <p v-if="!projectInstallations.length" class="pw-empty">{{ t('admin.projects.noInstallations') }}</p>
+                      <div v-for="(row, index) in projectInstallations" :key="row.id || index" class="service-card">
+                        <label>
+                          <span>{{ t('admin.projects.projectName') }}</span>
+                          <input v-model="row.name" type="text" />
+                        </label>
+                        <div class="service-grid">
+                          <label>
+                            <span>{{ t('admin.drawer.location') }}</span>
+                            <input v-model="row.location" type="text" />
+                          </label>
+                          <label>
+                            <span>{{ t('admin.projects.energyType') }}</span>
+                            <input v-model="row.energy_type" type="text" />
+                          </label>
+                          <label>
+                            <span>{{ t('admin.projects.price') }}</span>
+                            <input v-model="row.price" type="number" min="0" step="0.01" />
+                          </label>
+                          <label>
+                            <span>{{ t('admin.projects.scheduled') }}</span>
+                            <input v-model="row.scheduled_at" type="datetime-local" />
+                          </label>
+                        </div>
+                        <label>
+                          <span>{{ t('admin.projects.description') }}</span>
+                          <textarea v-model="row.description" rows="2"></textarea>
+                        </label>
+                        <button
+                          type="button"
+                          class="action-btn danger"
+                          :title="t('admin.projects.remove')"
+                          :aria-label="t('admin.projects.remove')"
+                          @click="projectInstallations.splice(index, 1)"
+                        >
+                          <AdminIcon name="trash" :size="15" />
+                        </button>
+                      </div>
+                    </section>
+
+                    <section class="drawer-section">
+                      <div class="section-head">
+                        <h3>{{ t('admin.projects.maintenances') }}</h3>
+                        <button
+                          type="button"
+                          class="action-btn"
+                          :title="t('admin.projects.addMaintenance')"
+                          :aria-label="t('admin.projects.addMaintenance')"
+                          @click="projectMaintenances.push(blankMaintenance())"
+                        >
+                          <AdminIcon name="plus" :size="15" />
+                        </button>
+                      </div>
+                      <p v-if="!projectMaintenances.length" class="pw-empty">{{ t('admin.projects.noMaintenances') }}</p>
+                      <div v-for="(row, index) in projectMaintenances" :key="row.id || index" class="service-card">
+                        <div class="service-grid">
+                          <label>
+                            <span>{{ t('admin.projects.serviceType') }}</span>
+                            <input v-model="row.type" type="text" />
+                          </label>
+                          <label>
+                            <span>{{ t('admin.projects.price') }}</span>
+                            <input v-model="row.price" type="number" min="0" step="0.01" />
+                          </label>
+                          <label>
+                            <span>{{ t('admin.projects.scheduled') }}</span>
+                            <input v-model="row.scheduled_at" type="datetime-local" />
+                          </label>
+                        </div>
+                        <label>
+                          <span>{{ t('admin.projects.description') }}</span>
+                          <textarea v-model="row.description" rows="2"></textarea>
+                        </label>
+                        <button
+                          type="button"
+                          class="action-btn danger"
+                          :title="t('admin.projects.remove')"
+                          :aria-label="t('admin.projects.remove')"
+                          @click="projectMaintenances.splice(index, 1)"
+                        >
+                          <AdminIcon name="trash" :size="15" />
+                        </button>
+                      </div>
+                    </section>
+                  </div>
+
+                  <div class="pw-comms">
+                    <section class="drawer-section client-update-section">
+                      <h3>{{ t('admin.drawer.messagesTitle') }}</h3>
+                      <div class="thread">
+                        <p v-if="!projectMessages.length" class="thread-empty">{{ t('admin.drawer.emptyThread') }}</p>
+                        <article
+                          v-for="message in projectMessages"
+                          :key="message.id"
+                          class="thread-item"
+                          :class="message.author"
+                        >
+                          <header>
+                            <strong>{{ message.author === 'client' ? (message.user?.name || t('admin.drawer.clientLabel')) : (message.user?.name || t('admin.drawer.teamLabel')) }}</strong>
+                            <time>{{ formatDate(message.created_at) }}</time>
+                          </header>
+                          <p>{{ message.body }}</p>
+                        </article>
+                      </div>
+                      <div class="thread-compose">
+                        <textarea
+                          v-model="replyDraft"
+                          rows="3"
+                          :placeholder="t('admin.drawer.replyPlaceholder')"
+                          @keydown.enter.exact.prevent="sendProjectReply"
+                        ></textarea>
+                        <button type="button" class="primary-btn" :disabled="replySending || !replyDraft.trim()" @click="sendProjectReply">
+                          {{ t('admin.drawer.sendReply') }}
+                        </button>
+                      </div>
+                    </section>
+
+                    <section class="drawer-section internal-section">
+                      <div class="section-head">
+                        <h3>{{ t('admin.drawer.internalNotes') }}</h3>
+                        <span class="team-badge">{{ t('admin.drawer.teamBadge') }}</span>
                       </div>
 
-                      <div v-if="tracesLoading" class="trace-empty">{{ t('admin.drawer.loadingActivity') }}</div>
-                      <ul v-else-if="projectTraces.length" class="trace-list">
-                        <li v-for="trace in projectTraces" :key="trace.id" class="trace-item">
-                          <div class="trace-meta">
-                            <strong>{{ traceActorLabel(trace) }}</strong>
-                            <time>{{ formatDate(trace.created_at) }}</time>
-                          </div>
-                          <p class="trace-summary">{{ formatTraceSummary(trace) }}</p>
-                          <ul v-if="trace.changes?.length" class="trace-changes">
-                            <li v-for="(change, index) in trace.changes" :key="index">
-                              {{ formatTraceChange(change) }}
-                            </li>
-                          </ul>
-                        </li>
-                      </ul>
-                      <p v-else class="trace-empty">{{ t('admin.drawer.noTraces') }}</p>
-                    </div>
-                  </section>
+                      <div class="note-suggestions">
+                        <button
+                          v-for="suggestion in noteSuggestions"
+                          :key="suggestion"
+                          type="button"
+                          class="note-chip"
+                          @click="appendInternalNote(suggestion)"
+                        >
+                          + {{ suggestion }}
+                        </button>
+                      </div>
+
+                      <div class="drawer-fields">
+                        <label>
+                          {{ t('admin.drawer.notes') }}
+                          <textarea
+                            v-model="projectForm.admin_notes"
+                            rows="5"
+                            :placeholder="t('admin.drawer.notesPlaceholder')"
+                          ></textarea>
+                        </label>
+                      </div>
+
+                      <div class="trace-panel">
+                        <div class="trace-panel-head">
+                          <h4>{{ t('admin.drawer.activityLog') }}</h4>
+                          <span class="trace-count" v-if="projectTraces.length">{{ projectTraces.length }}</span>
+                        </div>
+
+                        <div v-if="tracesLoading" class="trace-empty">{{ t('admin.drawer.loadingActivity') }}</div>
+                        <ul v-else-if="projectTraces.length" class="trace-list">
+                          <li v-for="trace in projectTraces" :key="trace.id" class="trace-item">
+                            <div class="trace-meta">
+                              <strong>{{ traceActorLabel(trace) }}</strong>
+                              <time>{{ formatDate(trace.created_at) }}</time>
+                            </div>
+                            <p class="trace-summary">{{ formatTraceSummary(trace) }}</p>
+                            <ul v-if="trace.changes?.length" class="trace-changes">
+                              <li v-for="(change, index) in trace.changes" :key="index">
+                                {{ formatTraceChange(change) }}
+                              </li>
+                            </ul>
+                          </li>
+                        </ul>
+                        <p v-else class="trace-empty">{{ t('admin.drawer.noTraces') }}</p>
+                      </div>
+                    </section>
+                  </div>
                 </div>
+              </div>
 
-                <p v-if="projectSaveSuccess" class="form-success">{{ projectSaveSuccess }}</p>
-                <p v-if="projectFormError" class="form-error">{{ projectFormError }}</p>
+              <p v-if="projectSaveSuccess" class="form-success project-workspace-msg">{{ projectSaveSuccess }}</p>
+              <p v-if="projectFormError" class="form-error project-workspace-msg">{{ projectFormError }}</p>
 
-                <footer class="drawer-footer">
-                  <button type="button" class="ghost-btn" @click="closeProjectDrawer">{{ t('common.cancel') }}</button>
-                  <button type="submit" class="primary-btn" :disabled="projectSaving">
-                    {{ projectSaving ? t('admin.projects.saving') : t('admin.projects.saveFollowup') }}
-                  </button>
-                </footer>
-              </form>
-            </aside>
+              <footer class="project-workspace-footer">
+                <button type="button" class="ghost-btn" @click="closeProjectDrawer">{{ t('common.cancel') }}</button>
+                <button type="submit" class="primary-btn" :disabled="projectSaving">
+                  {{ projectSaving ? t('admin.projects.saving') : t('admin.projects.saveFollowup') }}
+                </button>
+              </footer>
+            </form>
           </div>
 
           <div v-if="showCreateProject" class="modal-overlay project-create-overlay" @click.self="showCreateProject = false">
             <div class="ops-modal project-create-modal" role="dialog" aria-modal="true">
               <header class="modal-header">
-                <h3>{{ t('admin.projects.createTitle') }}</h3>
+                <div>
+                  <p class="modal-kicker">{{ t('admin.projects.newProject') }}</p>
+                  <h3>{{ t('admin.projects.createTitle') }}</h3>
+                </div>
                 <button type="button" class="close-btn" @click="showCreateProject = false">×</button>
               </header>
               <form class="task-form" @submit.prevent="submitCreateProject">
                 <div class="modal-body project-create-body">
-                  <aside class="project-create-sidebar modal-group">
-                    <label>
-                      <span>{{ t('admin.projects.projectName') }}</span>
-                      <input v-model="createProjectForm.name" type="text" required />
-                    </label>
-                    <label>
-                      <span>{{ t('admin.projects.selectClient') }}</span>
-                      <select v-model="createProjectForm.id_client" required>
-                        <option value="">{{ t('admin.projects.selectClient') }}</option>
-                        <option v-for="client in users" :key="client.id_client" :value="client.id_client">
-                          {{ client.company || client.name }}
-                        </option>
-                      </select>
-                    </label>
-                    <label>
-                      <span>{{ t('admin.drawer.location') }}</span>
-                      <input v-model="createProjectForm.location" type="text" />
-                    </label>
-                    <label>
-                      <span>{{ t('admin.projects.description') }}</span>
-                      <textarea v-model="createProjectForm.description" rows="3"></textarea>
-                    </label>
-                    <div class="quote-picks">
-                      <p>{{ t('admin.projects.assignQuotes') }}</p>
-                      <label v-for="quote in createClientQuotes" :key="quote.id">
-                        <input v-model="createProjectForm.quote_ids" type="checkbox" :value="quote.id" />
-                        <span>{{ quote.ticket_number }}</span>
-                        <small>{{ quote.company || '—' }}</small>
+                  <section class="create-section">
+                    <div class="create-section-head">
+                      <h4>{{ t('admin.projects.createEssentials') }}</h4>
+                      <p>{{ t('admin.projects.createEssentialsHint') }}</p>
+                    </div>
+                    <div class="create-essentials-grid">
+                      <label>
+                        <span>{{ t('admin.projects.projectName') }}</span>
+                        <input v-model="createProjectForm.name" type="text" required />
                       </label>
-                      <p v-if="createProjectForm.id_client && !createClientQuotes.length" class="thread-empty">{{ t('admin.projects.noQuotes') }}</p>
+                      <label>
+                        <span>{{ t('admin.projects.selectClient') }}</span>
+                        <select v-model="createProjectForm.id_client" required @change="onCreateClientChange">
+                          <option value="">{{ t('admin.projects.selectClientPlaceholder') }}</option>
+                          <option v-for="client in users" :key="client.id_client" :value="client.id_client">
+                            {{ client.company || client.name }}
+                          </option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>{{ t('admin.drawer.location') }}</span>
+                        <input v-model="createProjectForm.location" type="text" :placeholder="t('admin.drawer.locationPlaceholder')" />
+                      </label>
+                      <label class="create-span-2">
+                        <span>{{ t('admin.projects.description') }}</span>
+                        <textarea v-model="createProjectForm.description" rows="2" :placeholder="t('admin.projects.descriptionPlaceholder')"></textarea>
+                      </label>
                     </div>
-                  </aside>
+                  </section>
 
-                  <div class="project-create-main">
-                    <div class="modal-group modal-group-products">
-                      <h4>{{ t('admin.projects.storeProducts') }}</h4>
-                      <ProjectCatalogPicker
-                        ref="createCatalogPickerRef"
-                        v-model="createProjectForm.lines"
-                        :products="products"
-                        :categories="adminCategories"
-                        :loading="isLoading && !products.length"
-                        @refresh="loadCatalogForPicker"
-                      />
+                  <section class="create-section">
+                    <div class="create-section-head">
+                      <h4>{{ t('admin.projects.assignQuotes') }}</h4>
+                      <p>{{ t('admin.projects.assignQuotesHint') }}</p>
                     </div>
+                    <div class="create-quotes">
+                      <template v-if="!createProjectForm.id_client">
+                        <p class="create-empty">{{ t('admin.projects.pickClientFirst') }}</p>
+                      </template>
+                      <template v-else-if="!createClientQuotes.length">
+                        <p class="create-empty">{{ t('admin.projects.noQuotes') }}</p>
+                      </template>
+                      <div v-else class="quote-picks create-quote-picks">
+                        <label v-for="quote in createClientQuotes" :key="quote.id" class="create-quote-chip">
+                          <input v-model="createProjectForm.quote_ids" type="checkbox" :value="quote.id" />
+                          <span>{{ quote.ticket_number }}</span>
+                          <small v-if="quote.amount != null">{{ formatMoney(quote.amount) }}</small>
+                        </label>
+                      </div>
+                    </div>
+                  </section>
 
+                  <section class="create-section">
+                    <ProjectCatalogPicker
+                      ref="createCatalogPickerRef"
+                      :model-value="createProjectForm.lines"
+                      :products="products"
+                      :categories="adminCategories"
+                      :loading="isLoading && !products.length"
+                      :price-references="createPriceReferences"
+                      @update:model-value="onCreateProjectLinesUpdate"
+                      @refresh="loadCatalogForPicker"
+                    />
+                  </section>
+
+                  <section class="create-section create-services-section">
+                    <div class="create-section-head">
+                      <h4>{{ t('admin.projects.createServices') }}</h4>
+                      <p>{{ t('admin.projects.createServicesHint') }}</p>
+                    </div>
                     <div class="project-create-services">
-                      <div class="modal-group">
+                      <div class="create-service-block">
                         <div class="section-head">
-                          <h4>{{ t('admin.projects.installations') }}</h4>
-                          <button type="button" class="ghost-btn" @click="createProjectForm.installations.push(blankInstallation())">{{ t('admin.projects.addInstallation') }}</button>
+                          <h5>{{ t('admin.projects.installations') }}</h5>
+                          <button
+                            type="button"
+                            class="action-btn"
+                            :title="t('admin.projects.addInstallation')"
+                            :aria-label="t('admin.projects.addInstallation')"
+                            @click="createProjectForm.installations.push(blankInstallation())"
+                          >
+                            <AdminIcon name="plus" :size="15" />
+                          </button>
                         </div>
+                        <p v-if="!createProjectForm.installations.length" class="create-empty muted">{{ t('admin.projects.noInstallations') }}</p>
                         <div v-for="(row, index) in createProjectForm.installations" :key="index" class="service-card">
                           <label>
                             <span>{{ t('admin.projects.projectName') }}</span>
@@ -1069,15 +1185,32 @@
                             <span>{{ t('admin.projects.description') }}</span>
                             <textarea v-model="row.description" rows="2"></textarea>
                           </label>
-                          <button type="button" class="ghost-btn" @click="createProjectForm.installations.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
+                          <button
+                            type="button"
+                            class="action-btn danger"
+                            :title="t('admin.projects.remove')"
+                            :aria-label="t('admin.projects.remove')"
+                            @click="createProjectForm.installations.splice(index, 1)"
+                          >
+                            <AdminIcon name="trash" :size="15" />
+                          </button>
                         </div>
                       </div>
 
-                      <div class="modal-group">
+                      <div class="create-service-block">
                         <div class="section-head">
-                          <h4>{{ t('admin.projects.maintenances') }}</h4>
-                          <button type="button" class="ghost-btn" @click="createProjectForm.maintenances.push(blankMaintenance())">{{ t('admin.projects.addMaintenance') }}</button>
+                          <h5>{{ t('admin.projects.maintenances') }}</h5>
+                          <button
+                            type="button"
+                            class="action-btn"
+                            :title="t('admin.projects.addMaintenance')"
+                            :aria-label="t('admin.projects.addMaintenance')"
+                            @click="createProjectForm.maintenances.push(blankMaintenance())"
+                          >
+                            <AdminIcon name="plus" :size="15" />
+                          </button>
                         </div>
+                        <p v-if="!createProjectForm.maintenances.length" class="create-empty muted">{{ t('admin.projects.noMaintenances') }}</p>
                         <div v-for="(row, index) in createProjectForm.maintenances" :key="index" class="service-card">
                           <div class="service-grid">
                             <label>
@@ -1097,15 +1230,25 @@
                             <span>{{ t('admin.projects.description') }}</span>
                             <textarea v-model="row.description" rows="2"></textarea>
                           </label>
-                          <button type="button" class="ghost-btn" @click="createProjectForm.maintenances.splice(index, 1)">{{ t('admin.projects.remove') }}</button>
+                          <button
+                            type="button"
+                            class="action-btn danger"
+                            :title="t('admin.projects.remove')"
+                            :aria-label="t('admin.projects.remove')"
+                            @click="createProjectForm.maintenances.splice(index, 1)"
+                          >
+                            <AdminIcon name="trash" :size="15" />
+                          </button>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </section>
                 </div>
                 <footer class="modal-footer">
                   <button type="button" class="ghost-btn" @click="showCreateProject = false">{{ t('common.cancel') }}</button>
-                  <button type="submit" class="primary-btn" :disabled="creatingProject">{{ t('admin.projects.create') }}</button>
+                  <button type="submit" class="primary-btn" :disabled="creatingProject">
+                    {{ creatingProject ? t('admin.projects.saving') : t('admin.projects.create') }}
+                  </button>
                 </footer>
               </form>
             </div>
@@ -1609,6 +1752,12 @@ const { locale } = useLocale()
 const { user, isAdmin, logoutUser } = useAuth()
 const toast = useToast()
 const {
+  servicesConfig,
+  serviceRequests,
+  toggleServiceEnabled,
+  updateService
+} = useServices()
+const {
   stats,
   rfqs,
   projects,
@@ -1754,6 +1903,46 @@ const followupCompletedCount = computed(() => projects.value.filter((project) =>
 
 const editingQuotes = computed(() => editingProject.value?.rfq_tickets || (editingProject.value?.rfq_ticket ? [editingProject.value.rfq_ticket] : []))
 
+function buildPriceReferences(rfqTickets, lines) {
+  const refs = []
+  ;(rfqTickets || []).forEach((ticket) => {
+    ;(ticket.items || []).forEach((item) => {
+      const id = Number(item.id ?? item.id_product)
+      if (!id || item.unit_price == null) return
+      refs.push({
+        id_product: id,
+        unit_price: Number(item.unit_price),
+        source: 'rfq',
+        label: item.display_name || item.title
+      })
+    })
+  })
+  ;(lines || []).forEach((line) => {
+    const id = Number(line.id_product)
+    if (!id || line.unit_price == null) return
+    refs.push({
+      id_product: id,
+      unit_price: Number(line.unit_price),
+      source: 'list',
+      label: line.title
+    })
+  })
+  return refs
+}
+
+const projectPriceReferences = computed(() =>
+  buildPriceReferences(editingQuotes.value, projectLines.value)
+)
+
+const createSelectedQuotes = computed(() => {
+  const ids = new Set((createProjectForm.value.quote_ids || []).map(Number))
+  return availableQuotes.value.filter((quote) => ids.has(Number(quote.id)))
+})
+
+const createPriceReferences = computed(() =>
+  buildPriceReferences(createSelectedQuotes.value, createProjectForm.value.lines)
+)
+
 const clientQuotes = computed(() => {
   const clientId = Number(editingProject.value?.id_client)
   if (!clientId) return []
@@ -1777,6 +1966,18 @@ function emptyCreateProject() {
     installations: [],
     maintenances: []
   }
+}
+
+function onProjectLinesUpdate(lines) {
+  projectLines.value = Array.isArray(lines) ? lines.map((line) => ({ ...line })) : []
+}
+
+function onCreateProjectLinesUpdate(lines) {
+  createProjectForm.value.lines = Array.isArray(lines) ? lines.map((line) => ({ ...line })) : []
+}
+
+function onCreateClientChange() {
+  createProjectForm.value.quote_ids = []
 }
 
 function blankInstallation() {
@@ -1812,7 +2013,7 @@ function cleanServices(rows, key) {
 function emptyProjectForm() {
   return {
     location: '',
-    current_phase: 'premier_contact',
+    current_phase: 'quote_confirmed',
     on_hold: false,
     admin_notes: ''
   }
@@ -2091,6 +2292,7 @@ const tabs = computed(() => {
     { id: 'overview', label: t('admin.tabs.overview'), icon: 'overview' },
     { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: (stats.value?.totals?.pending_rfqs || 0) + (serviceRequests.value?.length || 0) || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
+    { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
     { id: 'services', label: t('admin.tabs.services') || 'Services', icon: 'services' },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
     {
@@ -2179,6 +2381,9 @@ const handleLogout = async () => {
 const missionMenuOpen = ref(false)
 
 const switchTab = async (tabId) => {
+  if (tabId !== 'projects' && showProjectDrawer.value) {
+    closeProjectDrawer()
+  }
   activeTab.value = tabId
   if (tabId !== 'operations') missionMenuOpen.value = false
   if (tabId === 'overview') await loadOverview()
@@ -2656,7 +2861,8 @@ const buildProjectPayload = () => {
       id_product: line.id_product,
       title: line.title,
       quantity: Number(line.quantity) || 1,
-      unit_price: Number(line.unit_price)
+      unit_price: Number(line.unit_price),
+      locked: !!line.locked
     })),
     installations: cleanServices(projectInstallations.value, 'name'),
     maintenances: cleanServices(projectMaintenances.value, 'type')
@@ -2673,14 +2879,16 @@ const handleSaveProject = async () => {
   projectSaving.value = false
 
   if (result) {
-    editingProject.value = result.project
-    selectedQuoteIds.value = (result.project.rfq_tickets || []).map((quote) => quote.id)
-    projectLines.value = (result.project.lines || []).map((line) => ({ ...line }))
-    projectInstallations.value = (result.project.installations || []).map((row) => ({ ...row, price: row.price ?? '' }))
-    projectMaintenances.value = (result.project.maintenances || []).map((row) => ({ ...row, price: row.price ?? '' }))
+    await loadProjects()
+    const refreshed = projects.value.find((project) => project.id === editingProject.value.id)
+    const project = refreshed || result.project
+    editingProject.value = project
+    selectedQuoteIds.value = (project.rfq_tickets || []).map((quote) => quote.id)
+    projectLines.value = (project.lines || []).map((line) => ({ ...line }))
+    projectInstallations.value = (project.installations || []).map((row) => ({ ...row, price: row.price ?? '' }))
+    projectMaintenances.value = (project.maintenances || []).map((row) => ({ ...row, price: row.price ?? '' }))
     projectTraces.value = result.traces || []
     projectSaveSuccess.value = t('admin.projects.saved')
-    await loadProjects()
     await fetchStats()
   } else {
     projectFormError.value = error.value || 'Could not save follow-up.'
@@ -2716,7 +2924,8 @@ const submitCreateProject = async () => {
       id_product: line.id_product,
       title: line.title,
       quantity: Number(line.quantity) || 1,
-      unit_price: Number(line.unit_price)
+      unit_price: Number(line.unit_price),
+      locked: !!line.locked
     })),
     installations: cleanServices(createProjectForm.value.installations, 'name'),
     maintenances: cleanServices(createProjectForm.value.maintenances, 'type')
@@ -2990,9 +3199,9 @@ const handleStockChange = async (product, stock) => {
 
 .status-pill.project.completed,
 .status-pill.project.on_hold,
-.status-pill.project.premier_contact,
-.status-pill.project.data_collection,
-.status-pill.project.energy_data {
+.status-pill.project.quote_confirmed,
+.status-pill.project.order_prep,
+.status-pill.project.installation {
   background: #f5f5f4;
   color: #44403c;
 }
@@ -3928,6 +4137,158 @@ const handleStockChange = async (product, stock) => {
   border: 1px solid #bbf7d0;
 }
 
+.wf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.wf-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+.wf-title {
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 750 !important;
+  color: #14532d !important;
+  line-height: 1.3;
+}
+
+.wf-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: #f5f5f4;
+  overflow: hidden;
+  margin: 0.85rem 0 1rem;
+}
+
+.wf-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #15803d;
+  transition: width 0.25s ease;
+}
+
+.wf-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.wf-step {
+  position: relative;
+  padding-bottom: 0.55rem;
+}
+
+.wf-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.85rem;
+  top: 1.85rem;
+  bottom: 0;
+  width: 2px;
+  background: #e7e5e4;
+}
+
+.wf-step.done:not(:last-child)::before {
+  background: #86efac;
+}
+
+.wf-step-btn {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  gap: 0.7rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.15rem 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.wf-dot {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 750;
+  flex-shrink: 0;
+  background: #fafaf9;
+  border: 1.5px solid #d6d3d1;
+  color: #78716c;
+  position: relative;
+  z-index: 1;
+}
+
+.wf-check {
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.wf-step.done .wf-dot {
+  background: #15803d;
+  border-color: #15803d;
+  color: #fff;
+}
+
+.wf-step.current .wf-dot {
+  background: #fff;
+  border-color: #15803d;
+  color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
+}
+
+.wf-step-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding-top: 0.2rem;
+}
+
+.wf-step-name {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: #44403c;
+}
+
+.wf-step.current .wf-step-name {
+  color: #14532d;
+  font-weight: 750;
+}
+
+.wf-step.done .wf-step-name {
+  color: #57534e;
+}
+
+.wf-step.muted .wf-step-name {
+  color: #a8a29e;
+  font-weight: 550;
+}
+
+.wf-step-hint {
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: #78716c;
+}
+
 .phase-picker {
   display: flex;
   flex-direction: column;
@@ -4029,26 +4390,41 @@ const handleStockChange = async (product, stock) => {
 }
 
 .phase-counter {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #44403c;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: #57534e;
   background: #f5f5f4;
   border: 1px solid #e7e5e4;
   border-radius: 999px;
-  padding: 0.22rem 0.55rem;
+  padding: 0.28rem 0.55rem;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .hold-toggle {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  margin-top: 0.75rem;
-  font-size: 0.86rem;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid #e7e5e4;
+  background: #fafaf9;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: #374151;
+  color: #57534e;
+  cursor: pointer;
+}
+
+.hold-toggle.active {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.hold-toggle input {
+  accent-color: #d97706;
 }
 
 .followup-btn {
@@ -4479,6 +4855,249 @@ const handleStockChange = async (product, stock) => {
   width: min(680px, 100vw);
 }
 
+.project-workspace {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 260px;
+  z-index: 200;
+  background:
+    radial-gradient(ellipse at top right, rgba(34, 197, 94, 0.06), transparent 42%),
+    #f5f5f4;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.project-workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 1.1rem 1.75rem 1.2rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e7e5e4;
+  flex-shrink: 0;
+}
+
+.pw-back {
+  border: none;
+  background: transparent;
+  color: #78716c;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.45rem;
+  cursor: pointer;
+}
+
+.pw-back:hover {
+  color: #15803d;
+}
+
+.pw-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.project-workspace-title h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 800;
+  color: #052e16;
+}
+
+.pw-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
+  color: #44403c;
+}
+
+.pw-status.completed {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.pw-status.on_hold {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.pw-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.pw-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
+  color: #44403c;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pw-chip.muted {
+  color: #78716c;
+  font-weight: 500;
+}
+
+.pw-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.project-workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  padding-top: 0.35rem;
+}
+
+.project-workspace-form {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-workspace-layout {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.35rem 1.75rem 1rem;
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.pw-rail,
+.pw-main,
+.pw-services,
+.pw-comms {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  min-width: 0;
+}
+
+.pw-rail {
+  position: sticky;
+  top: 0;
+}
+
+.pw-services,
+.pw-comms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+
+.project-workspace .drawer-section {
+  padding: 1.25rem 1.35rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 18px;
+  background: #fff;
+  margin: 0;
+  box-shadow: 0 1px 0 rgba(28, 25, 23, 0.03);
+}
+
+.project-workspace .drawer-section h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: #1c1917;
+}
+
+.project-workspace .section-head h3 {
+  margin: 0;
+}
+
+.pw-picker-wrap {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.project-workspace .service-card {
+  background: #fafaf9;
+}
+
+.project-workspace .thread {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 0.85rem;
+  padding-right: 0.25rem;
+}
+
+.project-workspace-msg {
+  margin: 0 1.75rem;
+}
+
+.project-workspace-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #e7e5e4;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1100px) {
+  .pw-services,
+  .pw-comms {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .project-workspace {
+    left: 0;
+  }
+
+  .project-workspace-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .pw-rail {
+    position: static;
+  }
+
+  .project-workspace-header {
+    flex-direction: column;
+  }
+
+  .project-workspace-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 .project-drawer .drawer-section {
   padding: 1.5rem;
   border: 1px solid #e7e5e4;
@@ -4561,34 +5180,144 @@ const handleStockChange = async (product, stock) => {
 }
 
 .project-create-modal {
-  width: min(1240px, calc(100vw - 2.5rem));
-  max-height: min(94vh, 980px);
+  width: min(920px, calc(100vw - 2.5rem));
+  max-height: min(94vh, 920px);
 }
 
-.project-create-body {
-  display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-  gap: 1rem;
-  align-items: start;
+.project-create-modal .modal-header {
+  align-items: flex-start;
 }
 
-.project-create-sidebar {
-  position: sticky;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.project-create-modal .modal-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #15803d;
 }
 
-.project-create-sidebar > h4 {
+.project-create-modal .modal-header h3 {
   margin: 0;
 }
 
-.project-create-main {
+.project-create-body {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
+  gap: 1.15rem;
+  overflow-y: auto;
+  padding: 1.15rem 1.35rem;
+}
+
+.create-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.create-section-head h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: #1c1917;
+}
+
+.create-section-head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #78716c;
+  line-height: 1.4;
+}
+
+.create-essentials-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.create-essentials-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #57534e;
+}
+
+.create-essentials-grid input,
+.create-essentials-grid select,
+.create-essentials-grid textarea {
+  width: 100%;
+  border: 1px solid rgba(5, 46, 22, 0.12);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+  color: #1c1917;
+  background: #fff;
+}
+
+.create-span-2 {
+  grid-column: 1 / -1;
+}
+
+.create-empty {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border-radius: 10px;
+  border: 1px dashed #d6d3d1;
+  background: #fafaf9;
+  color: #78716c;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.create-empty.muted {
+  border-style: solid;
+  border-color: #f1f5f9;
+  background: transparent;
+  padding: 0.35rem 0;
+  font-size: 0.82rem;
+}
+
+.create-quote-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.create-quote-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 999px;
+  background: #fafaf9;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #292524;
+}
+
+.create-quote-chip:has(input:checked) {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #14532d;
+}
+
+.create-quote-chip input {
+  accent-color: #15803d;
+}
+
+.create-quote-chip small {
+  font-weight: 500;
+  color: #78716c;
 }
 
 .project-create-services {
@@ -4596,6 +5325,40 @@ const handleStockChange = async (product, stock) => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   align-items: start;
+}
+
+.create-service-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.create-service-block h5 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #44403c;
+}
+
+.create-services-section .service-card {
+  background: #fafaf9;
+}
+
+@media (max-width: 800px) {
+  .create-essentials-grid,
+  .project-create-services {
+    grid-template-columns: 1fr;
+  }
+
+  .project-create-modal {
+    width: 100%;
+    max-height: 96vh;
+  }
+}
+
+.project-create-sidebar {
+  display: none;
 }
 
 .line-pick-wide {
@@ -4606,26 +5369,7 @@ const handleStockChange = async (product, stock) => {
   grid-template-columns: minmax(0, 1.6fr) 0.55fr 0.75fr auto auto;
 }
 
-@media (max-width: 1024px) {
-  .project-create-body {
-    grid-template-columns: 1fr;
-  }
-
-  .project-create-sidebar {
-    position: static;
-  }
-
-  .project-create-services {
-    grid-template-columns: 1fr;
-  }
-}
-
 @media (max-width: 720px) {
-  .project-create-modal {
-    width: 100%;
-    max-height: 96vh;
-  }
-
   .line-pick-wide {
     grid-template-columns: 1fr 1fr;
   }

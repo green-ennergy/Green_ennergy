@@ -44,6 +44,6 @@ class QuoteRequest extends Model
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'quote_items', 'id_quote', 'id_product')
-            ->withPivot('label', 'unit_price', 'line_type', 'quantity');
+            ->withPivot('label', 'unit_price', 'line_type', 'quantity', 'locked');
     }
 }

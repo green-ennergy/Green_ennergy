@@ -184,6 +184,9 @@ export function useAdmin() {
       error.value = null
       const response = await api.get('/admin/products', { params: filters })
       products.value = response.data.data || response.data.products || response.data
+      if (!Array.isArray(products.value)) {
+        products.value = []
+      }
       return response.data
     } catch (err) {
       error.value = getApiErrorMessage(err, 'Failed to load products')

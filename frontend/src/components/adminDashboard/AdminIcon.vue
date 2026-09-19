@@ -119,6 +119,16 @@
       <path d="M14 11v6" />
     </template>
 
+    <template v-else-if="name === 'lock'">
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </template>
+
+    <template v-else-if="name === 'unlock'">
+      <rect x="5" y="11" width="14" height="10" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 7.5-2" />
+    </template>
+
     <template v-else-if="name === 'image'">
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <circle cx="9" cy="9" r="2" />

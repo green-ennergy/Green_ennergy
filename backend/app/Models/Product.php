@@ -48,7 +48,7 @@ class Product extends Model
     public function quotes(): BelongsToMany
     {
         return $this->belongsToMany(QuoteRequest::class, 'quote_items', 'id_product', 'id_quote')
-            ->withPivot('label', 'unit_price', 'line_type', 'quantity');
+            ->withPivot('label', 'unit_price', 'line_type', 'quantity', 'locked');
     }
 
     public function orders(): BelongsToMany
