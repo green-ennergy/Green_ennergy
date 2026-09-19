@@ -1491,7 +1491,7 @@
                     <h4>{{ task.title }}</h4>
                     <p class="agenda-op">👤 {{ (task.operatorName && task.operatorName.trim()) ? task.operatorName : 'Non assigné' }}</p>
                     <p class="agenda-time">⏰ {{ task.timeSlot }}</p>
-                  </div>
+                  </section>
                 </div>
 
                 <footer class="modal-footer">
@@ -1500,6 +1500,8 @@
                     {{ editingTask ? t('admin.operations.modal.submitUpdate') : t('admin.operations.modal.submitCreate') }}
                   </button>
                 </footer>
+                
+
               </form>
             </div>
           </div>
