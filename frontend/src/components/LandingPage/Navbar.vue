@@ -1,5 +1,14 @@
 <template>
-  <nav class="navbar" :class="{ scrolled: isScrolled, 'light-navbar': isLightNavbar }" role="navigation" aria-label="Main navigation">
+  <nav
+    class="navbar"
+    :class="{
+      scrolled: isScrolled,
+      'light-navbar': isLightNavbar,
+      'hero-navbar': hasHeroUnderNav
+    }"
+    role="navigation"
+    aria-label="Main navigation"
+  >
     <div class="container nav-container">
       <!-- Logo -->
       <router-link to="/" class="logo" :aria-label="t('nav.homeAria')">
@@ -21,17 +30,20 @@
       </ul>
 
       <div class="nav-actions">
-        <template v-if="isLoggedIn">
-          <router-link
-            :to="{ name: homeRoute }"
-            class="nav-signin"
-          >
-            {{ spaceLabel }}
-          </router-link>
-          <button type="button" class="btn nav-login get-consultation" @click="handleLogout">
-            {{ t('common.signOut') }}
-          </button>
-        </template>
+        <router-link
+          v-if="isLoggedIn"
+          :to="{ name: homeRoute }"
+          class="nav-user"
+          :title="spaceLabel"
+        >
+          <span class="nav-user-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          <span class="nav-user-name">{{ displayName }}</span>
+        </router-link>
         <router-link
           v-else
           to="/login"
@@ -65,7 +77,17 @@
         <li><router-link to="/#faq" @click="isMenuOpen = false">{{ t('nav.faq') }}</router-link></li>
         <li><router-link to="/#about" @click="isMenuOpen = false">{{ t('nav.about') }}</router-link></li>
         <li v-if="isLoggedIn">
-          <router-link :to="{ name: homeRoute }" @click="isMenuOpen = false">{{ spaceLabel }}</router-link>
+          <router-link :to="{ name: homeRoute }" class="mobile-user" @click="isMenuOpen = false">
+            <span class="nav-user-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>
+            <span>
+              <strong>{{ displayName }}</strong>
+            </span>
+          </router-link>
         </li>
         <li v-if="isLoggedIn">
           <button type="button" class="mobile-auth-btn" @click="handleLogout">{{ t('common.signOut') }}</button>
@@ -79,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../../composables/useAuth'
@@ -87,30 +109,39 @@ import { useAuth } from '../../composables/useAuth'
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const { isLoggedIn, homeRoute, logoutUser } = useAuth()
+const { isLoggedIn, homeRoute, logoutUser, user } = useAuth()
 const spaceLabel = computed(() => {
   if (homeRoute.value === 'admin') return t('nav.admin')
   if (homeRoute.value === 'operator') return t('nav.operator')
   return t('nav.dashboard')
 })
+const displayName = computed(() => user.value?.name?.trim() || user.value?.email || spaceLabel.value)
 
 const isScrolled = ref(false)
 const isMenuOpen = ref(false)
 
+/** Pages with a full-bleed hero image / dark band under the fixed navbar */
+const hasHeroUnderNav = computed(() => {
+  const path = route.path || ''
+  if (path === '/') return true
+  if (path === '/store') return true
+  if (path.startsWith('/services')) return true
+  if (path.startsWith('/partners')) return true
+  if (path.startsWith('/about')) return true
+  if (path.startsWith('/privacy')) return true
+  if (path.startsWith('/terms')) return true
+  if (path.startsWith('/projects/')) return true
+  return false
+})
+
+/** Light solid bar only when there is no dark hero (e.g. product detail) */
 const isLightNavbar = computed(() => {
-  if (!route || !route.path) return false
-  return (
-    route.path.startsWith('/store') ||
-    route.path.startsWith('/services') ||
-    route.path.startsWith('/partners') ||
-    route.path.startsWith('/about') ||
-    route.path.startsWith('/privacy') ||
-    route.path.startsWith('/terms')
-  )
+  const path = route.path || ''
+  return path.startsWith('/store/')
 })
 
 const handleScroll = () => {
-  isScrolled.value = window.scrollY > 50
+  isScrolled.value = window.scrollY > 40
 }
 
 const handleLogout = async () => {
@@ -121,7 +152,18 @@ const handleLogout = async () => {
   }
 }
 
-onMounted(() => window.addEventListener('scroll', handleScroll))
+watch(
+  () => route.fullPath,
+  () => {
+    isMenuOpen.value = false
+    handleScroll()
+  }
+)
+
+onMounted(() => {
+  handleScroll()
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
 onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 </script>
 
@@ -136,6 +178,15 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   padding: 1.5rem 0;
   color: #f0fdf4;
   border-bottom: 1px solid transparent;
+  background: transparent;
+}
+
+.navbar.hero-navbar:not(.scrolled) {
+  background: transparent;
+  box-shadow: none;
+  border-bottom-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .navbar.scrolled {
@@ -217,14 +268,44 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   gap: 1.25rem;
 }
 
-.nav-signin {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(240,253,244,0.65);
-  transition: color 0.2s;
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 253, 244, 0.18);
+  background: rgba(240, 253, 244, 0.08);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  max-width: 220px;
 }
 
-.nav-signin:hover { color: #f0fdf4; }
+.nav-user:hover {
+  background: rgba(74, 222, 128, 0.14);
+  border-color: rgba(74, 222, 128, 0.35);
+  transform: translateY(-1px);
+}
+
+.nav-user-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(74, 222, 128, 0.18);
+  color: #4ade80;
+}
+
+.nav-user-name {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: #f0fdf4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .nav-login {
   font-size: 0.875rem;
@@ -324,14 +405,14 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   .mobile-menu ul li a:hover { color: #4ade80; }
 }
 
-/* ─── Light Navbar Theme (Store pages) ────────── */
+/* ─── Light Navbar (pages without a dark hero, e.g. product detail) ────────── */
 .navbar.light-navbar {
   color: #052e16;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .navbar.light-navbar:not(.scrolled) {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -371,7 +452,48 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   color: #16a34a;
 }
 
+.navbar.light-navbar .nav-user {
+  border-color: rgba(5, 46, 22, 0.1);
+  background: rgba(5, 46, 22, 0.04);
+}
+
+.navbar.light-navbar .nav-user:hover {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.navbar.light-navbar .nav-user-icon {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.navbar.light-navbar .nav-user-name {
+  color: #052e16;
+}
+
 .navbar.light-navbar .mobile-menu-btn {
   color: #052e16;
+}
+
+.mobile-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid rgba(240, 253, 244, 0.06);
+  color: inherit;
+}
+
+.mobile-user strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #f0fdf4;
+}
+
+.mobile-user small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: rgba(240, 253, 244, 0.5);
 }
 </style>

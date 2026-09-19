@@ -111,10 +111,11 @@ export default {
       overview: 'Overview',
       orders: 'Orders & RFQs',
       marketplace: 'Products',
+      projects: 'Projects',
       services: 'Services',
       clients: 'Clients',
       operators: 'Operators',
-      operations: 'Operations Management'
+      operations: 'Missions'
     },
     overview: {
       title: 'Operations Overview',
@@ -140,6 +141,11 @@ export default {
       emptyDesc: 'Projects appear here after a client confirms a quote on their dashboard.',
       goOrders: 'Go to Orders & RFQ →',
       updateFollowup: 'Update follow-up',
+      backToList: 'Back to projects',
+      noInstallations: 'No installations yet. Add one if needed.',
+      noMaintenances: 'No maintenance entries yet.',
+      noStoreProducts: 'No store products on this project yet.',
+      unnamedProduct: 'Product',
       active: 'Active follow-ups',
       onHold: 'On hold',
       completed: 'Completed',
@@ -150,10 +156,23 @@ export default {
       createTitle: 'New project',
       projectName: 'Name',
       selectClient: 'Client',
+      selectClientPlaceholder: 'Select a client…',
+      createEssentials: 'Project details',
+      createEssentialsHint: 'Name, client and location for this follow-up.',
       assignQuotes: 'Quotes',
-      noQuotes: 'No quotes for this client.',
+      assignQuotesHint: 'Link existing RFQs for this client (optional).',
+      pickClientFirst: 'Select a client to see available quotes.',
+      noQuotes: 'No quotes for this client yet. You can still add catalog products below.',
       description: 'Details',
+      descriptionPlaceholder: 'Optional notes about the project…',
+      createServices: 'Services (optional)',
+      createServicesHint: 'Add installation or maintenance only if needed now.',
       storeProducts: 'Store products',
+      additionalProducts: 'Additional products',
+      additionalProductsHint: 'Extra catalog items needed after the RFQ — shown like the quote lines above.',
+      noAdditionalProducts: 'No additional products yet. Add catalog items the client still needs.',
+      pickProductTitle: 'Pick a product',
+      addProduct: 'Add product',
       pickProduct: 'Pick a product',
       addLine: 'Add',
       unitPrice: 'Unit price',
@@ -168,6 +187,15 @@ export default {
       remove: 'Remove',
       selectedProducts: 'Selected products',
       enterPrice: 'Enter a unit price before adding.',
+      productAdded: 'Added “{name}” to the project.',
+      outOfStock: 'This product is out of stock.',
+      qtyExceedsStock: 'Quantity cannot exceed stock ({stock}).',
+      stockAvailable: 'Stock: {count}',
+      priceMismatchWarnRfq: 'Differs from quote ({existing}).',
+      priceMismatchWarnList: 'Differs from list price ({existing}).',
+      lockLine: 'Lock price and quantity',
+      unlockLine: 'Unlock to edit',
+      unlockToEdit: 'Unlock this product before editing or removing it.',
       productsPill: '{count} products',
       installationsPill: '{count} installations',
       maintenancesPill: '{count} maintenances',
@@ -491,37 +519,37 @@ export default {
   },
   followup: {
     steps: {
-      premier_contact: {
-        label: 'Premier contact',
-        short: 'Contact',
-        clientHint: 'Our team confirms your request and collects initial project information.',
-        adminHint: 'Collect location, project type and estimated energy need with the client.'
+      quote_confirmed: {
+        label: 'Quote confirmed',
+        short: 'Quote',
+        clientHint: 'Your quote is confirmed. Our team is preparing the next steps.',
+        adminHint: 'Quote accepted — confirm scope, products and client details.'
       },
-      data_collection: {
-        label: 'Data collection',
-        short: 'Collecte',
-        clientHint: 'Our team gathers the site information required for your project.',
-        adminHint: 'Complete site data: grid bill analysis or off-grid equipment inventory.'
+      order_prep: {
+        label: 'Order & preparation',
+        short: 'Prep',
+        clientHint: 'Your order is being prepared (products and scheduling).',
+        adminHint: 'Prepare catalog products, logistics and site planning.'
       },
-      energy_data: {
-        label: 'Energy data',
-        short: 'Énergie',
-        clientHint: 'Our team reviews energy requirements before moving to the next phase.',
-        adminHint: 'Validate energy data before site visit or technical study.'
+      installation: {
+        label: 'Installation',
+        short: 'Install',
+        clientHint: 'Installation work is in progress or scheduled on site.',
+        adminHint: 'Carry out or follow installation and field work.'
       },
       completed: {
-        label: 'Completed',
-        short: 'Terminé',
-        clientHint: 'Your follow-up is complete. Our team remains available if you need support.',
-        adminHint: 'Mark when delivery or service handover is finished.'
+        label: 'Handover complete',
+        short: 'Done',
+        clientHint: 'Delivery is complete. Our team remains available if you need support.',
+        adminHint: 'Mark reception / handover as finished.'
       }
     },
     status: {
       on_hold: 'On hold',
-      premier_contact: 'Premier contact',
-      data_collection: 'Data collection',
-      energy_data: 'Energy data',
-      completed: 'Completed'
+      quote_confirmed: 'Quote confirmed',
+      order_prep: 'Order & preparation',
+      installation: 'Installation',
+      completed: 'Handover complete'
     },
     currentStep: 'Current step',
     onHoldTitle: 'On hold',

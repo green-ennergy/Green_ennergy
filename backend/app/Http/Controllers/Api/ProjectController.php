@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Installation;
 use App\Models\Maintenance;
+use App\Models\Product;
 use App\Models\Project;
 use App\Models\ProjectMessage;
 use App\Models\ProjectTrace;
@@ -13,10 +14,40 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ProjectController extends Controller
 {
-    private const PHASES = ['premier_contact', 'data_collection', 'energy_data', 'completed'];
+    private const PHASES = ['quote_confirmed', 'order_prep', 'installation', 'completed'];
+
+    private const LEGACY_PHASE_MAP = [
+        'premier_contact' => 'quote_confirmed',
+        'data_collection' => 'order_prep',
+        'energy_data' => 'installation',
+        'completed' => 'completed',
+    ];
+
+    private function normalizePhase(?string $phase): ?string
+    {
+        if ($phase === null || $phase === '' || $phase === 'on_hold') {
+            return $phase;
+        }
+
+        return self::LEGACY_PHASE_MAP[$phase] ?? $phase;
+    }
+
+    private function normalizeCompletedSteps(array $steps): array
+    {
+        $normalized = [];
+        foreach ($steps as $step) {
+            $key = $this->normalizePhase((string) $step);
+            if ($key && in_array($key, self::PHASES, true) && ! in_array($key, $normalized, true)) {
+                $normalized[] = $key;
+            }
+        }
+
+        return array_values(array_intersect(self::PHASES, $normalized));
+    }
 
     public function index(Request $request): JsonResponse
     {
@@ -29,7 +60,11 @@ class ProjectController extends Controller
         ]);
 
         if ($status = $request->query('status')) {
-            $query->where('status', $status);
+            $legacy = array_keys(array_filter(
+                self::LEGACY_PHASE_MAP,
+                fn (string $mapped) => $mapped === $status
+            ));
+            $query->whereIn('status', array_values(array_unique([$status, ...$legacy])));
         }
 
         $projects = $query->orderByDesc('id_project')->get()
@@ -49,6 +84,7 @@ class ProjectController extends Controller
     public function quotes(): JsonResponse
     {
         $quotes = QuoteRequest::query()
+            ->with('products')
             ->where(function ($query) {
                 $query->whereNull('origin')->orWhere('origin', '!=', 'manual');
             })
@@ -63,6 +99,18 @@ class ProjectController extends Controller
                 'status' => $quote->status,
                 'id_client' => $quote->id_client,
                 'id_project' => $quote->id_project,
+                'items' => $quote->products->map(function ($product) {
+                    $quantity = (int) $product->pivot->quantity;
+                    $unitPrice = (float) $product->pivot->unit_price;
+
+                    return [
+                        'id' => $product->id_product,
+                        'display_name' => $product->pivot->label ?: $product->title,
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'line_total' => $unitPrice * $quantity,
+                    ];
+                })->values(),
             ]);
 
         return response()->json(['data' => $quotes]);
@@ -87,11 +135,13 @@ class ProjectController extends Controller
         $maintenances = $validated['maintenances'] ?? [];
         unset($validated['quote_ids'], $validated['lines'], $validated['installations'], $validated['maintenances']);
 
+        $this->assertLinesWithinStock($lines);
+
         $project = Project::create([
             ...$validated,
-            'status' => 'premier_contact',
+            'status' => 'quote_confirmed',
             'progress' => 25,
-            'completed_steps' => ['premier_contact'],
+            'completed_steps' => ['quote_confirmed'],
             'start_date' => now()->toDateString(),
         ]);
 
@@ -103,7 +153,7 @@ class ProjectController extends Controller
         $this->recordTrace($project, $request, 'Project opened', [[
             'label' => 'Phase',
             'action' => 'added',
-            'to' => 'premier_contact',
+            'to' => 'quote_confirmed',
         ]]);
 
         $project->load(['client.user', 'quoteRequests.products', 'latestMessage.user', 'installations', 'maintenances']);
@@ -121,7 +171,7 @@ class ProjectController extends Controller
             'description' => ['nullable', 'string'],
             'admin_notes' => ['nullable', 'string'],
             'completed_steps' => ['sometimes', 'array'],
-            'completed_steps.*' => ['string', Rule::in(self::PHASES)],
+            'completed_steps.*' => ['string', Rule::in([...self::PHASES, ...array_keys(self::LEGACY_PHASE_MAP)])],
             'on_hold' => ['sometimes', 'boolean'],
             'quote_ids' => ['sometimes', 'array'],
             'quote_ids.*' => ['integer', 'exists:quote_requests,id_quote'],
@@ -151,10 +201,9 @@ class ProjectController extends Controller
             $project->admin_notes = $validated['admin_notes'];
         }
 
-        $steps = $validated['completed_steps'] ?? $project->completed_steps ?? [];
-        $steps = array_values(array_intersect(self::PHASES, $steps));
+        $steps = $this->normalizeCompletedSteps($validated['completed_steps'] ?? $project->completed_steps ?? []);
         if ($steps === []) {
-            $steps = ['premier_contact'];
+            $steps = ['quote_confirmed'];
         }
 
         $onHold = array_key_exists('on_hold', $validated)
@@ -181,6 +230,7 @@ class ProjectController extends Controller
         }
 
         if (array_key_exists('lines', $validated)) {
+            $this->assertLinesWithinStock($validated['lines'] ?? []);
             $this->syncManualLines($project, $request, $validated['lines'] ?? []);
         }
 
@@ -301,8 +351,8 @@ class ProjectController extends Controller
         $allQuotes = $project->quoteRequests
             ? $project->quoteRequests->sortByDesc('creation_date')->values()
             : collect();
-        $manual = $allQuotes->first(fn (QuoteRequest $quote) => $quote->origin === 'manual');
-        $quotes = $allQuotes->reject(fn (QuoteRequest $quote) => $quote->origin === 'manual')->values();
+        $manual = $allQuotes->first(fn (QuoteRequest $quote) => ($quote->origin ?? null) === 'manual');
+        $quotes = $allQuotes->reject(fn (QuoteRequest $quote) => ($quote->origin ?? null) === 'manual')->values();
 
         return [
             'id' => $project->id_project,
@@ -310,9 +360,9 @@ class ProjectController extends Controller
             'name' => $project->name,
             'type' => $project->type,
             'location' => $project->location,
-            'status' => $project->status,
+            'status' => $this->normalizePhase($project->status) ?: $project->status,
             'progress' => $project->progress,
-            'completed_steps' => $project->completed_steps ?? [],
+            'completed_steps' => $this->normalizeCompletedSteps($project->completed_steps ?? []),
             'description' => $project->description,
             'admin_notes' => $project->admin_notes,
             'start_date' => optional($project->start_date)->toDateString(),
@@ -341,6 +391,8 @@ class ProjectController extends Controller
 
     private function presentQuote(QuoteRequest $quote): array
     {
+        $quote->loadMissing('products');
+
         return [
             'id' => $quote->id_quote,
             'ticket_number' => $quote->number,
@@ -391,7 +443,8 @@ class ProjectController extends Controller
             'lines.*.id_product' => ['required', 'integer', 'exists:products,id_product'],
             'lines.*.quantity' => ['required', 'integer', 'min:1', 'max:32767'],
             'lines.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'lines.*.title' => ['nullable', 'string', 'max:50'],
+            'lines.*.title' => ['nullable', 'string', 'max:255'],
+            'lines.*.locked' => ['nullable', 'boolean'],
             'installations' => ['nullable', 'array'],
             'installations.*.id' => ['nullable', 'integer'],
             'installations.*.name' => ['nullable', 'string', 'max:255'],
@@ -418,14 +471,16 @@ class ProjectController extends Controller
         $quote->loadMissing('products');
 
         return $quote->products->map(function ($product) {
-            $quantity = (int) $product->pivot->quantity;
-            $unitPrice = (float) $product->pivot->unit_price;
+            $quantity = (int) ($product->pivot->quantity ?? 1);
+            $unitPrice = (float) ($product->pivot->unit_price ?? 0);
+            $title = trim((string) ($product->pivot->label ?: $product->title ?: ''));
 
             return [
                 'id_product' => $product->id_product,
-                'title' => $product->pivot->label ?: $product->title,
+                'title' => $title !== '' ? $title : 'Product',
                 'quantity' => $quantity,
                 'unit_price' => $unitPrice,
+                'locked' => (bool) ($product->pivot->locked ?? false),
             ];
         })->values()->all();
     }
@@ -456,23 +511,97 @@ class ProjectController extends Controller
         ];
     }
 
+    private function assertLinesWithinStock(array $lines): void
+    {
+        if ($lines === []) {
+            return;
+        }
+
+        $ids = [];
+        foreach ($lines as $line) {
+            $id = (int) ($line['id_product'] ?? 0);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+        }
+
+        if ($ids === []) {
+            return;
+        }
+
+        $stocks = Product::query()
+            ->whereIn('id_product', array_values(array_unique($ids)))
+            ->pluck('stock', 'id_product');
+
+        $errors = [];
+        foreach ($lines as $index => $line) {
+            $id = (int) ($line['id_product'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $qty = (int) ($line['quantity'] ?? 0);
+            $stock = (int) ($stocks[$id] ?? 0);
+
+            if ($stock <= 0) {
+                $errors["lines.$index.quantity"] = ["This product is out of stock."];
+            } elseif ($qty > $stock) {
+                $errors["lines.$index.quantity"] = ["Quantity cannot exceed available stock ($stock)."];
+            }
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
     private function syncManualLines(Project $project, Request $request, array $lines): void
     {
+        $quote = $project->quoteRequests()->where('origin', 'manual')->first();
+        $existingByProduct = [];
+        if ($quote) {
+            $quote->loadMissing('products');
+            foreach ($quote->products as $product) {
+                $existingByProduct[(int) $product->id_product] = [
+                    'quantity' => (int) $product->pivot->quantity,
+                    'unit_price' => (float) $product->pivot->unit_price,
+                    'locked' => (bool) ($product->pivot->locked ?? false),
+                    'label' => $product->pivot->label,
+                ];
+            }
+        }
+
         $normalized = [];
         foreach ($lines as $line) {
             $id = (int) ($line['id_product'] ?? 0);
             if ($id <= 0) {
                 continue;
             }
+
+            $locked = filter_var($line['locked'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $existing = $existingByProduct[$id] ?? null;
+
+            // Locked lines keep their saved qty/price unless unlocked in this request.
+            if ($existing && ($existing['locked'] || $locked) && $locked) {
+                $normalized[$id] = [
+                    'quantity' => $existing['quantity'],
+                    'unit_price' => round($existing['unit_price'], 2),
+                    'label' => $existing['label']
+                        ?: (Str::limit(trim((string) ($line['title'] ?? '')), 50, '') ?: null),
+                    'line_type' => 'product',
+                    'locked' => true,
+                ];
+                continue;
+            }
+
             $normalized[$id] = [
                 'quantity' => max(1, min(32767, (int) ($line['quantity'] ?? 1))),
                 'unit_price' => round((float) $line['unit_price'], 2),
                 'label' => Str::limit(trim((string) ($line['title'] ?? '')), 50, '') ?: null,
                 'line_type' => 'product',
+                'locked' => $locked,
             ];
         }
-
-        $quote = $project->quoteRequests()->where('origin', 'manual')->first();
 
         if ($normalized === []) {
             if ($quote) {
@@ -508,6 +637,8 @@ class ProjectController extends Controller
                 $normalized
             )),
         ]);
+
+        $project->unsetRelation('quoteRequests');
     }
 
     private function manualNumber(Project $project): string

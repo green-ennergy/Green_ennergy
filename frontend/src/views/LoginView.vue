@@ -88,6 +88,7 @@
         watch
     } from 'vue'
     import {
+        useRoute,
         useRouter
     } from 'vue-router'
     import {
@@ -101,6 +102,7 @@
     } from '../utils/password'
     //import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
+    const route = useRoute()
     const router = useRouter()
     const {
         t
@@ -170,7 +172,12 @@
             const result = await loginUser(email.value, password.value)
             isLoading.value = false
             if (result.success) {
-                router.push({ name: homeRoute.value })
+                const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+                if (redirect.startsWith('/') && !redirect.startsWith('//')) {
+                    router.push(redirect)
+                } else {
+                    router.push({ name: homeRoute.value })
+                }
             } else {
                 alertType.value = 'error'
                 alertMessage.value = result.error || 'Login failed'
@@ -181,16 +188,16 @@
                 isLoading.value = false
                 return
             }
-            const result = await registerUser({
-                name: fullName.value,
-                company: company.value,
-                phone: phone.value,
-                email: email.value,
-                password: password.value
-            })
+            const result = await registerUser(
+                fullName.value,
+                company.value,
+                phone.value,
+                email.value,
+                password.value
+            )
             isLoading.value = false
             if (result.success) {
-                router.push('/dashboard')
+                router.push({ name: homeRoute.value })
             } else {
                 alertType.value = 'error'
                 alertMessage.value = result.error || 'Registration failed'

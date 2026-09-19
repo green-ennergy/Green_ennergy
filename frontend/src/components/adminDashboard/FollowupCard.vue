@@ -16,7 +16,6 @@
 
           </span>
 
-          <span v-if="project.lines?.length" class="pill pill-quote">{{ t('admin.projects.productsPill', { count: project.lines.length }) }}</span>
           <span v-if="project.installations?.length" class="pill pill-quote">{{ t('admin.projects.installationsPill', { count: project.installations.length }) }}</span>
           <span v-if="project.maintenances?.length" class="pill pill-quote">{{ t('admin.projects.maintenancesPill', { count: project.maintenances.length }) }}</span>
           <span class="pill pill-status" :class="project.status">{{ statusLabel }}</span>
@@ -103,12 +102,10 @@
 
 
 
-    <p v-if="clientMessage" class="client-update">
-      <span class="update-label">{{ variant === 'admin' ? t('followup.clientMessage') : t('followup.latestUpdate') }}</span>
-      {{ clientMessage }}
+    <p v-if="latestMessage" class="client-update">
+      <span class="update-label">{{ t('followup.latestUpdate') }}</span>
+      {{ latestMessage }}
     </p>
-
-
 
     <footer class="card-footer">
 
@@ -118,7 +115,7 @@
 
           v-if="variant === 'client'"
 
-          :to="`/dashboard/projects/${project.id}`"
+          :to="{ name: 'dashboard', query: { project: project.id } }"
 
           class="card-action"
 
@@ -151,6 +148,7 @@ import {
   getFollowupStepNumber,
   getStepMeta,
   isStepDone,
+  normalizePhaseKey,
   projectClientMessage,
   projectStatusLabel
 } from '../../utils/projectSteps'
@@ -193,11 +191,15 @@ const currentStep = computed(() => getStepMeta(currentPhase.value))
 
 const stepHint = computed(() => getFollowupHint(props.project, props.variant))
 
-const clientMessage = computed(() => props.project?.latest_message?.body || projectClientMessage(props.project))
+const latestMessage = computed(() => {
+  const fromThread = props.project?.latest_message?.body?.trim()
+  if (fromThread) return fromThread
+  return projectClientMessage(props.project)
+})
 
 const statusLabel = computed(() => projectStatusLabel(props.project?.status))
 
-const statusTone = computed(() => `tone-${props.project?.status || 'premier_contact'}`)
+const statusTone = computed(() => `tone-${normalizePhaseKey(props.project?.status) || 'quote_confirmed'}`)
 
 
 
@@ -359,11 +361,11 @@ function pipelineClass(stepKey, index) {
 
 
 
-.pill-status.premier_contact,
+.pill-status.quote_confirmed,
 
-.pill-status.data_collection,
+.pill-status.order_prep,
 
-.pill-status.energy_data {
+.pill-status.installation {
 
   color: #14532d;
 
@@ -775,6 +777,56 @@ function pipelineClass(stepKey, index) {
 
 }
 
+.card-products {
+  margin-top: 0.35rem;
+  padding: 0.85rem;
+  border-radius: 12px;
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
+}
+
+.card-products-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+.card-products-head strong {
+  font-size: 0.88rem;
+  color: #1c1917;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.card-products ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.card-products li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.65rem;
+  align-items: center;
+  font-size: 0.86rem;
+  color: #292524;
+}
+
+.card-products li strong {
+  justify-self: end;
+}
+
 
 
 .update-label {
@@ -873,9 +925,9 @@ function pipelineClass(stepKey, index) {
 .followup-card.admin .pill-status,
 .followup-card.admin .pill-status.on_hold,
 .followup-card.admin .pill-status.completed,
-.followup-card.admin .pill-status.premier_contact,
-.followup-card.admin .pill-status.data_collection,
-.followup-card.admin .pill-status.energy_data {
+.followup-card.admin .pill-status.quote_confirmed,
+.followup-card.admin .pill-status.order_prep,
+.followup-card.admin .pill-status.installation {
   color: #44403c;
   background: #f5f5f4;
   border: 1px solid #e7e5e4;
