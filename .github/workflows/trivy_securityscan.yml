@@ -54,7 +54,7 @@ jobs:
           exit-code: '0'
 
       - name: Build frontend image
-        run: docker build -f docker/frontend/Dockerfile.prod -t green-energy-frontend:scan .
+        run: docker build -f docker/frontend/Dockerfile.prod -t green-energy-frontend:scan frontend
 
       - name: Scan frontend image
         uses: aquasecurity/trivy-action@v0.36.0
