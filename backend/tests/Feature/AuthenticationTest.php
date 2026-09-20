@@ -27,16 +27,22 @@ class AuthenticationTest extends TestCase
         ]);
 
         $response->assertJsonStructure([
-            'user' => ['id_user', 'name', 'company', 'phone', 'email', 'role'],
+            'user' => ['id_user', 'name', 'company', 'phone', 'email', 'role', 'id_client'],
             'token',
             'message',
         ]);
+
+        $response->assertJsonPath('user.role', 'client');
 
         $this->assertDatabaseHas('users', [
             'name' => 'salah eddine',
             'company' => 'Green Energy Company',
             'phone' => '+212 600 123 456',
             'email' => 'salah.eddine@green.com',
+        ]);
+
+        $this->assertDatabaseHas('clients', [
+            'id_user' => $response->json('user.id_user'),
         ]);
     }
 
