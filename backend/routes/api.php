@@ -62,7 +62,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/admin/missions/{mission}', [MissionController::class, 'destroy']);
     });
 
-
     Route::middleware('role:operator')->group(function () {
         Route::get('/operator/me', [OperatorController::class, 'me']);
         Route::patch('/operator/duty', [OperatorController::class, 'updateDuty']);
@@ -70,7 +69,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/operator/missions/{mission}', [MissionController::class, 'update']);
     });
 
-    
     Route::middleware('role:client')->group(function () {
         Route::get('/rfq', [RfqController::class, 'index']);
         Route::post('/rfq', [RfqController::class, 'store']);

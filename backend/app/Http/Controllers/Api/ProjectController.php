@@ -556,7 +556,7 @@ class ProjectController extends Controller
             $stock = (int) ($stocks[$id] ?? 0);
 
             if ($stock <= 0) {
-                $errors["lines.$index.quantity"] = ["This product is out of stock."];
+                $errors["lines.$index.quantity"] = ['This product is out of stock.'];
             } elseif ($qty > $stock) {
                 $errors["lines.$index.quantity"] = ["Quantity cannot exceed available stock ($stock)."];
             }
@@ -603,6 +603,7 @@ class ProjectController extends Controller
                     'line_type' => 'product',
                     'locked' => true,
                 ];
+
                 continue;
             }
 
@@ -691,6 +692,7 @@ class ProjectController extends Controller
             if ($existing) {
                 $existing->update($data);
                 $kept[] = $existing->id_installation;
+
                 continue;
             }
 
@@ -735,6 +737,7 @@ class ProjectController extends Controller
             if ($existing) {
                 $existing->update($data);
                 $kept[] = $existing->id_maintenance;
+
                 continue;
             }
 

@@ -305,6 +305,7 @@ class RfqController extends Controller
                         'label' => $label ?: $item->label,
                         'line_type' => 'product',
                     ]);
+
                     continue;
                 }
 
@@ -316,6 +317,7 @@ class RfqController extends Controller
                         'label' => $label ?: 'Line item',
                         'line_type' => $type,
                     ]);
+
                     continue;
                 }
 
@@ -331,6 +333,7 @@ class RfqController extends Controller
                         'quantity' => $quantity,
                         'locked' => false,
                     ]);
+
                     continue;
                 }
 
