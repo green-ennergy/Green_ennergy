@@ -46,6 +46,7 @@ jobs:
           fail_action: false
           allow_issue_writing: false
           cmd_options: '-a'
+          artifact_name: 'zap-full-scan-internal-report'
 
       - name: Upload ZAP report
         if: always()
@@ -57,6 +58,11 @@ jobs:
             report_json.json
             report_md.md
           retention-days: 30
+          if-no-files-found: warn
+
+      - name: Show docker logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.yml logs
 
       - name: Stop application stack
         if: always()
