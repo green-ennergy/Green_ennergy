@@ -16,7 +16,7 @@ class User extends Authenticatable
 
     protected $primaryKey = 'id_user';
 
-    protected $appends = ['role'];
+    protected $appends = ['role', 'id_client'];
 
     public $timestamps = false;
 
@@ -90,5 +90,14 @@ class User extends Authenticatable
         }
 
         return null;
+    }
+
+    public function getIdClientAttribute(): ?int
+    {
+        if ($this->relationLoaded('client')) {
+            return $this->client?->id_client;
+        }
+
+        return $this->client()->value('id_client');
     }
 }

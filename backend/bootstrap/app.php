@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => RoleMiddleware::class,
         ]);
+
+        // API/SPA: no named web "login" route — returning null avoids
+        // RouteNotFoundException (and stack leaks when APP_DEBUG=true).
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
@@ -28,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             AuthenticationException $e,
             Request $request
         ) {
-            if ($request->is('api/*')) {
+            if ($request->is('api/*') || $request->expectsJson()) {
                 return response()->json([
                     'message' => 'Unauthenticated.',
                 ], 401);

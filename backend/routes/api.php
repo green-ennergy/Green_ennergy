@@ -23,6 +23,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Available to all authenticated users
     Route::get('/me', [AuthController::class, 'me']);
+    Route::patch('/me', [AuthController::class, 'updateProfile']);
+    Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     // Administrator only
     Route::middleware('role:administrator')->group(function () {
@@ -56,6 +58,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/admin/missions/{mission}', [MissionController::class, 'destroy']);
     });
 
+
     Route::middleware('role:operator')->group(function () {
         Route::get('/operator/me', [OperatorController::class, 'me']);
         Route::patch('/operator/duty', [OperatorController::class, 'updateDuty']);
@@ -63,6 +66,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/operator/missions/{mission}', [MissionController::class, 'update']);
     });
 
+    
     Route::middleware('role:client')->group(function () {
         Route::get('/projects', [ProjectController::class, 'index']);
         Route::get('/projects/{project}', [ProjectController::class, 'show']);
