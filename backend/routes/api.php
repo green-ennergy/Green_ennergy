@@ -19,6 +19,7 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('/health', fn () => response()->json(['status' => 'ok']));
 
 Route::middleware('auth:sanctum')->group(function () {
 
