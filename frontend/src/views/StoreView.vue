@@ -321,7 +321,11 @@ const handleQuoteSubmit = async () => {
   isSubmitting.value = false
   if (result.success) {
     lastSubmittedRfq.value = result.rfq
-    await fetchRfqTickets()
+    try {
+      await fetchRfqTickets()
+    } catch (_) {
+      /* quote already submitted; dashboard refresh is best-effort */
+    }
     isQuoteOpen.value = false
     showSuccessModal.value = true
   } else {
@@ -369,7 +373,11 @@ const handleAuthSubmit = async () => {
     return
   }
   lastSubmittedRfq.value = quoteResult.rfq
-  await fetchRfqTickets()
+  try {
+    await fetchRfqTickets()
+  } catch (_) {
+    /* quote already submitted; dashboard refresh is best-effort */
+  }
   showAuthModal.value = false
   isQuoteOpen.value = false
   showSuccessModal.value = true
