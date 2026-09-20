@@ -56,8 +56,11 @@
                                     {{ showPassword ? t('auth.hide') : t('auth.show') }}
                                 </button>
                             </div>
-                            <span v-if="!isLoginMode" class="input-hint">{{ t('auth.passwordHint') }}</span>
-                            <span v-if="passwordError" class="input-error">{{ passwordError }}</span>
+                            <span
+                                v-if="!isLoginMode"
+                                class="password-feedback"
+                                :class="{ 'is-error': passwordInvalid }"
+                            >{{ t('auth.passwordHint') }}</span>
                         </div>
 
                         <div v-if="alertMessage" class="portal-alert" :class="alertType">
@@ -85,6 +88,7 @@
 <script setup>
     import {
         ref,
+        computed,
         watch
     } from 'vue'
     import {
@@ -100,7 +104,7 @@
     import {
         isStrongPassword
     } from '../utils/password'
-    //import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+    import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
     const route = useRoute()
     const router = useRouter()
@@ -123,17 +127,19 @@
     const isLoading = ref(false)
     const emailError = ref('')
     const phoneError = ref('')
-    const passwordError = ref('')
     const alertMessage = ref('')
     const alertType = ref('')
 
+    const passwordInvalid = computed(() => {
+        if (isLoginMode.value || !password.value) return false
+        return Boolean(isStrongPassword(password.value))
+    })
 
     const toggleMode = () => {
         isLoginMode.value = !isLoginMode.value
         alertMessage.value = ''
         emailError.value = ''
         phoneError.value = ''
-        passwordError.value = ''
         password.value = ''
         phone.value = ''
     }
@@ -156,14 +162,6 @@
         }
     })
 
-    watch(password, (value) => {
-        if (!isLoginMode.value && value && !isStrongPassword(value)) {
-            passwordError.value = t('auth.passwordHint')
-        } else {
-            passwordError.value = ''
-        }
-    })
-
     const handleSubmit = async () => {
         alertMessage.value = ''
         isLoading.value = true
@@ -183,8 +181,7 @@
                 alertMessage.value = result.error || 'Login failed'
             }
         } else {
-            if (!isStrongPassword(password.value)) {
-                passwordError.value = t('auth.passwordHint')
+            if (passwordInvalid.value) {
                 isLoading.value = false
                 return
             }
@@ -361,8 +358,20 @@
     }
 
     .input-hint,
-    .input-error {
+    .input-error,
+    .password-feedback {
         font-size: 0.8rem;
+        line-height: 1.35;
+        min-height: 1.35em;
+    }
+
+    .password-feedback {
+        color: var(--text-muted);
+    }
+
+    .password-feedback.is-error {
+        color: #ef4444;
+        font-weight: 600;
     }
 
     .input-error {

@@ -171,7 +171,19 @@ class ProjectController extends Controller
             'description' => ['nullable', 'string'],
             'admin_notes' => ['nullable', 'string'],
             'completed_steps' => ['sometimes', 'array'],
-            'completed_steps.*' => ['string', Rule::in([...self::PHASES, ...array_keys(self::LEGACY_PHASE_MAP)])],
+            'completed_steps.*' => [
+                'string',
+                Rule::in([
+                    'quote_confirmed',
+                    'order_prep',
+                    'installation',
+                    'completed',
+                    // legacy study-funnel keys still accepted and normalized on save
+                    'premier_contact',
+                    'data_collection',
+                    'energy_data',
+                ]),
+            ],
             'on_hold' => ['sometimes', 'boolean'],
             'quote_ids' => ['sometimes', 'array'],
             'quote_ids.*' => ['integer', 'exists:quote_requests,id_quote'],
