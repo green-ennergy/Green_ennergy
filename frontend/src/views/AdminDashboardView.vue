@@ -877,42 +877,29 @@
                         </button>
                       </div>
                       <p v-if="!projectInstallations.length" class="pw-empty">{{ t('admin.projects.noInstallations') }}</p>
-                      <div v-for="(row, index) in projectInstallations" :key="row.id || index" class="service-card">
-                        <label>
-                          <span>{{ t('admin.projects.projectName') }}</span>
-                          <input v-model="row.name" type="text" />
-                        </label>
-                        <div class="service-grid">
-                          <label>
-                            <span>{{ t('admin.drawer.location') }}</span>
-                            <input v-model="row.location" type="text" />
-                          </label>
-                          <label>
-                            <span>{{ t('admin.projects.energyType') }}</span>
-                            <input v-model="row.energy_type" type="text" />
-                          </label>
-                          <label>
+                      <div v-for="(row, index) in projectInstallations" :key="row.id || index" class="service-card service-card-simple">
+                        <div class="service-simple-top">
+                          <label class="service-price-field">
                             <span>{{ t('admin.projects.price') }}</span>
-                            <input v-model="row.price" type="number" min="0" step="0.01" />
+                            <div class="price-input-wrap">
+                              <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                              <span class="price-suffix">MAD</span>
+                            </div>
                           </label>
-                          <label>
-                            <span>{{ t('admin.projects.scheduled') }}</span>
-                            <input v-model="row.scheduled_at" type="datetime-local" />
-                          </label>
+                          <button
+                            type="button"
+                            class="action-btn danger service-remove"
+                            :title="t('admin.projects.remove')"
+                            :aria-label="t('admin.projects.remove')"
+                            @click="projectInstallations.splice(index, 1)"
+                          >
+                            <AdminIcon name="trash" :size="15" />
+                          </button>
                         </div>
-                        <label>
+                        <label class="service-details-field">
                           <span>{{ t('admin.projects.description') }}</span>
-                          <textarea v-model="row.description" rows="2"></textarea>
+                          <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
                         </label>
-                        <button
-                          type="button"
-                          class="action-btn danger"
-                          :title="t('admin.projects.remove')"
-                          :aria-label="t('admin.projects.remove')"
-                          @click="projectInstallations.splice(index, 1)"
-                        >
-                          <AdminIcon name="trash" :size="15" />
-                        </button>
                       </div>
                     </section>
 
@@ -930,34 +917,29 @@
                         </button>
                       </div>
                       <p v-if="!projectMaintenances.length" class="pw-empty">{{ t('admin.projects.noMaintenances') }}</p>
-                      <div v-for="(row, index) in projectMaintenances" :key="row.id || index" class="service-card">
-                        <div class="service-grid">
-                          <label>
-                            <span>{{ t('admin.projects.serviceType') }}</span>
-                            <input v-model="row.type" type="text" />
-                          </label>
-                          <label>
+                      <div v-for="(row, index) in projectMaintenances" :key="row.id || index" class="service-card service-card-simple">
+                        <div class="service-simple-top">
+                          <label class="service-price-field">
                             <span>{{ t('admin.projects.price') }}</span>
-                            <input v-model="row.price" type="number" min="0" step="0.01" />
+                            <div class="price-input-wrap">
+                              <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                              <span class="price-suffix">MAD</span>
+                            </div>
                           </label>
-                          <label>
-                            <span>{{ t('admin.projects.scheduled') }}</span>
-                            <input v-model="row.scheduled_at" type="datetime-local" />
-                          </label>
+                          <button
+                            type="button"
+                            class="action-btn danger service-remove"
+                            :title="t('admin.projects.remove')"
+                            :aria-label="t('admin.projects.remove')"
+                            @click="projectMaintenances.splice(index, 1)"
+                          >
+                            <AdminIcon name="trash" :size="15" />
+                          </button>
                         </div>
-                        <label>
+                        <label class="service-details-field">
                           <span>{{ t('admin.projects.description') }}</span>
-                          <textarea v-model="row.description" rows="2"></textarea>
+                          <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
                         </label>
-                        <button
-                          type="button"
-                          class="action-btn danger"
-                          :title="t('admin.projects.remove')"
-                          :aria-label="t('admin.projects.remove')"
-                          @click="projectMaintenances.splice(index, 1)"
-                        >
-                          <AdminIcon name="trash" :size="15" />
-                        </button>
                       </div>
                     </section>
                   </div>
@@ -1158,42 +1140,29 @@
                           </button>
                         </div>
                         <p v-if="!createProjectForm.installations.length" class="create-empty muted">{{ t('admin.projects.noInstallations') }}</p>
-                        <div v-for="(row, index) in createProjectForm.installations" :key="index" class="service-card">
-                          <label>
-                            <span>{{ t('admin.projects.projectName') }}</span>
-                            <input v-model="row.name" type="text" />
-                          </label>
-                          <div class="service-grid">
-                            <label>
-                              <span>{{ t('admin.drawer.location') }}</span>
-                              <input v-model="row.location" type="text" />
-                            </label>
-                            <label>
-                              <span>{{ t('admin.projects.energyType') }}</span>
-                              <input v-model="row.energy_type" type="text" />
-                            </label>
-                            <label>
+                        <div v-for="(row, index) in createProjectForm.installations" :key="index" class="service-card service-card-simple">
+                          <div class="service-simple-top">
+                            <label class="service-price-field">
                               <span>{{ t('admin.projects.price') }}</span>
-                              <input v-model="row.price" type="number" min="0" step="0.01" />
+                              <div class="price-input-wrap">
+                                <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                                <span class="price-suffix">MAD</span>
+                              </div>
                             </label>
-                            <label>
-                              <span>{{ t('admin.projects.scheduled') }}</span>
-                              <input v-model="row.scheduled_at" type="datetime-local" />
-                            </label>
+                            <button
+                              type="button"
+                              class="action-btn danger service-remove"
+                              :title="t('admin.projects.remove')"
+                              :aria-label="t('admin.projects.remove')"
+                              @click="createProjectForm.installations.splice(index, 1)"
+                            >
+                              <AdminIcon name="trash" :size="15" />
+                            </button>
                           </div>
-                          <label>
+                          <label class="service-details-field">
                             <span>{{ t('admin.projects.description') }}</span>
-                            <textarea v-model="row.description" rows="2"></textarea>
+                            <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
                           </label>
-                          <button
-                            type="button"
-                            class="action-btn danger"
-                            :title="t('admin.projects.remove')"
-                            :aria-label="t('admin.projects.remove')"
-                            @click="createProjectForm.installations.splice(index, 1)"
-                          >
-                            <AdminIcon name="trash" :size="15" />
-                          </button>
                         </div>
                       </div>
 
@@ -1211,34 +1180,29 @@
                           </button>
                         </div>
                         <p v-if="!createProjectForm.maintenances.length" class="create-empty muted">{{ t('admin.projects.noMaintenances') }}</p>
-                        <div v-for="(row, index) in createProjectForm.maintenances" :key="index" class="service-card">
-                          <div class="service-grid">
-                            <label>
-                              <span>{{ t('admin.projects.serviceType') }}</span>
-                              <input v-model="row.type" type="text" />
-                            </label>
-                            <label>
+                        <div v-for="(row, index) in createProjectForm.maintenances" :key="index" class="service-card service-card-simple">
+                          <div class="service-simple-top">
+                            <label class="service-price-field">
                               <span>{{ t('admin.projects.price') }}</span>
-                              <input v-model="row.price" type="number" min="0" step="0.01" />
+                              <div class="price-input-wrap">
+                                <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                                <span class="price-suffix">MAD</span>
+                              </div>
                             </label>
-                            <label>
-                              <span>{{ t('admin.projects.scheduled') }}</span>
-                              <input v-model="row.scheduled_at" type="datetime-local" />
-                            </label>
+                            <button
+                              type="button"
+                              class="action-btn danger service-remove"
+                              :title="t('admin.projects.remove')"
+                              :aria-label="t('admin.projects.remove')"
+                              @click="createProjectForm.maintenances.splice(index, 1)"
+                            >
+                              <AdminIcon name="trash" :size="15" />
+                            </button>
                           </div>
-                          <label>
+                          <label class="service-details-field">
                             <span>{{ t('admin.projects.description') }}</span>
-                            <textarea v-model="row.description" rows="2"></textarea>
+                            <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
                           </label>
-                          <button
-                            type="button"
-                            class="action-btn danger"
-                            :title="t('admin.projects.remove')"
-                            :aria-label="t('admin.projects.remove')"
-                            @click="createProjectForm.maintenances.splice(index, 1)"
-                          >
-                            <AdminIcon name="trash" :size="15" />
-                          </button>
                         </div>
                       </div>
                     </div>
@@ -1981,11 +1945,11 @@ function onCreateClientChange() {
 }
 
 function blankInstallation() {
-  return { id: null, name: '', location: '', energy_type: '', price: '', scheduled_at: '', description: '' }
+  return { id: null, name: '', price: '', description: '' }
 }
 
 function blankMaintenance() {
-  return { id: null, type: '', price: '', scheduled_at: '', description: '' }
+  return { id: null, type: '', price: '', description: '' }
 }
 
 async function loadCatalogForPicker(filters = {}) {
@@ -1995,19 +1959,30 @@ async function loadCatalogForPicker(filters = {}) {
   await fetchProducts({ sort: 'title', ...filters })
 }
 
-function cleanServices(rows, key) {
-  return rows
-    .filter((row) => String(row[key] || '').trim())
-    .map((row) => ({
-      id: row.id || null,
-      name: row.name,
-      type: row.type,
-      location: row.location || null,
-      energy_type: row.energy_type || null,
-      description: row.description || null,
-      scheduled_at: row.scheduled_at || null,
-      price: row.price === '' || row.price == null ? null : Number(row.price)
-    }))
+function hasServiceContent(row) {
+  return String(row.description || '').trim() !== '' || (row.price !== '' && row.price != null)
+}
+
+function cleanInstallations(rows) {
+  return rows.filter(hasServiceContent).map((row) => ({
+    id: row.id || null,
+    name: String(row.name || '').trim() || t('admin.projects.installations'),
+    location: null,
+    energy_type: null,
+    description: row.description || null,
+    scheduled_at: null,
+    price: row.price === '' || row.price == null ? null : Number(row.price)
+  }))
+}
+
+function cleanMaintenances(rows) {
+  return rows.filter(hasServiceContent).map((row) => ({
+    id: row.id || null,
+    type: String(row.type || '').trim() || t('admin.projects.maintenances'),
+    description: row.description || null,
+    scheduled_at: null,
+    price: row.price === '' || row.price == null ? null : Number(row.price)
+  }))
 }
 
 function emptyProjectForm() {
@@ -2864,8 +2839,8 @@ const buildProjectPayload = () => {
       unit_price: Number(line.unit_price),
       locked: !!line.locked
     })),
-    installations: cleanServices(projectInstallations.value, 'name'),
-    maintenances: cleanServices(projectMaintenances.value, 'type')
+    installations: cleanInstallations(projectInstallations.value),
+    maintenances: cleanMaintenances(projectMaintenances.value)
   }
 }
 
@@ -2927,8 +2902,8 @@ const submitCreateProject = async () => {
       unit_price: Number(line.unit_price),
       locked: !!line.locked
     })),
-    installations: cleanServices(createProjectForm.value.installations, 'name'),
-    maintenances: cleanServices(createProjectForm.value.maintenances, 'type')
+    installations: cleanInstallations(createProjectForm.value.installations),
+    maintenances: cleanMaintenances(createProjectForm.value.maintenances)
   })
   creatingProject.value = false
   if (result.success) {
@@ -5043,7 +5018,11 @@ const handleStockChange = async (product, stock) => {
   border-top: 1px solid #f1f5f9;
 }
 
-.project-workspace .service-card {
+.project-workspace .service-card:not(.service-card-simple) {
+  background: #fafaf9;
+}
+
+.create-services-section .service-card:not(.service-card-simple) {
   background: #fafaf9;
 }
 
@@ -5152,6 +5131,127 @@ const handleStockChange = async (product, stock) => {
   border: 1px solid #e7e5e4;
   border-radius: 12px;
   background: #fafaf9;
+}
+
+.service-card-simple {
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04);
+}
+
+.service-simple-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.service-price-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.service-price-field span,
+.service-details-field span {
+  display: block;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+.price-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 200px;
+  padding: 0 0.75rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.price-input-wrap:focus-within {
+  border-color: #22c55e;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.price-input-wrap input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.65rem 0;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1c1917;
+  outline: none;
+}
+
+.price-input-wrap input::-webkit-outer-spin-button,
+.price-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.price-input-wrap input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.price-suffix {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #a8a29e;
+}
+
+.service-remove {
+  flex-shrink: 0;
+  margin-bottom: 0.1rem;
+}
+
+.service-details-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.service-details-field textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #1c1917;
+  line-height: 1.45;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.service-details-field textarea::placeholder {
+  color: #a8a29e;
+}
+
+.service-details-field textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
 }
 
 .line-list li {
@@ -5341,7 +5441,7 @@ const handleStockChange = async (product, stock) => {
   color: #44403c;
 }
 
-.create-services-section .service-card {
+.create-services-section .service-card:not(.service-card-simple) {
   background: #fafaf9;
 }
 

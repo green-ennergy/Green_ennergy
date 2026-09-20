@@ -99,13 +99,14 @@ export function useAuth() {
   const fetchRfqTickets = async () => {
     try {
       isLoading.value = true
+      error.value = null
       const response = await api.get('/rfq')
       rfqTickets.value = response.data.data || response.data
       return rfqTickets.value
     } catch (err) {
-      error.value = err.response?.data?.message || 'Failed to fetch RFQ tickets'
+      error.value = getApiErrorMessage(err, 'Failed to fetch RFQ tickets')
       console.error('Fetch RFQ error:', err)
-      return []
+      throw err
     } finally {
       isLoading.value = false
     }
