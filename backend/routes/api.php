@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MissionController;
 use App\Http\Controllers\Api\OperatorController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProjectController;
+use App\Http\Controllers\Api\RfqController;
 use App\Http\Controllers\Api\StatsController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -40,6 +41,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/admin/projects', [ProjectController::class, 'index']);
         Route::get('/admin/quotes', [ProjectController::class, 'quotes']);
+        Route::get('/admin/rfq', [RfqController::class, 'adminIndex']);
+        Route::patch('/admin/rfq/{rfq}/status', [RfqController::class, 'adminUpdateStatus']);
+        Route::post('/admin/rfq/{rfq}/quote', [RfqController::class, 'adminQuote']);
         Route::post('/admin/projects', [ProjectController::class, 'store']);
         Route::get('/admin/projects/{project}/traces', [ProjectController::class, 'traces']);
         Route::get('/admin/projects/{project}/messages', [ProjectController::class, 'messages']);
@@ -68,6 +72,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     
     Route::middleware('role:client')->group(function () {
+        Route::get('/rfq', [RfqController::class, 'index']);
+        Route::post('/rfq', [RfqController::class, 'store']);
+        Route::patch('/rfq/{rfq}/status', [RfqController::class, 'updateStatus']);
+        Route::post('/rfq/{rfq}/confirm', [RfqController::class, 'confirm']);
+
         Route::get('/projects', [ProjectController::class, 'index']);
         Route::get('/projects/{project}', [ProjectController::class, 'show']);
         Route::get('/projects/{project}/messages', [ProjectController::class, 'messages']);
