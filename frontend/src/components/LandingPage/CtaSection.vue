@@ -11,43 +11,47 @@
 
 
       <h2 class="cta-title" id="cta-heading">
-        Ready to switch<br />to <span class="accent">solar</span>?
+        {{ t('landing.cta.titleLine1') }}<br />{{ t('landing.cta.titleLine2Before') }}
+        <span class="accent">{{ t('landing.cta.titleAccent') }}</span>{{ t('landing.cta.titleLine2After') }}
       </h2>
 
       <p class="cta-desc">
-        Join hundreds of customers already reducing their electricity bills
-        with clean, premium renewable energy from Energy Agency.
+        {{ t('landing.cta.description') }}
       </p>
 
       <!-- Trust stats row -->
-      <div class="cta-stats" aria-label="Key statistics">
-        <div class="cta-stat" v-for="s in stats" :key="s.label">
-          <span class="cta-stat-num">{{ s.num }}</span>
-          <span class="cta-stat-label">{{ s.label }}</span>
+      <div class="cta-stats" :aria-label="t('landing.cta.statsAria')">
+        <div class="cta-stat" v-for="s in stats" :key="s.key">
+          <span class="cta-stat-num">{{ t(`landing.cta.statNums.${s.key}`) }}</span>
+          <span class="cta-stat-label">{{ t(`landing.cta.stats.${s.key}`) }}</span>
         </div>
       </div>
 
       <div class="cta-actions">
-        <a href="#" class="cta-btn-primary" id="cta-create-account">
-          Get Free Consultation
+        <router-link to="/services/consultation" class="cta-btn-primary" id="cta-create-account">
+          {{ t('landing.cta.ctaConsultation') }}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
-        </a>
-        <a href="#" class="cta-btn-ghost" id="cta-store">Explore Store</a>
+        </router-link>
+        <router-link to="/store" class="cta-btn-ghost" id="cta-store">{{ t('landing.cta.ctaStore') }}</router-link>
       </div>
 
-      <p class="cta-note">No commitment required · Free site survey · Financing available</p>
+      <p class="cta-note">{{ t('landing.cta.note') }}</p>
     </div>
   </section>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 const stats = [
-  { num: '+500', label: 'Installations' },
-  { num: '98%',  label: 'Satisfaction' },
-  { num: '$0',   label: 'Hidden Fees' },
-  { num: '25yr', label: 'Warranty' },
+  { key: 'installations' },
+  { key: 'satisfaction' },
+  { key: 'hiddenFees' },
+  { key: 'warranty' },
 ]
 </script>
 

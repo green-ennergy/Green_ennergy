@@ -27,8 +27,8 @@ Do these steps once after cloning the repo.
 ### 1. Clone the project
 
 ```bash
-git clone https://github.com/green-ennergy/Green_ennergy.git
-cd green_ennergy
+git clone https://github.com/green-ennergy/Green_ennergy.git green_energy
+cd green_energy
 git checkout develop
 ```
 
@@ -148,9 +148,21 @@ Run from the repo root while containers are up.
 
 ### Backend (Laravel)
 
+**Daily / after pulling new migrations** — applies pending migrations only (keeps your data):
+
 ```bash
 docker compose exec backend php artisan migrate
+```
+
+**Reset database (destructive)** — drops all tables, re-runs every migration, and seeds demo data. **Do not use on a database you need to keep.**
+
+```bash
 docker compose exec backend php artisan migrate:fresh --seed
+```
+
+Other commands:
+
+```bash
 docker compose exec backend php artisan config:clear
 docker compose exec backend php artisan tinker
 docker compose exec backend php artisan test

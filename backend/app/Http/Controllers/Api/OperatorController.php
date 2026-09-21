@@ -32,11 +32,12 @@ class OperatorController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:50'],
-            'email' => ['required', 'email', 'max:50', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['required', 'email:filter', 'max:50', 'unique:users,email'],
+            'phone' => ['required', 'string', 'max:50'],
             'role' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
             'password' => ['nullable', 'string', 'min:8', 'max:100'],
+            'company' => ['nullable', 'string', 'max:50'],
         ]);
 
         $temporaryPassword = $validated['password'] ?? Str::password(12);
@@ -44,7 +45,8 @@ class OperatorController extends Controller
         $operator = DB::transaction(function () use ($validated, $temporaryPassword) {
             $user = User::create([
                 'name' => $validated['name'],
-                'email' => $validated['email'],
+                'company' => $validated['company'] ?? 'Green Energy',
+                'email' => strtolower(trim($validated['email'])),
                 'phone' => $validated['phone'] ?? null,
                 'password' => $temporaryPassword,
                 'creation_date' => now()->toDateString(),
@@ -72,17 +74,27 @@ class OperatorController extends Controller
     {
         $operator->load('user');
 
+        if (! $operator->user) {
+            return response()->json(['message' => 'Operator has no linked user account.'], 422);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:50'],
-            'email' => ['required', 'email', 'max:50', Rule::unique('users', 'email')->ignore($operator->user)],
-            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => [
+                'required',
+                'string',
+                'email:filter',
+                'max:50',
+                Rule::unique('users', 'email')->ignore($operator->user->id_user, 'id_user'),
+            ],
+            'phone' => ['required', 'string', 'max:50'],
             'role' => ['nullable', 'string', 'max:100'],
             'city' => ['nullable', 'string', 'max:100'],
         ]);
 
         $operator->user->update([
             'name' => $validated['name'],
-            'email' => $validated['email'],
+            'email' => strtolower(trim($validated['email'])),
             'phone' => $validated['phone'] ?? null,
         ]);
 

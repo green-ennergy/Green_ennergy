@@ -13,15 +13,22 @@
       <div class="section-head">
         <h2>{{ t('services.ourServices') }}</h2>
         <div class="active-count-tag">
-          {{ availableServices.length }} / {{ servicesConfig.length }} Services Active
+          {{ availableServices.length }} {{ t('services.activeCount') }}
         </div>
       </div>
 
-      <div class="services-grid">
+      <p v-if="isLoading" class="state-msg">{{ t('common.loading') }}</p>
+      <p v-else-if="error" class="state-msg error">{{ error }}</p>
+      <div v-else-if="!availableServices.length" class="state-msg empty">
+        <h3>{{ t('services.emptyTitle') }}</h3>
+        <p>{{ t('services.emptyDesc') }}</p>
+      </div>
+
+      <div v-else class="services-grid">
         <div
-          v-for="service in servicesConfig"
+          v-for="service in availableServices"
           :key="service.id"
-          :class="['service-card', { disabled: !service.enabled }]"
+          class="service-card"
         >
           <!-- Card Header & Badge -->
           <div class="card-top">
@@ -46,8 +53,7 @@
             </div>
 
             <div class="card-badges">
-              <span v-if="service.enabled" class="status-badge active">● Active</span>
-              <span v-else class="status-badge paused">● Paused</span>
+              <span class="status-badge active">● Active</span>
               <span class="cat-badge">{{ service.category }}</span>
             </div>
           </div>
@@ -55,19 +61,17 @@
           <h3 class="service-title">{{ service.title }}</h3>
           <p class="service-desc">{{ service.desc }}</p>
 
-          <!-- Pricing & Duration Meta -->
           <div class="service-meta-row">
             <div class="meta-item">
               <span class="lbl">Est. Duration</span>
-              <span class="val">⏱️ {{ service.estimatedDuration }}</span>
+              <span class="val">{{ service.estimatedDuration }}</span>
             </div>
             <div class="meta-item">
               <span class="lbl">Starting At</span>
-              <span class="val price">💰 {{ service.startingPrice }}</span>
+              <span class="val price">{{ service.startingPrice }}</span>
             </div>
           </div>
 
-          <!-- Feature Bullets -->
           <ul class="bullet-list">
             <li v-for="(b, i) in service.bullets" :key="i">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5">
@@ -77,17 +81,8 @@
             </li>
           </ul>
 
-          <div v-if="!service.enabled" class="disabled-notice">
-            ⚠️ {{ t('services.disabledNotice') }}
-          </div>
-
-          <!-- Actions -->
           <div class="card-actions">
-            <button
-              class="primary-btn"
-              :disabled="!service.enabled"
-              @click="openRequestModal(service)"
-            >
+            <button class="primary-btn" @click="openRequestModal(service)">
               <span>{{ t('services.requestService') }}</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -117,36 +112,36 @@
           <div class="form-row">
             <label>
               <span>{{ t('services.form.fullName') }}</span>
-              <input v-model="form.clientName" type="text" placeholder="M. Karim Tazi" required />
+              <input v-model="form.clientName" type="text" required :readonly="identityLocked" @keydown.enter.prevent />
             </label>
             <label>
               <span>{{ t('services.form.phone') }}</span>
-              <input v-model="form.clientPhone" type="text" placeholder="+212 661 234 567" required />
+              <input v-model="form.clientPhone" type="text" required :readonly="identityLocked" @keydown.enter.prevent />
             </label>
           </div>
 
           <div class="form-row">
             <label>
               <span>{{ t('services.form.email') }}</span>
-              <input v-model="form.clientEmail" type="email" placeholder="client@example.ma" required />
+              <input v-model="form.clientEmail" type="email" required :readonly="identityLocked" @keydown.enter.prevent />
             </label>
             <label>
               <span>{{ t('services.form.city') }}</span>
-              <input v-model="form.city" type="text" placeholder="Casablanca, Rabat, Marrakech..." required />
+              <input v-model="form.city" type="text" required @keydown.enter.prevent />
             </label>
           </div>
 
           <div class="form-row">
             <label class="full">
               <span>{{ t('services.form.address') }}</span>
-              <input v-model="form.address" type="text" placeholder="Street address or site location details..." required />
+              <input v-model="form.address" type="text" placeholder="Street address or site location details..." required @keydown.enter.prevent />
             </label>
           </div>
 
           <div class="form-row">
             <label>
               <span>{{ t('services.form.preferredDate') }}</span>
-              <input v-model="form.preferredDate" type="date" required />
+              <input v-model="form.preferredDate" type="date" required @keydown.enter.prevent />
             </label>
           </div>
 
@@ -161,10 +156,11 @@
             <button type="button" class="ghost-btn" @click="showModal = false">
               {{ t('common.cancel') }}
             </button>
-            <button type="submit" class="primary-btn">
-              {{ t('services.form.submitBtn') }}
+            <button type="submit" class="primary-btn" :disabled="submitting">
+              {{ submitting ? t('common.loading') : t('services.form.submitBtn') }}
             </button>
           </footer>
+          <p v-if="formError" class="form-error">{{ formError }}</p>
         </form>
       </div>
     </div>
@@ -172,19 +168,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { getApiErrorMessage } from '../api/client'
 import { useServices } from '../composables/useServices'
 import { useAuth } from '../composables/useAuth'
+import { useToast } from '../composables/useToast'
 
 const router = useRouter()
 const { t } = useI18n()
-const { user } = useAuth()
-const { servicesConfig, availableServices, createServiceRequest } = useServices()
+const toast = useToast()
+const { user, isAdmin, isOperator } = useAuth()
+const {
+  availableServices,
+  isLoading,
+  error,
+  fetchServices,
+  createServiceRequest
+} = useServices()
 
+const identityLocked = computed(() => !!user.value)
 const showModal = ref(false)
 const selectedService = ref(null)
+const submitting = ref(false)
+const formError = ref('')
 
 const form = ref({
   clientName: user.value?.name || '',
@@ -196,21 +204,48 @@ const form = ref({
   notes: ''
 })
 
+onMounted(() => {
+  fetchServices(false)
+})
+
 function openRequestModal(service) {
+  if (!user.value) {
+    router.push({ path: '/login', query: { redirect: '/services' } })
+    return
+  }
+  if (isAdmin.value || isOperator.value) {
+    formError.value = t('services.clientsOnly')
+    toast.error(t('services.clientsOnly'))
+    return
+  }
   selectedService.value = service
+  formError.value = ''
+  form.value = {
+    ...form.value,
+    clientName: user.value?.name || form.value.clientName,
+    clientEmail: user.value?.email || form.value.clientEmail,
+    clientPhone: user.value?.phone || form.value.clientPhone
+  }
   showModal.value = true
 }
 
-function submitRequest() {
-  if (!selectedService.value) return
-  createServiceRequest({
-    serviceId: selectedService.value.id,
-    ...form.value
-  })
-
-  showModal.value = false
-  alert('Your service request has been submitted! You can now track its realization progress in your Client Dashboard.')
-  router.push('/dashboard')
+async function submitRequest() {
+  if (!selectedService.value || submitting.value) return
+  submitting.value = true
+  formError.value = ''
+  try {
+    await createServiceRequest({
+      serviceId: selectedService.value.id,
+      ...form.value
+    })
+    showModal.value = false
+    toast.success(t('services.requestSubmitted'))
+    router.push({ path: '/dashboard', query: { tab: 'services' } })
+  } catch (err) {
+    formError.value = getApiErrorMessage(err, t('services.requestFailed'))
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -579,5 +614,26 @@ function submitRequest() {
   border-top: 1px solid #e2e8f0;
   padding-top: 1rem;
   margin-top: 0.5rem;
+}
+
+.form-error {
+  color: #b91c1c;
+  font-size: 0.85rem;
+  margin: 0.75rem 0 0;
+}
+
+.state-msg {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: #64748b;
+}
+
+.state-msg.error {
+  color: #b91c1c;
+}
+
+.state-msg.empty h3 {
+  margin: 0 0 0.35rem;
+  color: #0f172a;
 }
 </style>

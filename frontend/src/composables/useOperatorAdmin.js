@@ -26,7 +26,11 @@ export function useOperatorAdmin() {
   }
 
   function getOperatorActiveTaskCount(operatorId) {
-    return tasks.value.filter((task) => task.operatorId === operatorId && (task.status === 'assigned' || task.status === 'in_progress')).length
+    return tasks.value.filter(
+      (task) =>
+        task.operatorId === operatorId &&
+        (task.status === 'assigned' || task.status === 'in_progress')
+    ).length
   }
 
   async function createTask(taskData) {
@@ -56,13 +60,26 @@ export function useOperatorAdmin() {
   }
 
   async function createOperator(data) {
-    const response = await api.post('/admin/operators', data)
+    const response = await api.post('/admin/operators', {
+      name: data.name,
+      email: data.email,
+      phone: data.phone || null,
+      role: data.role || 'Field operator',
+      city: data.city || null,
+      password: data.password || undefined
+    })
     operators.value.unshift(response.data.operator)
     return response.data
   }
 
   async function updateOperator(operatorId, data) {
-    const response = await api.patch(`/admin/operators/${operatorId}`, data)
+    const response = await api.patch(`/admin/operators/${operatorId}`, {
+      name: data.name,
+      email: data.email,
+      phone: data.phone || null,
+      role: data.role || null,
+      city: data.city || null
+    })
     const index = operators.value.findIndex((operator) => operator.id === operatorId)
     if (index !== -1) operators.value[index] = response.data.operator
     tasks.value.forEach((task) => {
@@ -82,48 +99,14 @@ export function useOperatorAdmin() {
     })
   }
 
-  function addOperator(opData) {
-    const newId = `OP-${105 + operators.value.length}`
-    const colors = ['#16a34a', '#0284c7', '#9333ea', '#ea580c', '#eab308', '#ec4899']
-    const newOp = {
-      id: newId,
-      name: opData.name || '',
-      role: opData.role || 'Technicien Solaire',
-      phone: opData.phone || '',
-      email: opData.email || '',
-      city: opData.city || 'Casablanca',
-      specialties: opData.specialties || ['installation'],
-      dutyStatus: opData.dutyStatus || 'onDuty',
-      avatarColor: colors[operators.value.length % colors.length],
-      completedTasksCount: 0,
-      rating: 5.0
-    }
-    operators.value.push(newOp)
-    saveOperators()
-    return newOp
-  }
-
-  function updateOperator(id, opData) {
-    const op = operators.value.find(o => o.id === id)
-    if (op) {
-      Object.assign(op, opData)
-      saveOperators()
-    }
-  }
-
-  function deleteOperator(id) {
-    operators.value = operators.value.filter(o => o.id !== id)
-    saveOperators()
-  }
-
-  function toggleOperatorDuty(id) {
-    const op = operators.value.find(o => o.id === id)
-    if (op) {
-      if (op.dutyStatus === 'onDuty') op.dutyStatus = 'onBreak'
-      else if (op.dutyStatus === 'onBreak') op.dutyStatus = 'offDuty'
-      else op.dutyStatus = 'onDuty'
-      saveOperators()
-    }
+  async function toggleOperatorDuty(operatorId) {
+    const op = operators.value.find((o) => o.id === operatorId)
+    if (!op) return null
+    const cycle = { onDuty: 'on_break', onBreak: 'off_duty', offDuty: 'on_duty', on_duty: 'on_break', on_break: 'off_duty', off_duty: 'on_duty' }
+    const next = cycle[op.dutyStatus] || 'on_duty'
+    // Admin has no dedicated duty endpoint for other operators — patch via update if needed
+    op.dutyStatus = next === 'on_duty' ? 'onDuty' : next === 'on_break' ? 'onBreak' : 'offDuty'
+    return op
   }
 
   return {
@@ -139,13 +122,9 @@ export function useOperatorAdmin() {
     updateTaskStatus,
     reassignTask,
     deleteTask,
-    addOperator,
-    updateOperator,
-    deleteOperator,
     toggleOperatorDuty,
     getOperatorActiveTaskCount,
     reloadOperations: fetchOperations,
     getApiErrorMessage
   }
 }
-

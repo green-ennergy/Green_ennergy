@@ -1,6 +1,9 @@
 <template>
-  <div class="service-detail-page" v-if="service">
-    <!-- Breadcrumb & Hero -->
+  <div v-if="detailLoading" class="not-found-container">
+    <p>{{ t('common.loading') }}</p>
+  </div>
+
+  <div class="service-detail-page" v-else-if="service">
     <header class="detail-hero">
       <div class="container">
         <router-link to="/services" class="back-link">
@@ -21,15 +24,15 @@
           <div class="hero-meta-strip">
             <div class="meta-box">
               <span class="lbl">Estimated Duration</span>
-              <span class="val">⏱️ {{ service.estimatedDuration }}</span>
+              <span class="val">{{ service.estimatedDuration }}</span>
             </div>
             <div class="meta-box">
               <span class="lbl">Starting Price</span>
-              <span class="val price">💰 {{ service.startingPrice }}</span>
+              <span class="val price">{{ service.startingPrice }}</span>
             </div>
             <div class="meta-box">
               <span class="lbl">Realization Steps</span>
-              <span class="val">📋 5 Realization Phases</span>
+              <span class="val">5 Realization Phases</span>
             </div>
           </div>
         </div>
@@ -38,16 +41,14 @@
 
     <main class="container detail-content">
       <div class="content-grid">
-        <!-- Main Column -->
         <div class="main-col">
-          <!-- Realization Workflow Roadmap -->
           <section class="detail-card">
             <h2>Realization Process Roadmap</h2>
             <p class="section-sub">Here is how our engineering team realizes your {{ service.title }} from start to finish:</p>
 
             <div class="roadmap-timeline">
               <div
-                v-for="st in service.realizationSteps"
+                v-for="st in (service.realizationSteps || [])"
                 :key="st.step"
                 class="roadmap-step"
               >
@@ -60,11 +61,10 @@
             </div>
           </section>
 
-          <!-- Technical Scope & Deliverables -->
           <section class="detail-card">
             <h2>Technical Scope & Deliverables</h2>
             <ul class="deliverables-list">
-              <li v-for="(b, i) in service.bullets" :key="i">
+              <li v-for="(b, i) in (service.bullets || [])" :key="i">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                   <polyline points="22 4 12 14.01 9 11.01"/>
@@ -78,7 +78,6 @@
           </section>
         </div>
 
-        <!-- Sidebar Column -->
         <aside class="sidebar-col">
           <div class="cta-card">
             <h3>Request This Service</h3>
@@ -92,7 +91,7 @@
             <button
               class="primary-btn full"
               :disabled="!service.enabled"
-              @click="showModal = true"
+              @click="openRequestModal"
             >
               <span>Request Service Now</span>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -101,14 +100,13 @@
             </button>
 
             <div v-if="!service.enabled" class="paused-alert">
-              ⚠️ {{ t('services.disabledNotice') }}
+              {{ t('services.disabledNotice') }}
             </div>
           </div>
         </aside>
       </div>
     </main>
 
-    <!-- Request Modal -->
     <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
       <div class="modal-card">
         <header class="modal-header">
@@ -123,43 +121,43 @@
           <div class="form-row">
             <label>
               <span>{{ t('services.form.fullName') }}</span>
-              <input v-model="form.clientName" type="text" placeholder="M. Karim Tazi" required />
+              <input v-model="form.clientName" type="text" required :readonly="identityLocked" @keydown.enter.prevent />
             </label>
             <label>
               <span>{{ t('services.form.phone') }}</span>
-              <input v-model="form.clientPhone" type="text" placeholder="+212 661 234 567" required />
+              <input v-model="form.clientPhone" type="text" required :readonly="identityLocked" @keydown.enter.prevent />
             </label>
           </div>
 
           <div class="form-row">
             <label>
               <span>{{ t('services.form.email') }}</span>
-              <input v-model="form.clientEmail" type="email" placeholder="client@example.ma" required />
+              <input v-model="form.clientEmail" type="email" required :readonly="identityLocked" @keydown.enter.prevent />
             </label>
             <label>
               <span>{{ t('services.form.city') }}</span>
-              <input v-model="form.city" type="text" placeholder="Casablanca, Rabat..." required />
+              <input v-model="form.city" type="text" required @keydown.enter.prevent />
             </label>
           </div>
 
           <div class="form-row">
             <label class="full">
               <span>{{ t('services.form.address') }}</span>
-              <input v-model="form.address" type="text" placeholder="Site address or location..." required />
+              <input v-model="form.address" type="text" required @keydown.enter.prevent />
             </label>
           </div>
 
           <div class="form-row">
             <label>
               <span>{{ t('services.form.preferredDate') }}</span>
-              <input v-model="form.preferredDate" type="date" required />
+              <input v-model="form.preferredDate" type="date" required @keydown.enter.prevent />
             </label>
           </div>
 
           <div class="form-row">
             <label class="full">
               <span>{{ t('services.form.notes') }}</span>
-              <textarea v-model="form.notes" rows="3" placeholder="Context notes, equipment specs or access instructions..."></textarea>
+              <textarea v-model="form.notes" rows="3"></textarea>
             </label>
           </div>
 
@@ -167,36 +165,48 @@
             <button type="button" class="ghost-btn" @click="showModal = false">
               {{ t('common.cancel') }}
             </button>
-            <button type="submit" class="primary-btn">
-              {{ t('services.form.submitBtn') }}
+            <button type="submit" class="primary-btn" :disabled="submitting">
+              {{ submitting ? t('common.loading') : t('services.form.submitBtn') }}
             </button>
           </footer>
+          <p v-if="formError" class="form-error">{{ formError }}</p>
         </form>
       </div>
     </div>
   </div>
 
   <div v-else class="not-found-container">
-    <h2>Service Not Found</h2>
+    <h2>{{ t('services.notFound') }}</h2>
     <router-link to="/services" class="primary-btn">Return to Services</router-link>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { getApiErrorMessage } from '../api/client'
 import { useServices } from '../composables/useServices'
 import { useAuth } from '../composables/useAuth'
+import { useToast } from '../composables/useToast'
 
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const { user } = useAuth()
-const { getServiceById, createServiceRequest } = useServices()
+const toast = useToast()
+const { user, isAdmin, isOperator } = useAuth()
+const {
+  getServiceById,
+  fetchServiceById,
+  createServiceRequest,
+  detailLoading
+} = useServices()
 
-const service = computed(() => getServiceById(route.params.id))
+const service = ref(null)
 const showModal = ref(false)
+const submitting = ref(false)
+const formError = ref('')
+const identityLocked = computed(() => !!user.value)
 
 const form = ref({
   clientName: user.value?.name || '',
@@ -208,16 +218,53 @@ const form = ref({
   notes: ''
 })
 
-function submitRequest() {
-  if (!service.value) return
-  createServiceRequest({
-    serviceId: service.value.id,
-    ...form.value
-  })
+async function loadService() {
+  const id = route.params.id
+  service.value = getServiceById(id)
+  const fetched = await fetchServiceById(id)
+  service.value = fetched
+}
 
-  showModal.value = false
-  alert('Your service request has been submitted! You can track its realization progress in your Client Dashboard.')
-  router.push('/dashboard')
+onMounted(loadService)
+watch(() => route.params.id, loadService)
+
+function openRequestModal() {
+  if (!user.value) {
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
+  if (isAdmin.value || isOperator.value) {
+    formError.value = t('services.clientsOnly')
+    toast.error(t('services.clientsOnly'))
+    return
+  }
+  formError.value = ''
+  form.value = {
+    ...form.value,
+    clientName: user.value?.name || form.value.clientName,
+    clientEmail: user.value?.email || form.value.clientEmail,
+    clientPhone: user.value?.phone || form.value.clientPhone
+  }
+  showModal.value = true
+}
+
+async function submitRequest() {
+  if (!service.value || submitting.value) return
+  submitting.value = true
+  formError.value = ''
+  try {
+    await createServiceRequest({
+      serviceId: service.value.id,
+      ...form.value
+    })
+    showModal.value = false
+    toast.success(t('services.requestSubmitted'))
+    router.push({ path: '/dashboard', query: { tab: 'services' } })
+  } catch (err) {
+    formError.value = getApiErrorMessage(err, t('services.requestFailed'))
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -627,5 +674,11 @@ function submitRequest() {
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
+}
+
+.form-error {
+  color: #b91c1c;
+  font-size: 0.85rem;
+  margin: 0.75rem 0 0;
 }
 </style>

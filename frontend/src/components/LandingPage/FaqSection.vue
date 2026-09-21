@@ -8,10 +8,10 @@
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
             <line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
-          Common Questions
+          {{ t('landing.faq.eyebrow') }}
         </span>
-        <h2 class="section-title">Frequently Asked Questions</h2>
-        <p class="section-desc">Everything you need to know about switching to solar.</p>
+        <h2 class="section-title">{{ t('landing.faq.title') }}</h2>
+        <p class="section-desc">{{ t('landing.faq.desc') }}</p>
       </div>
 
       <div class="faq-container reveal" data-delay="150">
@@ -22,7 +22,7 @@
           :class="{ active: activeIndex === index }"
         >
           <button class="faq-question" @click="toggle(index)">
-            {{ faq.question }}
+            {{ faq.q }}
             <span class="faq-icon">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="plus">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -33,7 +33,7 @@
             </span>
           </button>
           <div class="faq-answer">
-            <p>{{ faq.answer }}</p>
+            <p>{{ faq.a }}</p>
           </div>
         </div>
       </div>
@@ -42,36 +42,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
+const { t, tm, locale } = useI18n()
 const activeIndex = ref(0)
 
 const toggle = (index) => {
   activeIndex.value = activeIndex.value === index ? -1 : index
 }
 
-const faqs = [
-  {
-    question: 'How much does a solar panel system cost?',
-    answer: 'The cost varies based on your energy needs and roof size. However, with available tax credits and local incentives, most homeowners see a return on investment within 5-7 years, with immediate reduction in monthly utility bills.'
-  },
-  {
-    question: 'How long does the installation take?',
-    answer: 'While the initial consultation, design, and permitting process can take a few weeks, the actual physical installation of the panels usually only takes 1-2 days with minimal disruption to your home.'
-  },
-  {
-    question: 'What happens when it rains or snows?',
-    answer: 'Solar panels still generate electricity on cloudy or rainy days, though at a reduced rate. Rain actually helps keep your panels clean. Snow will melt quickly due to the dark color and angle of the panels, and battery systems can provide backup power during severe weather.'
-  },
-  {
-    question: 'How long do solar panels last?',
-    answer: 'Our premium tier-1 solar panels are built to last. They come with a 25-year manufacturer warranty, but typically continue generating power for 30-40 years with only a slight decrease in efficiency over time.'
-  },
-  {
-    question: 'Will solar panels damage my roof?',
-    answer: 'No. Our certified installers use specialized flashing and mounting hardware that protects your roof. In fact, panels can actually protect the portion of the roof they cover from weather damage and UV light.'
-  }
-]
+const faqs = computed(() => {
+  void locale.value
+  const items = tm('landing.faq.items')
+  return Array.isArray(items) ? items : []
+})
 </script>
 
 <style scoped>

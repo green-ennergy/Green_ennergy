@@ -173,7 +173,7 @@
     </div>
 
     <!-- Auth -->
-    <div v-if="showAuthModal" class="overlay open" @click.self="showAuthModal = false">
+    <div v-if="showAuthModal" class="overlay open auth-overlay" @click.self="showAuthModal = false">
       <div class="modal auth-modal">
         <button class="icon-btn modal-close" @click="showAuthModal = false">×</button>
         <h2>{{ authTab === 'login' ? t('auth.signInTitle') : t('auth.registerTitle') }}</h2>
@@ -226,6 +226,7 @@ import { useCart } from '../composables/useCart'
 import { useAuth } from '../composables/useAuth'
 import { useProducts } from '../composables/useProducts'
 import { isStrongPassword } from '../utils/password'
+import { isValidEmail } from '../utils/email'
 import { resolveProductImage } from '../utils/productImage'
 
 const router = useRouter()
@@ -312,6 +313,7 @@ const handleQuoteSubmit = async () => {
     return
   }
   if (!isLoggedIn.value) {
+    isQuoteOpen.value = false
     showAuthModal.value = true
     authTab.value = 'login'
     return
@@ -335,6 +337,12 @@ const handleQuoteSubmit = async () => {
 
 const handleAuthSubmit = async () => {
   authError.value = ''
+
+  if (!isValidEmail(authForm.value.email)) {
+    authError.value = t('auth.invalidEmail')
+    return
+  }
+
   authSubmitting.value = true
   let result
   if (authTab.value === 'login') {
@@ -355,7 +363,7 @@ const handleAuthSubmit = async () => {
       authForm.value.name,
       authForm.value.company,
       authForm.value.phone.trim(),
-      authForm.value.email,
+      authForm.value.email.trim().toLowerCase(),
       authForm.value.password
     )
   }
@@ -706,6 +714,14 @@ const closeSuccessModal = () => {
   pointer-events: auto;
 }
 
+.overlay.auth-overlay {
+  z-index: 500;
+}
+
+.auth-modal {
+  z-index: 510;
+}
+
 .quote-drawer {
   position: fixed;
   top: 0;
@@ -814,7 +830,7 @@ const closeSuccessModal = () => {
   width: min(720px, calc(100% - 2rem));
   max-height: 90vh;
   overflow-y: auto;
-  z-index: 220;
+  z-index: 410;
 }
 
 .modal-close { position: absolute; top: 1rem; right: 1rem; }

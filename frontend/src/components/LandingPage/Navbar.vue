@@ -7,7 +7,7 @@
       'hero-navbar': hasHeroUnderNav
     }"
     role="navigation"
-    aria-label="Main navigation"
+    :aria-label="t('nav.mainAria')"
   >
     <div class="container nav-container">
       <!-- Logo -->
@@ -24,7 +24,7 @@
       <ul class="nav-links" role="list">
         <li><router-link to="/store" class="nav-link">{{ t('nav.store') }}</router-link></li>
         <li><router-link to="/services" class="nav-link">{{ t('nav.services') }}</router-link></li>
-        <li><router-link to="/partners" class="nav-link">Partenaires</router-link></li>
+        <li><router-link to="/partners" class="nav-link">{{ t('nav.partners') }}</router-link></li>
         <li><router-link to="/about" class="nav-link">{{ t('nav.about') }}</router-link></li>
         <li><router-link to="/#faq" class="nav-link">{{ t('nav.faq') }}</router-link></li>
       </ul>
@@ -71,11 +71,13 @@
     </div>
 
     <!-- Mobile menu -->
-    <div v-if="isMenuOpen" id="mobile-menu" class="mobile-menu animate-fade-in" role="dialog" aria-label="Mobile navigation">
+    <div v-if="isMenuOpen" id="mobile-menu" class="mobile-menu animate-fade-in" role="dialog" :aria-label="t('nav.mobileAria')">
       <ul role="list">
         <li><router-link to="/store" @click="isMenuOpen = false">{{ t('nav.store') }}</router-link></li>
+        <li><router-link to="/services" @click="isMenuOpen = false">{{ t('nav.services') }}</router-link></li>
+        <li><router-link to="/partners" @click="isMenuOpen = false">{{ t('nav.partners') }}</router-link></li>
+        <li><router-link to="/about" @click="isMenuOpen = false">{{ t('nav.about') }}</router-link></li>
         <li><router-link to="/#faq" @click="isMenuOpen = false">{{ t('nav.faq') }}</router-link></li>
-        <li><router-link to="/#about" @click="isMenuOpen = false">{{ t('nav.about') }}</router-link></li>
         <li v-if="isLoggedIn">
           <router-link :to="{ name: homeRoute }" class="mobile-user" @click="isMenuOpen = false">
             <span class="nav-user-icon" aria-hidden="true">

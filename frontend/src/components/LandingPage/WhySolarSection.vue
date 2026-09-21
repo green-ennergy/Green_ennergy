@@ -6,19 +6,19 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
-          Why solar?
+          {{ t('landing.whySolar.eyebrow') }}
         </span>
-        <h2 class="section-title">Why Choose Solar Energy?</h2>
-        <p class="section-desc">Experience the multiple benefits of upgrading to renewable energy solutions designed for your future.</p>
+        <h2 class="section-title">{{ t('landing.whySolar.title') }}</h2>
+        <p class="section-desc">{{ t('landing.whySolar.desc') }}</p>
       </div>
 
       <div class="features-grid">
-        <div class="feature-card animate-fade-up delay-100" v-for="(f, i) in features" :key="f.title" :class="`card-${i}`">
+        <div class="feature-card animate-fade-up delay-100" v-for="(f, i) in features" :key="f.key" :class="`card-${i}`">
           <div class="feature-icon-wrap">
             <div class="feature-icon" v-html="f.icon" aria-hidden="true"></div>
           </div>
-          <h3 class="feature-title">{{ f.title }}</h3>
-          <p class="feature-desc">{{ f.desc }}</p>
+          <h3 class="feature-title">{{ t(`landing.whySolar.items.${f.key}.title`) }}</h3>
+          <p class="feature-desc">{{ t(`landing.whySolar.items.${f.key}.desc`) }}</p>
           <div class="card-accent" aria-hidden="true"></div>
         </div>
       </div>
@@ -27,21 +27,22 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 const features = [
   {
+    key: 'bills',
     icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
-    title: 'Lower Energy Bills',
-    desc: 'Dramatically reduce or even eliminate your monthly electricity costs by generating your own power from the sun.',
   },
   {
+    key: 'independence',
     icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
-    title: 'Energy Independence',
-    desc: 'Protect yourself against rising utility rates and grid outages with smart battery storage solutions.',
   },
   {
+    key: 'eco',
     icon: `<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/></svg>`,
-    title: 'Eco-Friendly',
-    desc: 'Significantly reduce your carbon footprint and contribute to a cleaner, sustainable planet for future generations.',
   },
 ]
 </script>

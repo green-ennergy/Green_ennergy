@@ -14,11 +14,22 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'company' => 'required|string|max:255',
             'phone' => ['required', 'string', 'max:20', 'regex:/^[+0-9\s\-()]{8,20}$/'],
-            'email' => 'required|string|email|unique:users',
+            'email' => [
+                'required',
+                'string',
+                'email:filter',
+                'max:255',
+                'regex:/^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$/',
+                'unique:users,email',
+            ],
             'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()],
         ]);
 
@@ -50,8 +61,18 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $validated = $request->validate([
-            'email' => 'required|string|email',
+            'email' => [
+                'required',
+                'string',
+                'email:filter',
+                'max:255',
+                'regex:/^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$/',
+            ],
             'password' => 'required|string',
         ]);
 

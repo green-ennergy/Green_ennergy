@@ -2,13 +2,12 @@
   <section class="partners-section" id="partners">
     <div class="container">
       <div class="partners-header">
-        <h2 class="partners-title">Trusted Equipment Partners</h2>
-        <p class="partners-sub">We work only with tier-1 manufacturers to guarantee quality and longevity.</p>
+        <h2 class="partners-title">{{ t('landing.partners.title') }}</h2>
+        <p class="partners-sub">{{ t('landing.partners.sub') }}</p>
       </div>
     </div>
 
-    <!-- Marquee track (no container constraint) -->
-    <div class="marquee-wrapper" aria-label="Partner logos">
+    <div class="marquee-wrapper" :aria-label="t('landing.partners.logosAria')">
       <div class="marquee-track" aria-hidden="true">
         <div class="partner-logo" v-for="(p, i) in [...partners, ...partners]" :key="i">
           <div class="logo-brand-box">
@@ -21,7 +20,7 @@
     <div class="container">
       <div class="partners-footer">
         <router-link to="/partners" class="partners-cta" id="partners-learn-more">
-          Learn More About Our Partners
+          {{ t('landing.partners.cta') }}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
@@ -32,6 +31,10 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 const partners = [
   { name: 'SAMSUNG',        logo: '/logos/samsung.svg' },
   { name: 'Deye',           logo: '/logos/deye.svg' },

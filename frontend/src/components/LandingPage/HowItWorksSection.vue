@@ -6,14 +6,13 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
-          Our Process
+          {{ t('landing.howItWorks.eyebrow') }}
         </span>
-        <h2 class="section-title">How It Works</h2>
-        <p class="section-desc">Transitioning to solar is seamless. Here is our proven 4-step process.</p>
+        <h2 class="section-title">{{ t('landing.howItWorks.title') }}</h2>
+        <p class="section-desc">{{ t('landing.howItWorks.desc') }}</p>
       </div>
 
       <div class="steps-container">
-        <!-- Connector line -->
         <div class="connector-line" aria-hidden="true">
           <div class="connector-fill"></div>
         </div>
@@ -21,18 +20,18 @@
         <div
           class="step-card"
           v-for="(step, i) in steps"
-          :key="step.title"
+          :key="step.key"
           :class="`animate-fade-up delay-${(i + 1) * 100}`"
         >
           <div class="step-number-wrap">
             <div class="step-number">{{ String(i + 1).padStart(2, '0') }}</div>
           </div>
           <div class="step-image-wrap">
-            <img :src="step.image" :alt="step.title" class="step-image" loading="lazy" />
+            <img :src="step.image" :alt="t(`landing.howItWorks.steps.${step.key}.title`)" class="step-image" loading="lazy" />
           </div>
           <div class="step-icon" v-html="step.icon" aria-hidden="true"></div>
-          <h3 class="step-title">{{ step.title }}</h3>
-          <p class="step-desc">{{ step.desc }}</p>
+          <h3 class="step-title">{{ t(`landing.howItWorks.steps.${step.key}.title`) }}</h3>
+          <p class="step-desc">{{ t(`landing.howItWorks.steps.${step.key}.desc`) }}</p>
         </div>
       </div>
     </div>
@@ -40,28 +39,28 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 const steps = [
   {
-    title: 'Consultation',
-    desc: 'We analyze your energy usage and determine the optimal system size and configuration for your needs.',
+    key: 'consultation',
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`,
     image: '/step_1_consultation_1779050884684.png',
   },
   {
-    title: 'Custom Design',
-    desc: 'Our engineers craft a personalized solar layout tailored specifically for your property and energy goals.',
+    key: 'design',
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>`,
     image: '/step_2_design_1779050897636.png',
   },
   {
-    title: 'Installation',
-    desc: 'Our certified team installs your premium equipment safely and efficiently — typically in just 1-2 days.',
+    key: 'installation',
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
     image: '/step_3_installation_1779050913053.png',
   },
   {
-    title: 'Activation',
-    desc: 'We handle all inspections and grid connections. Flip the switch and start saving from day one.',
+    key: 'activation',
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
     image: '/step_4_activation_1779050928592.png',
   },

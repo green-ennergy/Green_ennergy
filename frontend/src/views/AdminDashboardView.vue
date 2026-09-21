@@ -1,7 +1,7 @@
 <template>
   <!-- <div class="admin-page" v-if="user"> -->
   <div class="admin-page">
-    <div class="admin-layout animate-fade-in">
+    <div class="admin-layout">
       <aside class="admin-sidebar">
         <div class="sidebar-brand">
           <router-link to="/" class="brand-link">
@@ -1262,12 +1262,19 @@
           <header class="panel-header">
             <div>
               <h1>Gestion des Services</h1>
-              <p>Activer, désactiver et modifier les tarifs, durées et descriptions des services solaires.</p>
+              <p>Ajouter, supprimer et personnaliser le catalogue. Traiter les demandes clients.</p>
             </div>
+            <button type="button" class="primary-btn" @click="openCreateServiceModal">
+              <AdminIcon name="plus" size="16" />
+              <span>Ajouter un service</span>
+            </button>
           </header>
 
           <div class="ops-services-config-view">
-            <div class="config-grid">
+            <div v-if="!servicesConfig.length" class="empty-state">
+              <p>Aucun service. Créez le premier pour le catalogue public.</p>
+            </div>
+            <div v-else class="config-grid">
               <div
                 v-for="srv in servicesConfig"
                 :key="srv.id"
@@ -1279,13 +1286,12 @@
                     <h3>{{ srv.title }}</h3>
                   </div>
 
-                  <!-- Toggle Switch -->
                   <div class="toggle-switch-wrap">
                     <label class="switch">
                       <input
                         type="checkbox"
                         :checked="srv.enabled"
-                        @change="toggleServiceEnabled(srv.id)"
+                        @change="handleToggleService(srv)"
                       />
                       <span class="slider round"></span>
                     </label>
@@ -1298,17 +1304,150 @@
                 <p class="config-desc">{{ srv.desc }}</p>
 
                 <div class="config-meta">
-                  <span>⏱️ Durée: <strong>{{ srv.estimatedDuration }}</strong></span>
-                  <span>💰 Tarif: <strong>{{ srv.startingPrice }}</strong></span>
+                  <span>Durée: <strong>{{ srv.estimatedDuration || '—' }}</strong></span>
+                  <span>Tarif: <strong>{{ srv.startingPrice || '—' }}</strong></span>
                 </div>
 
-                <div class="card-footer-actions">
-                  <button type="button" class="edit-service-btn full" @click="openEditServiceModal(srv)">
+                <div class="card-footer-actions service-card-actions">
+                  <button type="button" class="edit-service-btn" @click="openEditServiceModal(srv)">
                     <AdminIcon name="edit" size="14" />
-                    <span>Modifier les détails</span>
+                    <span>Modifier</span>
+                  </button>
+                  <button type="button" class="danger-service-btn" @click="handleDeleteService(srv)">
+                    <AdminIcon name="trash" size="14" />
+                    <span>Supprimer</span>
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div class="service-requests-block">
+              <header class="subpanel-header">
+                <div>
+                  <h2>Demandes de services</h2>
+                  <p>Accepter et assigner un opérateur pour démarrer la réalisation.</p>
+                </div>
+              </header>
+
+              <div v-if="!serviceRequests.length" class="empty-state compact">
+                <p>Aucune demande pour le moment.</p>
+              </div>
+
+              <div v-else class="service-req-list">
+                <article v-for="req in serviceRequests" :key="req.id" class="service-req-card">
+                  <div class="req-top">
+                    <div>
+                      <code>{{ req.id }}</code>
+                      <h3>{{ req.serviceTitle }}</h3>
+                      <p>{{ req.clientName }} · {{ req.clientEmail }} · {{ req.city || '—' }}</p>
+                      <small>
+                        {{ req.createdAt }} ·
+                        {{ getPhaseLabel(req) }} ({{ req.currentPhase }}/5)
+                      </small>
+                    </div>
+                    <span class="status-pill" :class="req.status">{{ req.status }}</span>
+                  </div>
+                  <p v-if="req.notes" class="req-notes">{{ req.notes }}</p>
+
+                  <div class="phase-track-labeled">
+                    <p class="phase-track-hint">Avancement de la réalisation — cliquez une étape pour la définir :</p>
+                    <div class="phase-steps-row">
+                      <button
+                        v-for="step in getRequestSteps(req)"
+                        :key="step.step"
+                        type="button"
+                        :class="[
+                          'phase-step-chip',
+                          {
+                            active: req.currentPhase === step.step,
+                            done: req.currentPhase > step.step
+                          }
+                        ]"
+                        :title="step.desc"
+                        @click="handleUpdateServicePhase(req, step.step)"
+                      >
+                        <span class="phase-num">{{ step.step }}</span>
+                        <span class="phase-text">
+                          <strong>{{ step.title }}</strong>
+                          <em>{{ step.desc }}</em>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="req-assign-row">
+                    <select v-model="assignOperatorMap[req.id]" class="filter-select">
+                      <option value="">Choisir un opérateur…</option>
+                      <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="primary-btn small"
+                      :disabled="!assignOperatorMap[req.id] || req.status === 'completed' || req.status === 'rejected'"
+                      @click="handleAssignServiceRequest(req)"
+                    >
+                      Assigner
+                    </button>
+                    <button
+                      type="button"
+                      class="ghost-btn small"
+                      :disabled="req.status === 'completed' || req.status === 'rejected'"
+                      @click="handleRejectServiceRequest(req)"
+                    >
+                      Rejeter
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showServiceModal" class="modal-overlay service-edit-overlay" @click.self="showServiceModal = false">
+            <div class="ops-modal ops-modal-sm" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <div>
+                  <h3>{{ editingService ? 'Modifier le service' : 'Nouveau service' }}</h3>
+                </div>
+                <button type="button" class="close-btn" @click="showServiceModal = false">×</button>
+              </header>
+              <form class="task-form" @submit.prevent="submitServiceForm">
+                <div class="modal-body">
+                  <div class="form-grid">
+                    <label class="span-2">
+                      <span>Titre</span>
+                      <input v-model="serviceForm.title" type="text" required />
+                    </label>
+                    <label>
+                      <span>Catégorie</span>
+                      <input v-model="serviceForm.category" type="text" />
+                    </label>
+                    <label>
+                      <span>Tarif de départ</span>
+                      <input v-model="serviceForm.startingPrice" type="text" placeholder="4,500 MAD" />
+                    </label>
+                    <label>
+                      <span>Durée estimée</span>
+                      <input v-model="serviceForm.estimatedDuration" type="text" placeholder="1-3 Days" />
+                    </label>
+                    <label class="span-2">
+                      <span>Description</span>
+                      <textarea v-model="serviceForm.desc" rows="3"></textarea>
+                    </label>
+                    <label class="span-2">
+                      <span>Points clés (un par ligne)</span>
+                      <textarea v-model="serviceForm.bulletsText" rows="3" placeholder="Site audit&#10;Panel mounting"></textarea>
+                    </label>
+                    <label class="checkbox-row span-2">
+                      <input v-model="serviceForm.enabled" type="checkbox" />
+                      <span>Service actif (visible clients)</span>
+                    </label>
+                  </div>
+                </div>
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showServiceModal = false">Annuler</button>
+                  <button type="submit" class="primary-btn">{{ editingService ? 'Enregistrer' : 'Créer' }}</button>
+                </footer>
+              </form>
             </div>
           </div>
         </section>
@@ -1408,6 +1547,9 @@
           </header>
 
           <template v-if="opsSection === 'jobs'">
+            <p class="ops-assign-hint">
+              {{ t('admin.operations.assignHint') }}
+            </p>
             <div class="queue-toolbar ops-simple-toolbar">
               <div class="search-wrap">
                 <AdminIcon name="search" size="16" />
@@ -1639,11 +1781,15 @@
                     </label>
                     <label>
                       <span>{{ t('admin.operations.operatorForm.phone') }}</span>
-                      <input v-model="operatorForm.phone" type="tel" />
+                      <input v-model="operatorForm.phone" type="tel" required />
                     </label>
                     <label>
                       <span>{{ t('admin.operations.operatorForm.email') }}</span>
-                      <input v-model="operatorForm.email" type="email" />
+                      <input v-model="operatorForm.email" type="email" required maxlength="50" />
+                    </label>
+                    <label v-if="!editingOperator" class="span-2">
+                      <span>{{ t('admin.operations.operatorForm.password') }}</span>
+                      <input v-model="operatorForm.password" type="text" :placeholder="t('admin.operations.operatorForm.passwordHint')" />
                     </label>
                   </div>
                 </div>
@@ -1719,8 +1865,18 @@ const {
   servicesConfig,
   serviceRequests,
   toggleServiceEnabled,
-  updateService
+  updateService,
+  createService,
+  deleteService,
+  acceptAndAssignRequest,
+  rejectServiceRequest,
+  updateRequestPhase,
+  reloadServices,
+  getRequestSteps,
+  getPhaseLabel,
+  error: servicesError
 } = useServices()
+const assignOperatorMap = ref({})
 const {
   stats,
   rfqs,
@@ -2006,9 +2162,6 @@ const {
   updateTaskStatus: updateOpsTaskStatus,
   reassignTask: reassignOpsTask,
   deleteTask: deleteOpsTask,
-  addOperator,
-  updateOperator,
-  deleteOperator,
   toggleOperatorDuty,
   getOperatorActiveTaskCount,
   reloadOperations
@@ -2019,7 +2172,7 @@ const selectedCalendarDate = ref('2026-09-15')
 const showTaskModal = ref(false)
 const showOperatorModal = ref(false)
 const editingOperator = ref(null)
-const operatorForm = ref({ name: '', role: '', phone: '', email: '', city: '' })
+const operatorForm = ref({ name: '', role: '', phone: '', email: '', city: '', password: '' })
 const editingTask = ref(null)
 
 const taskForm = ref({
@@ -2059,14 +2212,15 @@ const calendarTasksForSelectedDay = computed(() => {
 })
 
 const filteredOpsTasks = computed(() => {
+  const q = (opsSearch.value || '').toLowerCase()
   return opsTasks.value.filter(task => {
     const matchType = opsFilterType.value === 'all' || task.type === opsFilterType.value
     const matchStatus = opsFilterStatus.value === 'all' || task.status === opsFilterStatus.value
-    const matchSearch = !opsSearch.value || 
-      task.title.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
-      task.id.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
-      task.client.name.toLowerCase().includes(opsSearch.value.toLowerCase()) ||
-      task.operatorName.toLowerCase().includes(opsSearch.value.toLowerCase())
+    const matchSearch = !q ||
+      String(task.title || '').toLowerCase().includes(q) ||
+      String(task.id || '').toLowerCase().includes(q) ||
+      String(task.client?.name || '').toLowerCase().includes(q) ||
+      String(task.operatorName || '').toLowerCase().includes(q)
     const matchPerson = opsFilterPerson.value === 'all' || task.operatorId === opsFilterPerson.value
     const matchDate = !opsFilterDate.value || task.scheduledDate === opsFilterDate.value
     return matchType && matchStatus && matchPerson && matchDate && matchSearch
@@ -2075,7 +2229,7 @@ const filteredOpsTasks = computed(() => {
 
 function openCreateOperatorModal() {
   editingOperator.value = null
-  operatorForm.value = { name: '', role: '', phone: '', email: '', city: '' }
+  operatorForm.value = { name: '', role: '', phone: '', email: '', city: '', password: '' }
   showOperatorModal.value = true
 }
 
@@ -2096,12 +2250,22 @@ async function submitOperatorForm() {
     toast.error('Name and email are required.')
     return
   }
+  if (!operatorForm.value.phone?.trim()) {
+    toast.error('Phone is required for operator accounts.')
+    return
+  }
   try {
     if (editingOperator.value) {
-      await updateOpsOperator(editingOperator.value.id, operatorForm.value)
+      await updateOpsOperator(editingOperator.value.id, {
+        ...operatorForm.value,
+        email: operatorForm.value.email.trim().toLowerCase()
+      })
       toast.success('Operator updated.')
     } else {
-      const result = await createOpsOperator(operatorForm.value)
+      const result = await createOpsOperator({
+        ...operatorForm.value,
+        email: operatorForm.value.email.trim().toLowerCase()
+      })
       const password = result.temporary_password
       toast.success(password ? `Operator added. Temporary password: ${password}` : 'Operator added.', 8000)
     }
@@ -2233,42 +2397,165 @@ function getDutyStatusClass(status) {
   return 'duty-offduty'
 }
 
-const showEditServiceModal = ref(false)
+const showServiceModal = ref(false)
 const editingService = ref(null)
 const serviceForm = ref({
   title: '',
+  category: '',
   startingPrice: '',
   estimatedDuration: '',
   desc: '',
+  bulletsText: '',
   enabled: true
 })
+
+function resetServiceForm() {
+  serviceForm.value = {
+    title: '',
+    category: 'General',
+    startingPrice: '',
+    estimatedDuration: '',
+    desc: '',
+    bulletsText: '',
+    enabled: true
+  }
+}
+
+function openCreateServiceModal() {
+  editingService.value = null
+  resetServiceForm()
+  showServiceModal.value = true
+}
 
 function openEditServiceModal(srv) {
   editingService.value = srv
   serviceForm.value = {
-    title: srv.title,
-    startingPrice: srv.startingPrice,
-    estimatedDuration: srv.estimatedDuration,
-    desc: srv.desc,
-    enabled: srv.enabled
+    title: srv.title || '',
+    category: srv.category || '',
+    startingPrice: srv.startingPrice || '',
+    estimatedDuration: srv.estimatedDuration || '',
+    desc: srv.desc || '',
+    bulletsText: Array.isArray(srv.bullets) ? srv.bullets.join('\n') : '',
+    enabled: srv.enabled !== false
   }
-  showEditServiceModal.value = true
+  showServiceModal.value = true
 }
 
-function submitServiceForm() {
-  if (!editingService.value) return
-  updateService(editingService.value.id, serviceForm.value)
-  showEditServiceModal.value = false
+async function submitServiceForm() {
+  const payload = {
+    title: serviceForm.value.title,
+    category: serviceForm.value.category,
+    startingPrice: serviceForm.value.startingPrice,
+    estimatedDuration: serviceForm.value.estimatedDuration,
+    desc: serviceForm.value.desc,
+    enabled: serviceForm.value.enabled,
+    bullets: serviceForm.value.bulletsText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+  }
+
+  if (editingService.value) {
+    const updated = await updateService(editingService.value.id, payload)
+    if (updated) {
+      toast.success('Service updated')
+      showServiceModal.value = false
+    } else {
+      toast.error(servicesError.value || 'Update failed')
+    }
+  } else {
+    const result = await createService(payload)
+    if (result?.success) {
+      toast.success('Service created')
+      showServiceModal.value = false
+    } else {
+      toast.error(result?.error || 'Create failed')
+    }
+  }
 }
+
+async function handleToggleService(srv) {
+  const updated = await toggleServiceEnabled(srv.id)
+  if (updated) toast.success(updated.enabled ? 'Service enabled' : 'Service disabled')
+  else toast.error('Toggle failed')
+}
+
+async function handleDeleteService(srv) {
+  const okConfirm = confirm(
+    `Supprimer « ${srv.title} » ?\n\nAttention: toutes les demandes de service liées seront aussi supprimées.`
+  )
+  if (!okConfirm) return
+  const ok = await deleteService(srv.id)
+  if (ok) toast.success('Service deleted')
+  else toast.error('Delete failed')
+}
+
+async function handleAssignServiceRequest(req) {
+  const opId = assignOperatorMap.value[req.id]
+  if (!opId) return
+  const updated = await acceptAndAssignRequest(req.id, opId)
+  if (updated) toast.success('Operator assigned')
+  else toast.error('Assign failed')
+}
+
+async function handleRejectServiceRequest(req) {
+  if (!confirm(`Rejeter la demande ${req.id} ?`)) return
+  const updated = await rejectServiceRequest(req.id, 'Rejected by admin')
+  if (updated) toast.success('Request rejected')
+  else toast.error('Reject failed')
+}
+
+async function handleUpdateServicePhase(req, step) {
+  const updated = await updateRequestPhase(req.id, step)
+  if (updated) toast.success(`Phase set to ${step}`)
+  else toast.error('Phase update failed')
+}
+
+async function loadServicesTab() {
+  await reloadServices({ admin: true, withRequests: true })
+  if (!opsOperators.value.length) {
+    try {
+      await loadOperations()
+    } catch (_) {
+      /* operators optional for catalog edit */
+    }
+  }
+  for (const req of serviceRequests.value) {
+    if (req.assignedOperatorId && !assignOperatorMap.value[req.id]) {
+      assignOperatorMap.value[req.id] = req.assignedOperatorId
+    }
+  }
+}
+
+let servicesPollTimer = null
+watch(
+  () => activeTab.value,
+  (tab) => {
+    if (servicesPollTimer) {
+      clearInterval(servicesPollTimer)
+      servicesPollTimer = null
+    }
+    if (tab === 'services') {
+      servicesPollTimer = setInterval(() => {
+        reloadServices({ admin: true, withRequests: true })
+      }, 15000)
+    }
+  }
+)
+
+const pendingServiceRequestCount = computed(
+  () => serviceRequests.value.filter((r) => r.status === 'pending' || r.status === 'accepted').length
+)
 
 const tabs = computed(() => {
   locale.value
+  const ordersBadge = stats.value?.totals?.pending_rfqs || null
   return [
     { id: 'overview', label: t('admin.tabs.overview'), icon: 'overview' },
-    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: (stats.value?.totals?.pending_rfqs || 0) + (serviceRequests.value?.length || 0) || null },
+    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: ordersBadge || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
     { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
-    { id: 'services', label: t('admin.tabs.services') || 'Services', icon: 'services' },
+    { id: 'services', label: t('admin.tabs.services') || 'Services', icon: 'services', badge: pendingServiceRequestCount.value || null },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
     {
       id: 'operations',
@@ -2345,6 +2632,10 @@ const filteredCatalogProducts = computed(() => {
 
 onMounted(async () => {
   await loadOverview()
+  await reloadServices({ admin: true, withRequests: true }).catch(() => {})
+  window.addEventListener('focus', () => {
+    if (activeTab.value === 'services') loadServicesTab()
+  })
 })
 
 //
@@ -2366,15 +2657,18 @@ const switchTab = async (tabId) => {
   if (tabId === 'marketplace') await loadMarketplace()
   if (tabId === 'projects') await loadProjects()
   if (tabId === 'clients') await loadClients()
+  if (tabId === 'services') await loadServicesTab()
   if (tabId === 'operations') await loadOperations()
 }
 
 const toggleMissionMenu = async () => {
-  missionMenuOpen.value = !missionMenuOpen.value
-  if (missionMenuOpen.value && activeTab.value !== 'operations') {
+  if (activeTab.value !== 'operations') {
+    missionMenuOpen.value = true
     await switchTab('operations')
     missionMenuOpen.value = true
+    return
   }
+  missionMenuOpen.value = !missionMenuOpen.value
 }
 
 const openOpsSection = async (section) => {
@@ -2937,7 +3231,8 @@ const handleStockChange = async (product, stock) => {
 
 <style scoped>
 .admin-page {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #eef4f0;
   font-family: 'Outfit', sans-serif;
 }
@@ -2986,8 +3281,8 @@ const handleStockChange = async (product, stock) => {
 
 .admin-layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  min-height: 100vh;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: 100%;
 }
 
 .admin-sidebar {
@@ -2998,9 +3293,8 @@ const handleStockChange = async (product, stock) => {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  height: 100%;
+  overflow-x: hidden;
   overflow-y: auto;
 }
 
@@ -3192,8 +3486,10 @@ const handleStockChange = async (product, stock) => {
 }
 
 .admin-main {
+  min-width: 0;
+  height: 100%;
   padding: 1.15rem 1.5rem 1.5rem;
-  overflow-x: auto;
+  overflow: auto;
 }
 
 /* Global `section { padding: 7rem 0 }` is for marketing pages — reset in admin */
@@ -3590,13 +3886,19 @@ const handleStockChange = async (product, stock) => {
 }
 
 @media (max-width: 900px) {
+  .admin-page {
+    height: auto;
+    overflow: visible;
+  }
+
   .admin-layout {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .admin-sidebar {
-    position: static;
     height: auto;
+    overflow: visible;
     border-right: none;
     border-bottom: 1px solid rgba(74, 222, 128, 0.12);
   }
@@ -3624,7 +3926,14 @@ const handleStockChange = async (product, stock) => {
   }
 
   .admin-main {
+    height: auto;
+    overflow: visible;
     padding: 1rem;
+  }
+
+  .project-workspace {
+    left: 0;
+    right: 0;
   }
 
   .order-head,
@@ -6256,6 +6565,11 @@ const handleStockChange = async (product, stock) => {
   margin-top: 0.5rem;
 }
 
+.ghost-btn.small {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+}
+
 .confirmed-tag {
   margin-left: 0.5rem;
   font-size: 0.78rem;
@@ -7012,6 +7326,10 @@ const handleStockChange = async (product, stock) => {
   padding: 1.25rem;
 }
 
+.service-edit-overlay {
+  z-index: 1400;
+}
+
 .ops-modal {
   background: #fff;
   border-radius: 18px;
@@ -7195,6 +7513,17 @@ const handleStockChange = async (product, stock) => {
 }
 
 /* Service Admin Controls & Realization Progress CSS */
+.ops-assign-hint {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  color: #166534;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .ops-services-config-view .config-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -7440,6 +7769,191 @@ input:checked + .slider:before {
   border-color: #86efac;
   color: #166534;
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.service-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.service-card-actions .edit-service-btn,
+.service-card-actions .danger-service-btn {
+  flex: 1;
+  width: auto;
+}
+
+.danger-service-btn {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
+.danger-service-btn:hover {
+  background: #fee2e2;
+}
+
+.service-requests-block {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.subpanel-header {
+  margin-bottom: 1rem;
+}
+
+.subpanel-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.subpanel-header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.service-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.service-req-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+}
+
+.req-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.req-top h3 {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+}
+
+.req-top p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.req-notes {
+  margin: 0.65rem 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.req-assign-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.phase-track-labeled {
+  margin: 0.85rem 0 0.35rem;
+}
+
+.phase-track-hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.phase-steps-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.45rem;
+}
+
+.phase-step-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.phase-step-chip:hover {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.phase-step-chip.done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.phase-step-chip.active {
+  border-color: #16a34a;
+  background: #dcfce7;
+  box-shadow: 0 0 0 1px #16a34a inset;
+}
+
+.phase-num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-step-chip.active .phase-num,
+.phase-step-chip.done .phase-num {
+  background: #16a34a;
+  color: #fff;
+}
+
+.phase-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.phase-text strong {
+  font-size: 0.78rem;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.phase-text em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.25;
+}
+
+.empty-state.compact {
+  padding: 1rem;
 }
 
 .ghost-btn.full {
