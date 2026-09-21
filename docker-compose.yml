@@ -12,10 +12,15 @@ services:
     volumes:
       - ./backend:/var/www
       - backend_vendor:/var/www/vendor
+    environment:
+      AI_BACKEND_URL: "http://ai_backend:8001"
+      AI_BACKEND_TIMEOUT: "15"
     command: sh -c "composer install && php-fpm"
     depends_on:
       postgres:
         condition: service_healthy
+      ai_backend:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "test -f /var/www/vendor/autoload.php"]
       interval: 3s
@@ -55,6 +60,37 @@ services:
       - app-network
 
 
+  ai_backend:
+    build:
+      context: ./docker/ai
+      dockerfile: Dockerfile
+    working_dir: /app
+    volumes:
+      - ./ai_backend:/app
+      - ai_venv:/opt/venv
+    ports:
+      - "${AI_PORT:-8001}:8001"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8001"
+      # Called by Laravel only (server-side); keep CORS minimal
+      ALLOWED_ORIGINS: "http://localhost:${NGINX_PORT},http://127.0.0.1:${NGINX_PORT}"
+      PATH: "/opt/venv/bin:/usr/local/bin:/usr/bin:/bin"
+    command: >
+      sh -c "python -m venv /opt/venv &&
+      . /opt/venv/bin/activate &&
+      pip install -r requirements.txt &&
+      uvicorn main:app --host 0.0.0.0 --port 8001 --reload"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/venv/bin/python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/')\""]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+    networks:
+      - app-network
+
+
   postgres:
     image: postgres:17-alpine
     environment:
@@ -78,6 +114,7 @@ volumes:
   postgres_data:
   backend_vendor:
   frontend_node_modules:
+  ai_venv:
 
 
 networks:

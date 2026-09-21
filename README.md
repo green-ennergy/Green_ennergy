@@ -6,8 +6,10 @@ Local development runs entirely in Docker. You do **not** need PHP, Composer, No
 | --- | --- |
 | Backend (Laravel) | http://localhost:8000 |
 | Frontend (Vue + Vite) | http://localhost:5173 |
+| AI backend (FastAPI, internal) | http://localhost:8001 (docs only; app traffic goes via Laravel) |
 | PostgreSQL | `localhost:5432` |
 | API docs | http://localhost:8000/docs/api |
+| AI API docs | http://localhost:8001/docs |
 
 ---
 
@@ -75,7 +77,7 @@ First start takes a few minutes. The containers will:
 
 - install PHP dependencies (`composer install`)
 - install frontend dependencies (`npm install`)
-- start PostgreSQL, Nginx, PHP-FPM, and Vite
+- start PostgreSQL, Nginx, PHP-FPM, Vite, and the AI backend
 
 
 ### 5. Generate the app key and run migrations
@@ -100,8 +102,9 @@ Open in your browser:
 - http://localhost:8000 → Laravel welcome page
 - http://localhost:8000/test → should show `BACKEND TEST 123`
 - http://localhost:5173 → Vue app
+- http://localhost:8001/docs → AI API Swagger
 
-If all three load, your environment is ready.
+If these load, your environment is ready.
 
 ---
 
@@ -190,7 +193,9 @@ docker compose exec postgres psql -U root -d green_energies
 green_energy/
 ├── backend/          Laravel API / backend
 ├── frontend/         Vue 3 + Vite frontend
+├── ai_backend/       FastAPI AI analytics API
 ├── docker/
+│   ├── ai/           AI backend Dockerfile
 │   ├── nginx/        Nginx config
 │   └── php/          PHP-FPM Dockerfile
 ├── docker-compose.yml
@@ -205,7 +210,10 @@ green_energy/
 | `backend` | PHP 8.4 FPM + Laravel |
 | `nginx` | Serves Laravel on port 8000 |
 | `frontend` | Vite dev server on port 5173 |
+| `ai_backend` | FastAPI AI analytics (called by Laravel, port 8001) |
 | `postgres` | PostgreSQL 17 database |
+
+**AI data flow:** Vue admin dashboard → Laravel (`/api/admin/ai/*`) → FastAPI (`ai_backend`).
 
 ---
 

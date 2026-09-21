@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'ai_backend' => [
+        'url' => env('AI_BACKEND_URL', 'http://ai_backend:8001'),
+        'timeout' => (int) env('AI_BACKEND_TIMEOUT', 15),
+    ],
+
 ];

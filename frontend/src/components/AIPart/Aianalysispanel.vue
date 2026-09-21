@@ -183,7 +183,7 @@
           v-if="selected.restock > 0"
           class="btn"
           style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;"
-          @click="openWhatsApp"
+          @click="orderRestock(selected)"
           :disabled="isOrdering"
         >
           <ShoppingCart :size="15" /> {{ isOrdering ? 'Création...' : 'Créer un bon de commande' }}
@@ -195,7 +195,8 @@
 
 <script setup>
 import { ref, computed, h, onMounted } from "vue";
-import axios from "axios";
+import api, { getApiErrorMessage } from "@/api/client";
+import { useToast } from "@/composables/useToast";
 import {
   Sun, Package, AlertTriangle, TrendingUp, Bot, X,
   ShoppingCart, BatteryMedium, PlugZap, Zap,
@@ -346,13 +347,12 @@ const assistantInsights = ref([
 ]);
 const isLoading = ref(false);
 const isOrdering = ref(false);
-
-const AI_API_URL = import.meta.env.VITE_AI_API_URL || "http://127.0.0.1:8001";
+const toast = useToast();
 
 const loadAIData = async () => {
   try {
     isLoading.value = true;
-    const response = await axios.get(`${AI_API_URL}/api/ai/overview`);
+    const response = await api.get("/admin/ai/overview");
     if (response.data) {
       const data = response.data;
       if (data.products && data.products.length) {
@@ -375,31 +375,31 @@ const loadAIData = async () => {
       }
     }
   } catch (err) {
-    console.warn("FastAPI backend non joignable, utilisation des données locales :", err.message);
+    console.warn("AI overview unavailable via Laravel, using local fallback:", err.message);
+    toast.error(getApiErrorMessage(err, "Impossible de charger l'analyse IA."));
   } finally {
     isLoading.value = false;
   }
 };
 
-const openWhatsApp = () => {
-  window.open("https://wa.me/212691512823", "_blank")
-}
-
-// const orderRestock = async (product) => {
-//   try {
-//     isOrdering.value = true;
-//     const res = await axios.post(`${AI_API_URL}/api/ai/restock-order`, {
-//       product_id: product.id,
-//       units: product.restock,
-//       notes: `Commande automatique IA pour ${product.name}`
-//     });
-//     alert(res.data.message || `Bon de commande créé pour ${product.restock} unités.`);
-//   } catch (err) {
-//     alert(`Bon de commande créé (simulation) pour ${product.restock} unités de ${product.name}.`);
-//   } finally {
-//     isOrdering.value = false;
-//   }
-// };
+const orderRestock = async (product) => {
+  if (!product?.id || !product.restock) return;
+  try {
+    isOrdering.value = true;
+    const res = await api.post("/admin/ai/restock-order", {
+      product_id: product.id,
+      units: product.restock,
+      notes: `Commande IA pour ${product.name}`
+    });
+    toast.success(res.data.message || `Bon de commande créé pour ${product.restock} unités.`);
+    selected.value = null;
+    await loadAIData();
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, "Échec de la création du bon de commande."));
+  } finally {
+    isOrdering.value = false;
+  }
+};
 
 onMounted(() => {
   loadAIData();
