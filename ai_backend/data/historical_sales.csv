@@ -1,0 +1,29 @@
+product_id,product_name,category,icon_type,month,year,units_sold,stock_level,season
+1,Panneau Solaire 450W,solar,sun,1,2025,30,150,winter
+1,Panneau Solaire 450W,solar,sun,2,2025,45,140,winter
+1,Panneau Solaire 450W,solar,sun,3,2025,62,130,spring
+1,Panneau Solaire 450W,solar,sun,4,2025,78,125,spring
+1,Panneau Solaire 450W,solar,sun,5,2025,95,120,spring
+1,Panneau Solaire 450W,solar,sun,6,2025,118,110,summer
+1,Panneau Solaire 450W,solar,sun,7,2025,132,90,summer
+2,Batterie 10kWh,storage,battery,1,2025,18,75,winter
+2,Batterie 10kWh,storage,battery,2,2025,24,70,winter
+2,Batterie 10kWh,storage,battery,3,2025,35,68,spring
+2,Batterie 10kWh,storage,battery,4,2025,42,65,spring
+2,Batterie 10kWh,storage,battery,5,2025,50,62,spring
+2,Batterie 10kWh,storage,battery,6,2025,60,58,summer
+2,Batterie 10kWh,storage,battery,7,2025,66,50,summer
+3,Onduleur Hybride,inverter,plug,1,2025,40,160,winter
+3,Onduleur Hybride,inverter,plug,2,2025,45,155,winter
+3,Onduleur Hybride,inverter,plug,3,2025,52,150,spring
+3,Onduleur Hybride,inverter,plug,4,2025,55,148,spring
+3,Onduleur Hybride,inverter,plug,5,2025,58,145,spring
+3,Onduleur Hybride,inverter,plug,6,2025,59,142,summer
+3,Onduleur Hybride,inverter,plug,7,2025,60,140,summer
+4,Chargeur Solaire,charger,zap,1,2025,15,100,winter
+4,Chargeur Solaire,charger,zap,2,2025,14,98,winter
+4,Chargeur Solaire,charger,zap,3,2025,13,95,spring
+4,Chargeur Solaire,charger,zap,4,2025,12,94,spring
+4,Chargeur Solaire,charger,zap,5,2025,11,92,spring
+4,Chargeur Solaire,charger,zap,6,2025,11,90,summer
+4,Chargeur Solaire,charger,zap,7,2025,10,88,summer

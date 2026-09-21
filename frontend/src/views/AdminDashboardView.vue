@@ -1257,552 +1257,11 @@
           </div>
         </section>
 
-        <!-- Services Management -->
-        <section v-if="activeTab === 'services'" class="panel">
-          <header class="panel-header">
-            <div>
-              <h1>Gestion des Services</h1>
-              <p>Ajouter, supprimer et personnaliser le catalogue. Traiter les demandes clients.</p>
-            </div>
-            <button type="button" class="primary-btn" @click="openCreateServiceModal">
-              <AdminIcon name="plus" size="16" />
-              <span>Ajouter un service</span>
-            </button>
-          </header>
-
-          <div class="ops-services-config-view">
-            <div v-if="!servicesConfig.length" class="empty-state">
-              <p>Aucun service. Créez le premier pour le catalogue public.</p>
-            </div>
-            <div v-else class="config-grid">
-              <div
-                v-for="srv in servicesConfig"
-                :key="srv.id"
-                :class="['service-config-card', { disabled: !srv.enabled }]"
-              >
-                <div class="card-head">
-                  <div>
-                    <span class="cat-tag">{{ srv.category }}</span>
-                    <h3>{{ srv.title }}</h3>
-                  </div>
-
-                  <div class="toggle-switch-wrap">
-                    <label class="switch">
-                      <input
-                        type="checkbox"
-                        :checked="srv.enabled"
-                        @change="handleToggleService(srv)"
-                      />
-                      <span class="slider round"></span>
-                    </label>
-                    <span :class="['toggle-lbl', srv.enabled ? 'enabled' : 'disabled']">
-                      {{ srv.enabled ? 'Actif' : 'Désactivé' }}
-                    </span>
-                  </div>
-                </div>
-
-                <p class="config-desc">{{ srv.desc }}</p>
-
-                <div class="config-meta">
-                  <span>Durée: <strong>{{ srv.estimatedDuration || '—' }}</strong></span>
-                  <span>Tarif: <strong>{{ srv.startingPrice || '—' }}</strong></span>
-                </div>
-
-                <div class="card-footer-actions service-card-actions">
-                  <button type="button" class="edit-service-btn" @click="openEditServiceModal(srv)">
-                    <AdminIcon name="edit" size="14" />
-                    <span>Modifier</span>
-                  </button>
-                  <button type="button" class="danger-service-btn" @click="handleDeleteService(srv)">
-                    <AdminIcon name="trash" size="14" />
-                    <span>Supprimer</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div class="service-requests-block">
-              <header class="subpanel-header">
-                <div>
-                  <h2>Demandes de services</h2>
-                  <p>Accepter et assigner un opérateur pour démarrer la réalisation.</p>
-                </div>
-              </header>
-
-              <div v-if="!serviceRequests.length" class="empty-state compact">
-                <p>Aucune demande pour le moment.</p>
-              </div>
-
-              <div v-else class="service-req-list">
-                <article v-for="req in serviceRequests" :key="req.id" class="service-req-card">
-                  <div class="req-top">
-                    <div>
-                      <code>{{ req.id }}</code>
-                      <h3>{{ req.serviceTitle }}</h3>
-                      <p>{{ req.clientName }} · {{ req.clientEmail }} · {{ req.city || '—' }}</p>
-                      <small>
-                        {{ req.createdAt }} ·
-                        {{ getPhaseLabel(req) }} ({{ req.currentPhase }}/5)
-                      </small>
-                    </div>
-                    <span class="status-pill" :class="req.status">{{ req.status }}</span>
-                  </div>
-                  <p v-if="req.notes" class="req-notes">{{ req.notes }}</p>
-
-                  <div class="phase-track-labeled">
-                    <p class="phase-track-hint">Avancement de la réalisation — cliquez une étape pour la définir :</p>
-                    <div class="phase-steps-row">
-                      <button
-                        v-for="step in getRequestSteps(req)"
-                        :key="step.step"
-                        type="button"
-                        :class="[
-                          'phase-step-chip',
-                          {
-                            active: req.currentPhase === step.step,
-                            done: req.currentPhase > step.step
-                          }
-                        ]"
-                        :title="step.desc"
-                        @click="handleUpdateServicePhase(req, step.step)"
-                      >
-                        <span class="phase-num">{{ step.step }}</span>
-                        <span class="phase-text">
-                          <strong>{{ step.title }}</strong>
-                          <em>{{ step.desc }}</em>
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div class="req-assign-row">
-                    <select v-model="assignOperatorMap[req.id]" class="filter-select">
-                      <option value="">Choisir un opérateur…</option>
-                      <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
-                    </select>
-                    <button
-                      type="button"
-                      class="primary-btn small"
-                      :disabled="!assignOperatorMap[req.id] || req.status === 'completed' || req.status === 'rejected'"
-                      @click="handleAssignServiceRequest(req)"
-                    >
-                      Assigner
-                    </button>
-                    <button
-                      type="button"
-                      class="ghost-btn small"
-                      :disabled="req.status === 'completed' || req.status === 'rejected'"
-                      @click="handleRejectServiceRequest(req)"
-                    >
-                      Rejeter
-                    </button>
-                  </div>
-                </article>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="showServiceModal" class="modal-overlay service-edit-overlay" @click.self="showServiceModal = false">
-            <div class="ops-modal ops-modal-sm" role="dialog" aria-modal="true">
-              <header class="modal-header">
-                <div>
-                  <h3>{{ editingService ? 'Modifier le service' : 'Nouveau service' }}</h3>
-                </div>
-                <button type="button" class="close-btn" @click="showServiceModal = false">×</button>
-              </header>
-              <form class="task-form" @submit.prevent="submitServiceForm">
-                <div class="modal-body">
-                  <div class="form-grid">
-                    <label class="span-2">
-                      <span>Titre</span>
-                      <input v-model="serviceForm.title" type="text" required />
-                    </label>
-                    <label>
-                      <span>Catégorie</span>
-                      <input v-model="serviceForm.category" type="text" />
-                    </label>
-                    <label>
-                      <span>Tarif de départ</span>
-                      <input v-model="serviceForm.startingPrice" type="text" placeholder="4,500 MAD" />
-                    </label>
-                    <label>
-                      <span>Durée estimée</span>
-                      <input v-model="serviceForm.estimatedDuration" type="text" placeholder="1-3 Days" />
-                    </label>
-                    <label class="span-2">
-                      <span>Description</span>
-                      <textarea v-model="serviceForm.desc" rows="3"></textarea>
-                    </label>
-                    <label class="span-2">
-                      <span>Points clés (un par ligne)</span>
-                      <textarea v-model="serviceForm.bulletsText" rows="3" placeholder="Site audit&#10;Panel mounting"></textarea>
-                    </label>
-                    <label class="checkbox-row span-2">
-                      <input v-model="serviceForm.enabled" type="checkbox" />
-                      <span>Service actif (visible clients)</span>
-                    </label>
-                  </div>
-                </div>
-                <footer class="modal-footer">
-                  <button type="button" class="ghost-btn" @click="showServiceModal = false">Annuler</button>
-                  <button type="submit" class="primary-btn">{{ editingService ? 'Enregistrer' : 'Créer' }}</button>
-                </footer>
-              </form>
-            </div>
-          </div>
+        <!-- AI-Analysis -->
+        <section v-if="activeTab === 'ai-analysis'">
+          <Aianalysispanel />
         </section>
 
-        <!-- Liste des Opérateurs -->
-        <section v-if="activeTab === 'operators'" class="panel operators-panel">
-          <header class="panel-header">
-            <div>
-              <h1>Liste des Opérateurs</h1>
-              <p>Gestion de la flotte des techniciens de terrain et affectation rapide des missions.</p>
-            </div>
-            <button class="primary-btn" @click="openCreateOperatorModal()">
-              <AdminIcon name="plus" size="16" />
-              <span>Ajouter un opérateur</span>
-            </button>
-          </header>
-
-          <div class="table-wrap">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Opérateur</th>
-                  <th>Région / Ville</th>
-                  <th>Téléphone</th>
-                  <th>Statut de Service</th>
-                  <th>Missions Actives</th>
-                  <th class="col-actions">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="op in opsOperators" :key="op.id">
-                  <td>
-                    <div class="op-table-profile">
-                      <div class="op-mini-avatar" :style="{ backgroundColor: op.avatarColor }">
-                        {{ op.name.substring(0, 2).toUpperCase() }}
-                      </div>
-                      <div>
-                        <strong>{{ op.name }}</strong><br />
-                        <small class="text-muted">{{ op.role }}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{{ op.city }}</td>
-                  <td>{{ op.phone }}</td>
-                  <td>
-                    <button
-                      type="button"
-                      :class="['duty-badge', getDutyStatusClass(op.dutyStatus)]"
-                      @click="toggleOperatorDuty(op.id)"
-                      title="Cliquer pour changer le statut"
-                      style="border: none; cursor: pointer;"
-                    >
-                      ● {{ getDutyStatusLabel(op.dutyStatus) }}
-                    </button>
-                  </td>
-                  <td>
-                    <span class="workload-tag">{{ getOperatorActiveTaskCount(op.id) }} Actives</span>
-                  </td>
-                  <td class="col-actions">
-                    <div class="row-actions">
-                      <button type="button" class="action-btn" @click="openCreateTaskModal(op.id)" title="Assigner Tâche">
-                        <AdminIcon name="plus" size="15" />
-                      </button>
-                      <button type="button" class="action-btn" @click="openEditOperatorModal(op)" title="Modifier l'opérateur">
-                        <AdminIcon name="edit" size="15" />
-                      </button>
-                      <button type="button" class="action-btn danger" @click="handleDeleteOperator(op.id)" title="Supprimer l'opérateur">
-                        <AdminIcon name="trash" size="15" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <!-- Operations Dispatch -->
-        <section v-if="activeTab === 'operations'" class="panel ops-panel">
-          <header class="panel-header ops-header">
-            <div>
-              <h1>{{ opsSection === 'operators' ? t('admin.operations.operatorsTitle') : t('admin.operations.title') }}</h1>
-              <p>{{ opsSection === 'operators' ? t('admin.operations.operatorsSubtitle') : t('admin.operations.subtitle') }}</p>
-            </div>
-            <div class="panel-actions" v-if="opsSection === 'jobs'">
-              <button class="primary-btn" @click="openCreateTaskModal()">
-                <AdminIcon name="plus" size="16" />
-                <span>{{ t('admin.operations.assignTaskBtn') }}</span>
-              </button>
-            </div>
-            <div class="panel-actions" v-else>
-              <button type="button" class="primary-btn" @click="openCreateOperatorModal">
-                <AdminIcon name="plus" size="16" />
-                <span>{{ t('admin.operations.addOperatorBtn') }}</span>
-              </button>
-            </div>
-          </header>
-
-          <template v-if="opsSection === 'jobs'">
-            <p class="ops-assign-hint">
-              {{ t('admin.operations.assignHint') }}
-            </p>
-            <div class="queue-toolbar ops-simple-toolbar">
-              <div class="search-wrap">
-                <AdminIcon name="search" size="16" />
-                <input v-model="opsSearch" type="search" :placeholder="t('admin.operations.list.search')" />
-              </div>
-              <div class="filter-group">
-                <select v-model="opsFilterPerson">
-                  <option value="all">{{ t('admin.operations.list.allPeople') }}</option>
-                  <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
-                </select>
-                <input v-model="opsFilterDate" type="date" />
-                <select v-model="opsFilterType">
-                  <option value="all">{{ t('admin.operations.list.allTypes') }}</option>
-                  <option value="installation">{{ t('admin.operations.types.installation') }}</option>
-                  <option value="maintenance">{{ t('admin.operations.types.maintenance') }}</option>
-                  <option value="delivery">{{ t('admin.operations.types.delivery') }}</option>
-                  <option value="study">{{ t('admin.operations.types.study') }}</option>
-                </select>
-                <select v-model="opsFilterStatus">
-                  <option value="all">{{ t('admin.operations.list.allStatuses') }}</option>
-                  <option value="assigned">{{ t('admin.operations.list.assigned') }}</option>
-                  <option value="in_progress">{{ t('admin.operations.list.inProgress') }}</option>
-                  <option value="on_hold">{{ t('admin.operations.list.onHold') }}</option>
-                  <option value="completed">{{ t('admin.operations.list.completed') }}</option>
-                </select>
-              </div>
-            </div>
-
-            <div v-if="!filteredOpsTasks.length" class="ops-empty">
-              {{ t('admin.operations.list.empty') }}
-            </div>
-            <div v-else class="job-grid">
-              <article v-for="job in filteredOpsTasks" :key="job.id" class="job-card">
-                <div class="job-card-top">
-                  <span class="ops-chip">{{ getOpsTypeLabel(job.type) }}</span>
-                  <span class="ops-chip">{{ opsStatusLabel(job.status) }}</span>
-                </div>
-                <h3>{{ job.title }}</h3>
-                <p class="job-client">{{ job.client.name }} · {{ job.client.city }}</p>
-                <div class="job-meta">
-                  <span>{{ job.operatorName }}</span>
-                  <span>{{ job.scheduledDate }} · {{ job.timeSlot }}</span>
-                </div>
-                <footer class="job-card-actions">
-                  <span class="ops-quiet">{{ opsPriorityLabel(job.priority) }}</span>
-                  <div class="action-btns">
-                    <button type="button" class="ghost-btn small" @click="openEditTaskModal(job)">
-                      <AdminIcon name="edit" size="14" />
-                    </button>
-                    <button type="button" class="ghost-btn small danger" @click="handleDeleteTask(job.id)">
-                      <AdminIcon name="trash" size="14" />
-                    </button>
-                  </div>
-                </footer>
-              </article>
-            </div>
-          </template>
-
-          <div v-else>
-            <div v-if="!opsOperators.length" class="ops-empty">{{ t('admin.operations.operatorsEmpty') }}</div>
-            <div v-else class="op-manage-grid">
-              <article v-for="op in opsOperators" :key="op.id" class="op-manage-card">
-                <div class="op-manage-head">
-                  <div class="op-avatar">
-                    {{ operatorInitials(op.name) }}
-                  </div>
-                  <div>
-                    <h3>{{ op.name }}</h3>
-                    <p>{{ op.role }}</p>
-                  </div>
-                </div>
-                <ul class="op-manage-facts">
-                  <li>{{ op.phone || '—' }}</li>
-                  <li>{{ op.city || '—' }}</li>
-                  <li>{{ op.email || '—' }}</li>
-                </ul>
-                <footer class="op-manage-foot">
-                  <span>{{ t('admin.operations.list.activeJobs', { n: getOperatorActiveTaskCount(op.id) }) }}</span>
-                  <div class="action-btns">
-                    <button type="button" class="ghost-btn small" @click="openEditOperatorModal(op)">
-                      <AdminIcon name="edit" size="14" />
-                    </button>
-                    <button type="button" class="ghost-btn small danger" @click="handleDeleteOperator(op.id)">
-                      <AdminIcon name="trash" size="14" />
-                    </button>
-                  </div>
-                </footer>
-              </article>
-            </div>
-          </div>
-
-          <!-- TASK ASSIGNMENT & EDIT MODAL -->
-          <div v-if="showTaskModal" class="modal-overlay" @click.self="showTaskModal = false">
-            <div class="ops-modal" role="dialog" aria-modal="true">
-              <header class="modal-header">
-                <div>
-                  <p class="modal-kicker">{{ t('admin.operations.title') }}</p>
-                  <h3>{{ editingTask ? t('admin.operations.modal.editTitle') : t('admin.operations.modal.createTitle') }}</h3>
-                </div>
-                <button type="button" class="close-btn" :aria-label="t('common.close')" @click="showTaskModal = false">×</button>
-              </header>
-
-              <form class="task-form" @submit.prevent="submitTaskForm">
-                <div class="modal-body">
-                  <section class="modal-group">
-                    <h4>{{ t('admin.operations.modal.jobSection') }}</h4>
-                    <div class="form-grid">
-                      <label>
-                        <span>{{ t('admin.operations.modal.taskType') }}</span>
-                        <select v-model="taskForm.type" required>
-                          <option value="installation">{{ t('admin.operations.types.installation') }}</option>
-                          <option value="maintenance">{{ t('admin.operations.types.maintenance') }}</option>
-                          <option value="delivery">{{ t('admin.operations.types.delivery') }}</option>
-                          <option value="study">{{ t('admin.operations.types.study') }}</option>
-                        </select>
-                      </label>
-                      <label>
-                        <span>{{ t('admin.operations.modal.selectOperator') }}</span>
-                        <select v-model="taskForm.operatorId" required>
-                          <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
-                        </select>
-                      </label>
-                      <label class="span-2">
-                        <span>{{ t('admin.operations.modal.taskTitle') }}</span>
-                        <input v-model="taskForm.title" type="text" required />
-                      </label>
-                    </div>
-                  </section>
-
-                  <section class="modal-group">
-                    <h4>{{ t('admin.operations.modal.whenSection') }}</h4>
-                    <div class="form-grid">
-                      <label>
-                        <span>{{ t('admin.operations.modal.scheduledDate') }}</span>
-                        <input v-model="taskForm.scheduledDate" type="date" required />
-                      </label>
-                      <label>
-                        <span>{{ t('admin.operations.modal.timeSlot') }}</span>
-                        <select v-model="taskForm.timeSlot">
-                          <option value="08:30 - 11:30">08:30 – 11:30</option>
-                          <option value="09:00 - 13:00">09:00 – 13:00</option>
-                          <option value="10:30 - 12:30">10:30 – 12:30</option>
-                          <option value="14:00 - 17:00">14:00 – 17:00</option>
-                        </select>
-                      </label>
-                    </div>
-                    <div class="priority-row">
-                      <span>{{ t('admin.operations.modal.priority') }}</span>
-                      <div class="priority-pills">
-                        <button
-                          v-for="level in ['low', 'medium', 'high', 'urgent']"
-                          :key="level"
-                          type="button"
-                          class="priority-pill"
-                          :class="[level, { active: taskForm.priority === level }]"
-                          @click="taskForm.priority = level"
-                        >
-                          {{ t(`admin.operations.modal.priority${level.charAt(0).toUpperCase()}${level.slice(1)}`) }}
-                        </button>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section class="modal-group">
-                    <h4>{{ t('admin.operations.modal.clientSection') }}</h4>
-                    <div class="form-grid">
-                      <label>
-                        <span>{{ t('admin.operations.modal.clientName') }}</span>
-                        <input v-model="taskForm.clientName" type="text" required />
-                      </label>
-                      <label>
-                        <span>{{ t('admin.operations.modal.clientPhone') }}</span>
-                        <input v-model="taskForm.clientPhone" type="tel" />
-                      </label>
-                      <label class="span-2">
-                        <span>{{ t('admin.operations.modal.clientAddress') }}</span>
-                        <input v-model="taskForm.clientAddress" type="text" />
-                      </label>
-                      <label>
-                        <span>{{ t('admin.operations.modal.clientCity') }}</span>
-                        <input v-model="taskForm.clientCity" type="text" />
-                      </label>
-                      <label class="span-2">
-                        <span>{{ t('admin.operations.modal.adminNotes') }}</span>
-                        <textarea v-model="taskForm.adminNotes" rows="3"></textarea>
-                      </label>
-                    </div>
-                    <h4>{{ task.title }}</h4>
-                    <p class="agenda-op">👤 {{ (task.operatorName && task.operatorName.trim()) ? task.operatorName : 'Non assigné' }}</p>
-                    <p class="agenda-time">⏰ {{ task.timeSlot }}</p>
-                  </section>
-                </div>
-
-                <footer class="modal-footer">
-                  <button type="button" class="ghost-btn" @click="showTaskModal = false">{{ t('common.cancel') }}</button>
-                  <button type="submit" class="primary-btn">
-                    {{ editingTask ? t('admin.operations.modal.submitUpdate') : t('admin.operations.modal.submitCreate') }}
-                  </button>
-                </footer>
-                
-
-              </form>
-            </div>
-          </div>
-
-          <div v-if="showOperatorModal" class="modal-overlay" @click.self="showOperatorModal = false">
-            <div class="ops-modal ops-modal-sm" role="dialog" aria-modal="true">
-              <header class="modal-header">
-                <div>
-                  <p class="modal-kicker">{{ t('admin.operations.title') }}</p>
-                  <h3>{{ editingOperator ? t('admin.operations.operatorForm.editTitle') : t('admin.operations.operatorForm.title') }}</h3>
-                </div>
-                <button type="button" class="close-btn" :aria-label="t('common.close')" @click="showOperatorModal = false">×</button>
-              </header>
-              <form class="task-form" @submit.prevent="submitOperatorForm">
-                <div class="modal-body">
-                  <div class="form-grid">
-                    <label class="span-2">
-                      <span>{{ t('admin.operations.operatorForm.name') }}</span>
-                      <input v-model="operatorForm.name" type="text" required />
-                    </label>
-                    <label>
-                      <span>{{ t('admin.operations.operatorForm.role') }}</span>
-                      <input v-model="operatorForm.role" type="text" />
-                    </label>
-                    <label>
-                      <span>{{ t('admin.operations.operatorForm.city') }}</span>
-                      <input v-model="operatorForm.city" type="text" />
-                    </label>
-                    <label>
-                      <span>{{ t('admin.operations.operatorForm.phone') }}</span>
-                      <input v-model="operatorForm.phone" type="tel" required />
-                    </label>
-                    <label>
-                      <span>{{ t('admin.operations.operatorForm.email') }}</span>
-                      <input v-model="operatorForm.email" type="email" required maxlength="50" />
-                    </label>
-                    <label v-if="!editingOperator" class="span-2">
-                      <span>{{ t('admin.operations.operatorForm.password') }}</span>
-                      <input v-model="operatorForm.password" type="text" :placeholder="t('admin.operations.operatorForm.passwordHint')" />
-                    </label>
-                  </div>
-                </div>
-                <footer class="modal-footer">
-                  <button type="button" class="ghost-btn" @click="showOperatorModal = false">{{ t('common.cancel') }}</button>
-                  <button type="submit" class="primary-btn">
-                    {{ editingOperator ? t('admin.operations.operatorForm.saveChanges') : t('admin.operations.operatorForm.save') }}
-                  </button>
-                </footer>
-              </form>
-            </div>
-          </div>
-        </section>
       </main>
     </div>
   </div>
@@ -1817,18 +1276,12 @@ import { useAdmin } from '../composables/useAdmin'
 import { useOperatorAdmin } from '../composables/useOperatorAdmin'
 import { useServices } from '../composables/useServices'
 import { useLocale } from '../composables/useLocale'
-import { useToast } from '../composables/useToast'
-import { getApiErrorMessage } from '../api/client'
-import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
+import AdminIcon from '../components/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
-import FollowupCard from '../components/adminDashboard/FollowupCard.vue'
-import ProjectCatalogPicker from '../components/adminDashboard/ProjectCatalogPicker.vue'
-import { resolveProductImage, resolveMediaUrl } from '../utils/productImage'
-import {
-  objectToLines,
-  linesToObject,
-} from '../utils/productDetails'
-import RfqQuoteEditor from '../components/adminDashboard/RfqQuoteEditor.vue'
+import FollowupCard from '../components/FollowupCard.vue'
+import ProjectTimeline from '../components/ProjectTimeline.vue'
+import { resolveProductImage } from '../utils/productImage'
+import RfqQuoteEditor from '../components/RfqQuoteEditor.vue'
 import {
   buildQuoteLinesFromRfq,
   formatMoney,
@@ -1841,13 +1294,11 @@ import {
   rfqPdfErrorMessage,
   getRfqStatusSteps
 } from '../utils/rfqQuote'
-
 import {
   formatTraceChange,
   formatTraceSummary,
   traceActorLabel
 } from '../utils/projectTrace'
-
 import {
   getWorkflowSteps,
   getCurrentPhase,
@@ -1855,6 +1306,7 @@ import {
   phaseToCompletedSteps,
   projectStatusLabel
 } from '../utils/projectSteps'
+import Aianalysispanel from '@/components/AIPart/Aianalysispanel.vue'
 
 const router = useRouter()
 const { t } = useI18n()
@@ -2555,18 +2007,8 @@ const tabs = computed(() => {
     { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: ordersBadge || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
     { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
-    { id: 'services', label: t('admin.tabs.services') || 'Services', icon: 'services', badge: pendingServiceRequestCount.value || null },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
-    {
-      id: 'operations',
-      label: t('admin.tabs.operations'),
-      icon: 'operations',
-      badge: opsStats.value?.inProgress || null,
-      children: [
-        { id: 'jobs', label: t('admin.operations.menu.jobs') },
-        { id: 'operators', label: t('admin.operations.menu.operators') }
-      ]
-    }
+    { id: 'ai-analysis', label: t('admin.tabs.aiAnalysis'), icon: 'ai' }
   ]
 })
 
@@ -2657,35 +2099,7 @@ const switchTab = async (tabId) => {
   if (tabId === 'marketplace') await loadMarketplace()
   if (tabId === 'projects') await loadProjects()
   if (tabId === 'clients') await loadClients()
-  if (tabId === 'services') await loadServicesTab()
-  if (tabId === 'operations') await loadOperations()
-}
-
-const toggleMissionMenu = async () => {
-  if (activeTab.value !== 'operations') {
-    missionMenuOpen.value = true
-    await switchTab('operations')
-    missionMenuOpen.value = true
-    return
-  }
-  missionMenuOpen.value = !missionMenuOpen.value
-}
-
-const openOpsSection = async (section) => {
-  opsSection.value = section
-  if (activeTab.value !== 'operations') {
-    await switchTab('operations')
-    return
-  }
-  await loadOperations()
-}
-
-const loadOperations = async () => {
-  try {
-    await reloadOperations()
-  } catch (err) {
-    toast.error(getApiErrorMessage(err, 'Could not load missions.'))
-  }
+  if (tabId === 'ai-analysis') await loadAiAnalysis()
 }
 
 const loadOverview = async () => {
@@ -3350,19 +2764,7 @@ const handleStockChange = async (product, stock) => {
 
 .admin-name {
   font-size: 0.88rem;
-  font-weight: 700;
-  color: #f0fdf4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.admin-role {
-  font-size: 0.72rem;
-  color: rgba(240, 253, 244, 0.55);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  opacity: 0.85;
 }
 
 .logout-btn {
