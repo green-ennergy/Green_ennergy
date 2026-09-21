@@ -1,8 +1,17 @@
 <template>
-  <nav class="navbar" :class="{ scrolled: isScrolled, 'light-navbar': isLightNavbar }" role="navigation" aria-label="Main navigation">
+  <nav
+    class="navbar"
+    :class="{
+      scrolled: isScrolled,
+      'light-navbar': isLightNavbar,
+      'hero-navbar': hasHeroUnderNav
+    }"
+    role="navigation"
+    :aria-label="t('nav.mainAria')"
+  >
     <div class="container nav-container">
       <!-- Logo -->
-      <router-link to="/" class="logo" aria-label="Energy Agency home">
+      <router-link to="/" class="logo" :aria-label="t('nav.homeAria')">
         <div class="logo-icon">
           <svg width="18" height="24" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <path d="M12.986 0L0 17.525H10.158L7.863 32L24 12.019H12.986V0Z" fill="#4ade80"/>
@@ -13,22 +22,43 @@
 
       <!-- Desktop links -->
       <ul class="nav-links" role="list">
-        <li><router-link to="/store" class="nav-link">Store</router-link></li>
-        <li><router-link to="/#faq" class="nav-link">FAQ</router-link></li>
-        <li><router-link to="/#about" class="nav-link">About</router-link></li>
+        <li><router-link to="/store" class="nav-link">{{ t('nav.store') }}</router-link></li>
+        <li><router-link to="/services" class="nav-link">{{ t('nav.services') }}</router-link></li>
+        <li><router-link to="/partners" class="nav-link">{{ t('nav.partners') }}</router-link></li>
+        <li><router-link to="/about" class="nav-link">{{ t('nav.about') }}</router-link></li>
+        <li><router-link to="/#faq" class="nav-link">{{ t('nav.faq') }}</router-link></li>
       </ul>
 
       <div class="nav-actions">
-        <router-link to="/login" class="btn nav-login get-consultation" id="nav-login">Connexion</router-link>
+        <router-link
+          v-if="isLoggedIn"
+          :to="{ name: homeRoute }"
+          class="nav-user"
+          :title="spaceLabel"
+        >
+          <span class="nav-user-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          <span class="nav-user-name">{{ displayName }}</span>
+        </router-link>
+        <router-link
+          v-else
+          to="/login"
+          class="btn nav-login get-consultation"
+        >
+          {{ t('nav.signIn') }}
+        </router-link>
       </div>
-
 
       <!-- Mobile hamburger -->
       <button
         class="mobile-menu-btn"
         :aria-expanded="isMenuOpen"
         aria-controls="mobile-menu"
-        :aria-label="toggleMenu"
+        :aria-label="t('nav.toggleMenu')"
         @click="isMenuOpen = !isMenuOpen"
       >
         <svg v-if="!isMenuOpen" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -41,36 +71,101 @@
     </div>
 
     <!-- Mobile menu -->
-    <div v-if="isMenuOpen" id="mobile-menu" class="mobile-menu animate-fade-in" role="dialog" aria-label="Mobile navigation">
+    <div v-if="isMenuOpen" id="mobile-menu" class="mobile-menu animate-fade-in" role="dialog" :aria-label="t('nav.mobileAria')">
       <ul role="list">
-        <li><router-link to="/" @click="isMenuOpen = false">Store</router-link></li>
-        <li ><router-link to="/" @click="isMenuOpen = false">FAQ</router-link></li>
-        <li ><router-link to="/" @click="isMenuOpen = false">About</router-link></li>
-        <li ><router-link to="/" @click="isMenuOpen = false">Connexion</router-link></li>
+        <li><router-link to="/store" @click="isMenuOpen = false">{{ t('nav.store') }}</router-link></li>
+        <li><router-link to="/services" @click="isMenuOpen = false">{{ t('nav.services') }}</router-link></li>
+        <li><router-link to="/partners" @click="isMenuOpen = false">{{ t('nav.partners') }}</router-link></li>
+        <li><router-link to="/about" @click="isMenuOpen = false">{{ t('nav.about') }}</router-link></li>
+        <li><router-link to="/#faq" @click="isMenuOpen = false">{{ t('nav.faq') }}</router-link></li>
+        <li v-if="isLoggedIn">
+          <router-link :to="{ name: homeRoute }" class="mobile-user" @click="isMenuOpen = false">
+            <span class="nav-user-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>
+            <span>
+              <strong>{{ displayName }}</strong>
+            </span>
+          </router-link>
+        </li>
+        <li v-if="isLoggedIn">
+          <button type="button" class="mobile-auth-btn" @click="handleLogout">{{ t('common.signOut') }}</button>
+        </li>
+        <li v-else>
+          <router-link to="/login" @click="isMenuOpen = false">{{ t('nav.signIn') }}</router-link>
+        </li>
       </ul>
-      <router-link to="/" class="mobile-cta" @click="isMenuOpen = false">consultation</router-link>
     </div>
   </nav>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
+import { useAuth } from '../../composables/useAuth'
 
 const route = useRoute()
+const router = useRouter()
+const { t } = useI18n()
+const { isLoggedIn, homeRoute, logoutUser, user } = useAuth()
+const spaceLabel = computed(() => {
+  if (homeRoute.value === 'admin') return t('nav.admin')
+  if (homeRoute.value === 'operator') return t('nav.operator')
+  return t('nav.dashboard')
+})
+const displayName = computed(() => user.value?.name?.trim() || user.value?.email || spaceLabel.value)
 
 const isScrolled = ref(false)
 const isMenuOpen = ref(false)
 
+/** Pages with a full-bleed hero image / dark band under the fixed navbar */
+const hasHeroUnderNav = computed(() => {
+  const path = route.path || ''
+  if (path === '/') return true
+  if (path === '/store') return true
+  if (path.startsWith('/services')) return true
+  if (path.startsWith('/partners')) return true
+  if (path.startsWith('/about')) return true
+  if (path.startsWith('/privacy')) return true
+  if (path.startsWith('/terms')) return true
+  if (path.startsWith('/projects/')) return true
+  return false
+})
+
+/** Light solid bar only when there is no dark hero (e.g. product detail) */
 const isLightNavbar = computed(() => {
-  return route && route.path && route.path.startsWith('/store')
+  const path = route.path || ''
+  return path.startsWith('/store/')
 })
 
 const handleScroll = () => {
-  isScrolled.value = window.scrollY > 50
+  isScrolled.value = window.scrollY > 40
 }
 
-onMounted(() => window.addEventListener('scroll', handleScroll))
+const handleLogout = async () => {
+  isMenuOpen.value = false
+  await logoutUser()
+  if (route.name !== 'home') {
+    router.push('/')
+  }
+}
+
+watch(
+  () => route.fullPath,
+  () => {
+    isMenuOpen.value = false
+    handleScroll()
+  }
+)
+
+onMounted(() => {
+  handleScroll()
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
 onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 </script>
 
@@ -85,6 +180,15 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   padding: 1.5rem 0;
   color: #f0fdf4;
   border-bottom: 1px solid transparent;
+  background: transparent;
+}
+
+.navbar.hero-navbar:not(.scrolled) {
+  background: transparent;
+  box-shadow: none;
+  border-bottom-color: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 .navbar.scrolled {
@@ -124,78 +228,85 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
 
 .logo-text {
   font-family: 'Space Grotesk', sans-serif;
-
-  font-size: 1.1rem;
   font-weight: 800;
-  letter-spacing: 2px;
+  font-size: 1.05rem;
+  letter-spacing: 1.5px;
   color: #f0fdf4;
 }
 
-/* Nav links */
 .nav-links {
   display: flex;
+  align-items: center;
   gap: 2rem;
+  list-style: none;
 }
 
-.nav-links .nav-link {
+.nav-links a {
   font-size: 0.9rem;
   font-weight: 500;
-  color: rgba(240,253,244,0.75);
-  transition: color 0.2s;
+  color: rgba(240,253,244,0.7);
   position: relative;
-  padding-bottom: 2px;
+  transition: color 0.2s;
 }
+
+.nav-links a:hover { color: #f0fdf4; }
 
 .nav-links a::after {
   content: '';
   position: absolute;
-  bottom: -2px;
+  bottom: -4px;
   left: 0;
   width: 0;
-  height: 1.5px;
+  height: 2px;
   background: #4ade80;
-  transition: width 0.25s ease;
-  border-radius: 1px;
+  transition: width 0.25s;
 }
 
-.nav-links a:hover {
-  color: #f0fdf4;
-}
+.nav-links a:hover::after { width: 100%; }
 
-.nav-links a:hover::after {
-  width: 100%;
-}
-
-/* Desktop actions */
 .nav-actions {
   display: flex;
   align-items: center;
   gap: 1.25rem;
 }
 
-.nav-signin {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: rgba(240,253,244,0.65);
-  transition: color 0.2s;
+.nav-user {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.75rem 0.35rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(240, 253, 244, 0.18);
+  background: rgba(240, 253, 244, 0.08);
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+  max-width: 220px;
 }
 
-.nav-signin:hover { color: #f0fdf4; }
-
-.nav-cta {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #052e16;
-  background: #4ade80;
-  padding: 0.6rem 1.25rem;
-  border-radius: 8px;
-  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
-}
-
-.nav-cta:hover {
-  background: #22c55e;
+.nav-user:hover {
+  background: rgba(74, 222, 128, 0.14);
+  border-color: rgba(74, 222, 128, 0.35);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(34,197,94,0.4);
+}
+
+.nav-user-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(74, 222, 128, 0.18);
+  color: #4ade80;
+}
+
+.nav-user-name {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: #f0fdf4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nav-login {
@@ -206,6 +317,9 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   padding: 0.6rem 1.25rem;
   border-radius: 8px;
   transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .nav-login:hover {
@@ -225,10 +339,26 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   display: none;
 }
 
+.mobile-auth-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.875rem 0;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  color: rgba(240,253,244,0.75);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.mobile-auth-btn:hover {
+  color: #4ade80;
+}
+
 @media (max-width: 900px) {
   .nav-links,
-  .nav-signin,
-  .get-consultation {
+  .nav-actions {
     display: none;
   }
 
@@ -256,10 +386,11 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
     display: flex;
     flex-direction: column;
     gap: 0;
-    margin-bottom: 1.5rem;
+    margin-bottom: 0;
   }
 
-  .mobile-menu ul li a {
+  .mobile-menu ul li a,
+  .mobile-menu ul li .mobile-auth-btn {
     display: block;
     padding: 0.875rem 0;
     border-bottom: 1px solid rgba(240,253,244,0.06);
@@ -268,41 +399,22 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
     transition: color 0.2s;
   }
 
-  .mobile-menu ul li:last-child a {
+  .mobile-menu ul li:last-child a,
+  .mobile-menu ul li:last-child .mobile-auth-btn {
     border-bottom: none;
   }
 
   .mobile-menu ul li a:hover { color: #4ade80; }
-
-  .mobile-lang {
-    margin-bottom: 1rem;
-    width: 100%;
-  }
-
-  .mobile-lang :deep(.locale-select) {
-    width: 100%;
-  }
-
-  .mobile-cta {
-    display: block;
-    text-align: center;
-    background: #22c55e;
-    color: #052e16;
-    font-weight: 700;
-    font-size: 0.95rem;
-    padding: 0.875rem;
-    border-radius: 10px;
-  }
 }
 
-/* ─── Light Navbar Theme (Store pages) ────────── */
+/* ─── Light Navbar (pages without a dark hero, e.g. product detail) ────────── */
 .navbar.light-navbar {
   color: #052e16;
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .navbar.light-navbar:not(.scrolled) {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -342,7 +454,48 @@ onUnmounted(() => window.removeEventListener('scroll', handleScroll))
   color: #16a34a;
 }
 
+.navbar.light-navbar .nav-user {
+  border-color: rgba(5, 46, 22, 0.1);
+  background: rgba(5, 46, 22, 0.04);
+}
+
+.navbar.light-navbar .nav-user:hover {
+  background: rgba(22, 163, 74, 0.08);
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.navbar.light-navbar .nav-user-icon {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+}
+
+.navbar.light-navbar .nav-user-name {
+  color: #052e16;
+}
+
 .navbar.light-navbar .mobile-menu-btn {
   color: #052e16;
+}
+
+.mobile-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 0;
+  border-bottom: 1px solid rgba(240, 253, 244, 0.06);
+  color: inherit;
+}
+
+.mobile-user strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #f0fdf4;
+}
+
+.mobile-user small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: rgba(240, 253, 244, 0.5);
 }
 </style>

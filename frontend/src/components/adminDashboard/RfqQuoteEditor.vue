@@ -142,7 +142,7 @@ const manualTypes = computed(() => {
 
 const draftTotal = computed(() => draftQuoteTotal(props.lines))
 
-const lineKey = (line, index) => line.id || `new-${index}-${line.label}`
+const lineKey = (line, index) => line._uid || (line.id != null ? `id-${line.id}` : `line-${index}`)
 
 const lineTotal = (line) => {
   const price = Number(line.unit_price)

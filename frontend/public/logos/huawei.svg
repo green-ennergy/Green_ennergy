@@ -1,0 +1,14 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 40" fill="none">
+  <g transform="translate(8, 4) scale(0.68)">
+    <path d="M24 28 C22 20 23 12 24 6 C25 12 26 20 24 28 Z" fill="#ED1C24"/>
+    <path d="M22 28 C17 21 15 14 17 8 C20 13 22 21 22 28 Z" fill="#ED1C24"/>
+    <path d="M26 28 C31 21 33 14 31 8 C28 13 26 21 26 28 Z" fill="#ED1C24"/>
+    <path d="M20 30 C13 25 9 19 11 13 C16 16 19 24 20 30 Z" fill="#ED1C24"/>
+    <path d="M28 30 C35 25 39 19 37 13 C32 16 29 24 28 30 Z" fill="#ED1C24"/>
+    <path d="M19 33 C11 31 6 27 6 22 C12 23 17 28 19 33 Z" fill="#ED1C24"/>
+    <path d="M29 33 C37 31 42 27 42 22 C36 23 31 28 29 33 Z" fill="#ED1C24"/>
+    <path d="M20 37 C13 38 7 37 5 33 C10 32 16 34 20 37 Z" fill="#ED1C24"/>
+    <path d="M28 37 C35 38 41 37 43 33 C38 32 32 34 28 37 Z" fill="#ED1C24"/>
+  </g>
+  <text x="50" y="26" fill="#ED1C24" font-family="'Space Grotesk', 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="16" letter-spacing="3">HUAWEI</text>
+</svg>

@@ -57,10 +57,15 @@
       <div v-else class="product-grid">
         <article v-for="prod in filteredProducts" :key="prod.id" class="product-card">
           <router-link :to="`/store/${prod.id}`" class="product-image-link">
-            <img :src="resolveProductImage(prod)" :alt="prod.title" />
-            <span class="stock-badge" :class="{ low: prod.stock <= 3, out: prod.stock === 0 }">
-              {{ prod.stock === 0 ? t('store.outOfStock') : t('store.inStock', { n: prod.stock }) }}
-            </span>
+            <div class="product-image-stage">
+              <img :src="resolveProductImage(prod)" :alt="prod.title" />
+              <div class="image-fade" aria-hidden="true"></div>
+              <span v-if="prod.category?.name" class="image-category">{{ prod.category.name }}</span>
+              <span v-if="(prod.images?.length || 0) > 1" class="image-count">{{ prod.images.length }} photos</span>
+              <span class="stock-badge" :class="{ low: prod.stock <= 3, out: prod.stock === 0 }">
+                {{ prod.stock === 0 ? t('store.outOfStock') : t('store.inStock', { n: prod.stock }) }}
+              </span>
+            </div>
           </router-link>
 
           <div class="product-body">
@@ -168,7 +173,7 @@
     </div>
 
     <!-- Auth -->
-    <div v-if="showAuthModal" class="overlay open" @click.self="showAuthModal = false">
+    <div v-if="showAuthModal" class="overlay open auth-overlay" @click.self="showAuthModal = false">
       <div class="modal auth-modal">
         <button class="icon-btn modal-close" @click="showAuthModal = false">×</button>
         <h2>{{ authTab === 'login' ? t('auth.signInTitle') : t('auth.registerTitle') }}</h2>
@@ -221,6 +226,7 @@ import { useCart } from '../composables/useCart'
 import { useAuth } from '../composables/useAuth'
 import { useProducts } from '../composables/useProducts'
 import { isStrongPassword } from '../utils/password'
+import { isValidEmail } from '../utils/email'
 import { resolveProductImage } from '../utils/productImage'
 
 const router = useRouter()
@@ -307,6 +313,7 @@ const handleQuoteSubmit = async () => {
     return
   }
   if (!isLoggedIn.value) {
+    isQuoteOpen.value = false
     showAuthModal.value = true
     authTab.value = 'login'
     return
@@ -316,7 +323,11 @@ const handleQuoteSubmit = async () => {
   isSubmitting.value = false
   if (result.success) {
     lastSubmittedRfq.value = result.rfq
-    await fetchRfqTickets()
+    try {
+      await fetchRfqTickets()
+    } catch (_) {
+      /* quote already submitted; dashboard refresh is best-effort */
+    }
     isQuoteOpen.value = false
     showSuccessModal.value = true
   } else {
@@ -326,6 +337,12 @@ const handleQuoteSubmit = async () => {
 
 const handleAuthSubmit = async () => {
   authError.value = ''
+
+  if (!isValidEmail(authForm.value.email)) {
+    authError.value = t('auth.invalidEmail')
+    return
+  }
+
   authSubmitting.value = true
   let result
   if (authTab.value === 'login') {
@@ -346,7 +363,7 @@ const handleAuthSubmit = async () => {
       authForm.value.name,
       authForm.value.company,
       authForm.value.phone.trim(),
-      authForm.value.email,
+      authForm.value.email.trim().toLowerCase(),
       authForm.value.password
     )
   }
@@ -364,7 +381,11 @@ const handleAuthSubmit = async () => {
     return
   }
   lastSubmittedRfq.value = quoteResult.rfq
-  await fetchRfqTickets()
+  try {
+    await fetchRfqTickets()
+  } catch (_) {
+    /* quote already submitted; dashboard refresh is best-effort */
+  }
   showAuthModal.value = false
   isQuoteOpen.value = false
   showSuccessModal.value = true
@@ -394,20 +415,25 @@ const closeSuccessModal = () => {
 .store-hero {
   background: linear-gradient(rgba(2, 13, 7, 0.88), rgba(2, 13, 7, 0.92)), url('/login_backdrop_1779051950394.png') center/cover;
   color: #f0fdf4;
-  padding: 5rem 0 3.5rem;
+  padding: 7.5rem 0 5.5rem;
   text-align: center;
 }
 
 .store-hero h1 {
   font-family: 'Space Grotesk', sans-serif;
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
-  margin-bottom: 0.75rem;
+  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+  font-weight: 500;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
 }
 
 .store-hero p {
-  color: rgba(240, 253, 244, 0.75);
-  max-width: 520px;
+  color: rgba(240, 253, 244, 0.85);
+  font-size: 1.05rem;
+  max-width: 580px;
   margin: 0 auto;
+  line-height: 1.6;
 }
 
 .store-main {
@@ -513,24 +539,80 @@ const closeSuccessModal = () => {
   position: relative;
   display: block;
   aspect-ratio: 4/3;
-  background: #eef4f0;
+  background:
+    linear-gradient(160deg, #eef4f0, #f8fbf9),
+    repeating-linear-gradient(
+      -18deg,
+      rgba(22, 163, 74, 0.04) 0,
+      rgba(22, 163, 74, 0.04) 8px,
+      transparent 8px,
+      transparent 16px
+    );
+  overflow: hidden;
+}
+
+.product-image-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .product-image-link img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.product-card:hover .product-image-link img {
+  transform: scale(1.05);
+}
+
+.image-fade {
+  position: absolute;
+  inset: auto 0 0;
+  height: 42%;
+  background: linear-gradient(to top, rgba(5, 46, 22, 0.35), transparent);
+  pointer-events: none;
+}
+
+.image-category {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 1;
+  background: rgba(255, 255, 255, 0.92);
+  color: #14532d;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.image-count {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  z-index: 1;
+  background: rgba(5, 46, 22, 0.72);
+  color: #ecfdf5;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
 }
 
 .stock-badge {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
+  z-index: 1;
   background: rgba(255, 255, 255, 0.95);
   padding: 0.25rem 0.55rem;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
+  box-shadow: 0 6px 14px rgba(5, 46, 22, 0.1);
 }
 
 .stock-badge.low { color: #b45309; }
@@ -630,6 +712,14 @@ const closeSuccessModal = () => {
 .overlay.open {
   opacity: 1;
   pointer-events: auto;
+}
+
+.overlay.auth-overlay {
+  z-index: 500;
+}
+
+.auth-modal {
+  z-index: 510;
 }
 
 .quote-drawer {
@@ -740,7 +830,7 @@ const closeSuccessModal = () => {
   width: min(720px, calc(100% - 2rem));
   max-height: 90vh;
   overflow-y: auto;
-  z-index: 220;
+  z-index: 410;
 }
 
 .modal-close { position: absolute; top: 1rem; right: 1rem; }

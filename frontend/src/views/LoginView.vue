@@ -22,7 +22,7 @@
                         <p>{{ isLoginMode ? t('auth.signInSubtitle') : t('auth.registerSubtitle') }}</p>
                     </header>
 
-                    <form @submit.prevent="handleSubmit" class="portal-form">
+                    <form @submit.prevent="handleSubmit" class="portal-form" novalidate>
                         <div class="form-group" v-if="!isLoginMode">
                             <label for="reg-name">{{ t('auth.fullName') }}</label>
                             <input id="reg-name" v-model="fullName" type="text" required />
@@ -43,7 +43,14 @@
 
                         <div class="form-group">
                             <label for="portal-email">{{ t('auth.email') }}</label>
-                            <input id="portal-email" v-model="email" type="email" required />
+                            <input
+                                id="portal-email"
+                                v-model="email"
+                                type="text"
+                                inputmode="email"
+                                autocomplete="email"
+                                required
+                            />
                             <span v-if="emailError" class="input-error">{{ emailError }}</span>
                         </div>
 
@@ -56,15 +63,22 @@
                                     {{ showPassword ? t('auth.hide') : t('auth.show') }}
                                 </button>
                             </div>
-                            <span v-if="!isLoginMode" class="input-hint">{{ t('auth.passwordHint') }}</span>
-                            <span v-if="passwordError" class="input-error">{{ passwordError }}</span>
+                            <span
+                                v-if="!isLoginMode"
+                                class="password-feedback"
+                                :class="{ 'is-error': passwordInvalid }"
+                            >{{ t('auth.passwordHint') }}</span>
                         </div>
 
                         <div v-if="alertMessage" class="portal-alert" :class="alertType">
                             {{ alertMessage }}
                         </div>
 
-                        <button type="submit" class="submit-btn" :disabled="isLoading">
+                        <button
+                            type="submit"
+                            class="submit-btn"
+                            :disabled="isLoading || !!emailError || (email && !isValidEmail(email))"
+                        >
                             {{ isLoading ? t('auth.pleaseWait') : (isLoginMode ? t('auth.signInTitle') : t('auth.createAccount')) }}
                         </button>
                     </form>
@@ -85,9 +99,11 @@
 <script setup>
     import {
         ref,
+        computed,
         watch
     } from 'vue'
     import {
+        useRoute,
         useRouter
     } from 'vue-router'
     import {
@@ -99,15 +115,20 @@
     import {
         isStrongPassword
     } from '../utils/password'
-    //import LanguageSwitcher from '../components/LanguageSwitcher.vue'
+    import {
+        isValidEmail
+    } from '../utils/email'
+    import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
+    const route = useRoute()
     const router = useRouter()
     const {
         t
     } = useI18n()
     const {
         loginUser,
-        registerUser
+        registerUser,
+        homeRoute
     } = useAuth()
 
     const isLoginMode = ref(true)
@@ -120,17 +141,19 @@
     const isLoading = ref(false)
     const emailError = ref('')
     const phoneError = ref('')
-    const passwordError = ref('')
     const alertMessage = ref('')
     const alertType = ref('')
 
+    const passwordInvalid = computed(() => {
+        if (isLoginMode.value || !password.value) return false
+        return Boolean(isStrongPassword(password.value))
+    })
 
     const toggleMode = () => {
         isLoginMode.value = !isLoginMode.value
         alertMessage.value = ''
         emailError.value = ''
         phoneError.value = ''
-        passwordError.value = ''
         password.value = ''
         phone.value = ''
     }
@@ -138,8 +161,8 @@
 
 
     watch(email, (value) => {
-        if (value && !/^[\w-.]+@([\w-]+\.)+[\w-]{2,}$/.test(value)) {
-            emailError.value = 'Invalid email format'
+        if (value && !isValidEmail(value)) {
+            emailError.value = t('auth.invalidEmail')
         } else {
             emailError.value = ''
         }
@@ -147,49 +170,56 @@
 
     watch(phone, (value) => {
         if (!isLoginMode.value && value && value.replace(/\D/g, '').length < 9) {
-            phoneError.value = 'Enter a valid phone number'
+            phoneError.value = t('auth.invalidPhone')
         } else {
             phoneError.value = ''
         }
     })
 
-    watch(password, (value) => {
-        if (!isLoginMode.value && value && !isStrongPassword(value)) {
-            passwordError.value = t('auth.passwordHint')
-        } else {
-            passwordError.value = ''
-        }
-    })
-
     const handleSubmit = async () => {
         alertMessage.value = ''
+
+        if (!isValidEmail(email.value)) {
+            emailError.value = t('auth.invalidEmail')
+            return
+        }
+
+        if (!isLoginMode.value && phone.value && phone.value.replace(/\D/g, '').length < 9) {
+            phoneError.value = t('auth.invalidPhone')
+            return
+        }
+
         isLoading.value = true
 
         if (isLoginMode.value) {
             const result = await loginUser(email.value, password.value)
             isLoading.value = false
             if (result.success) {
-                router.push(result.user?.role === 'admin' ? '/admin' : '/dashboard')
+                const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+                if (redirect.startsWith('/') && !redirect.startsWith('//')) {
+                    router.push(redirect)
+                } else {
+                    router.push({ name: homeRoute.value })
+                }
             } else {
                 alertType.value = 'error'
                 alertMessage.value = result.error || 'Login failed'
             }
         } else {
-            if (!isStrongPassword(password.value)) {
-                passwordError.value = t('auth.passwordHint')
+            if (passwordInvalid.value) {
                 isLoading.value = false
                 return
             }
-            const result = await registerUser({
-                name: fullName.value,
-                company: company.value,
-                phone: phone.value,
-                email: email.value,
-                password: password.value
-            })
+            const result = await registerUser(
+                fullName.value,
+                company.value,
+                phone.value,
+                email.value.trim().toLowerCase(),
+                password.value
+            )
             isLoading.value = false
             if (result.success) {
-                router.push('/dashboard')
+                router.push({ name: homeRoute.value })
             } else {
                 alertType.value = 'error'
                 alertMessage.value = result.error || 'Registration failed'
@@ -353,8 +383,20 @@
     }
 
     .input-hint,
-    .input-error {
+    .input-error,
+    .password-feedback {
         font-size: 0.8rem;
+        line-height: 1.35;
+        min-height: 1.35em;
+    }
+
+    .password-feedback {
+        color: var(--text-muted);
+    }
+
+    .password-feedback.is-error {
+        color: #ef4444;
+        font-weight: 600;
     }
 
     .input-error {

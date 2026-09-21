@@ -3,68 +3,62 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Product extends Model
 {
+    protected $table = 'products';
+
+    protected $primaryKey = 'id_product';
+
+    public $timestamps = false;
+
     protected $fillable = [
-        'product_key',
-        'title',
-        'category_id',
-        'rating',
-        'stock',
-        'units_sold',
-        'image',
-        'description',
-        'climate_info',
-        'highlights',
-        'specs',
-        'documents',
-        'unit_capacity',
-        'unit_weight',
-        'unit_area',
-        'local_onee_cert',
-        'related_ids',
+        'reference', 'title', 'rating', 'stock', 'sales', 'image', 'description',
+        'climate_info', 'highlights', 'specs', 'documents', 'capacity', 'weight_kg',
+        'surface', 'id_category', 'is_visible',
     ];
 
     protected $casts = [
-        'highlights' => 'array',
-        'specs' => 'array',
-        'documents' => 'array',
-        'related_ids' => 'array',
-        'local_onee_cert' => 'boolean',
+        'rating' => 'float',
+        'capacity' => 'float',
+        'weight_kg' => 'float',
+        'surface' => 'float',
+        'is_visible' => 'boolean',
     ];
 
-    protected $appends = ['image_url'];
-
-    public function getImageUrlAttribute(): ?string
+    public function getRouteKeyName(): string
     {
-        if (! $this->image) {
-            return null;
-        }
-
-        if (filter_var($this->image, FILTER_VALIDATE_URL)) {
-            return $this->image;
-        }
-
-        if (str_starts_with($this->image, '/storage/')) {
-            return rtrim(config('app.url'), '/').$this->image;
-        }
-
-        if (str_starts_with($this->image, 'products/')) {
-            return Storage::disk('public')->url($this->image);
-        }
-
-        return $this->image;
+        return 'id_product';
     }
 
-    public function category()
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class, 'id_category', 'id_category');
     }
 
-    public function rfqItems()
+    public function kits(): BelongsToMany
     {
-        return $this->hasMany(RfqItem::class);
+        return $this->belongsToMany(Kit::class, 'kit_product', 'id_product', 'id_kit')
+            ->withPivot('quantity', 'role', 'priority');
+    }
+
+    public function quotes(): BelongsToMany
+    {
+        return $this->belongsToMany(QuoteRequest::class, 'quote_items', 'id_product', 'id_quote')
+            ->withPivot('label', 'unit_price', 'line_type', 'quantity', 'locked');
+    }
+
+    public function orders(): BelongsToMany
+    {
+        return $this->belongsToMany(Order::class, 'order_items', 'id_product', 'id_order')
+            ->withPivot('quantity', 'unit_price');
+    }
+
+    public function aiStockAlerts(): HasMany
+    {
+        return $this->hasMany(AiStockAlert::class, 'id_product', 'id_product');
     }
 }

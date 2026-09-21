@@ -1,16 +1,30 @@
 import { i18n } from '../i18n'
 
 export const PROJECT_STEP_KEYS = [
-  'premier_contact',
-  'data_collection',
-  'energy_data',
+  'quote_confirmed',
+  'order_prep',
+  'installation',
   'completed'
 ]
+
+/** Map legacy study-funnel statuses to the commercial delivery pipeline. */
+const LEGACY_STEP_MAP = {
+  premier_contact: 'quote_confirmed',
+  data_collection: 'order_prep',
+  energy_data: 'installation',
+  completed: 'completed'
+}
 
 export const PROJECT_STATUS_ORDER = [...PROJECT_STEP_KEYS, 'on_hold']
 
 /** @deprecated use getWorkflowSteps() for translated labels */
 export const PROJECT_WORKFLOW_STEPS = PROJECT_STEP_KEYS.map(key => ({ key }))
+
+export function normalizePhaseKey(key) {
+  if (!key || key === 'on_hold') return key
+  if (PROJECT_STEP_KEYS.includes(key)) return key
+  return LEGACY_STEP_MAP[key] || key
+}
 
 export function getWorkflowSteps() {
   return PROJECT_STEP_KEYS.map(key => ({
@@ -23,21 +37,24 @@ export function getWorkflowSteps() {
 }
 
 export function getStepShortLabel(stepKey) {
-  return i18n.global.t(`followup.steps.${stepKey}.short`)
+  const key = normalizePhaseKey(stepKey)
+  return i18n.global.t(`followup.steps.${key}.short`)
 }
 
 export function phaseToCompletedSteps(phase) {
-  const index = PROJECT_STEP_KEYS.indexOf(phase)
+  const key = normalizePhaseKey(phase)
+  const index = PROJECT_STEP_KEYS.indexOf(key)
   if (index === -1) return []
   return PROJECT_STEP_KEYS.slice(0, index + 1)
 }
 
 export function getCompletedSteps(project) {
   if (project?.completed_steps?.length) {
-    return PROJECT_STEP_KEYS.filter(key => project.completed_steps.includes(key))
+    const normalized = project.completed_steps.map(normalizePhaseKey)
+    return PROJECT_STEP_KEYS.filter(key => normalized.includes(key))
   }
 
-  const status = project?.status
+  const status = normalizePhaseKey(project?.status)
   if (!status || status === 'on_hold') return []
 
   const index = PROJECT_STEP_KEYS.indexOf(status)
@@ -46,7 +63,7 @@ export function getCompletedSteps(project) {
 }
 
 export function getCurrentPhase(project) {
-  if (!project) return 'premier_contact'
+  if (!project) return 'quote_confirmed'
 
   const steps = getCompletedSteps(project)
   if (steps.length) {
@@ -54,34 +71,37 @@ export function getCurrentPhase(project) {
   }
 
   if (project.status && project.status !== 'on_hold') {
-    return project.status
+    return normalizePhaseKey(project.status)
   }
 
-  return 'premier_contact'
+  return 'quote_confirmed'
 }
 
 export function isStepDone(project, stepKey) {
-  return getCompletedSteps(project).includes(stepKey)
+  return getCompletedSteps(project).includes(normalizePhaseKey(stepKey))
 }
 
 export function getStepMeta(stepKey) {
-  if (!PROJECT_STEP_KEYS.includes(stepKey)) return null
+  const key = normalizePhaseKey(stepKey)
+  if (!PROJECT_STEP_KEYS.includes(key)) return null
   return {
-    key: stepKey,
-    label: i18n.global.t(`followup.steps.${stepKey}.label`),
-    labelFr: i18n.global.t(`followup.steps.${stepKey}.label`),
-    clientHint: i18n.global.t(`followup.steps.${stepKey}.clientHint`),
-    adminHint: i18n.global.t(`followup.steps.${stepKey}.adminHint`)
+    key,
+    label: i18n.global.t(`followup.steps.${key}.label`),
+    labelFr: i18n.global.t(`followup.steps.${key}.label`),
+    clientHint: i18n.global.t(`followup.steps.${key}.clientHint`),
+    adminHint: i18n.global.t(`followup.steps.${key}.adminHint`)
   }
 }
 
 export function getStepIndex(stepKey) {
-  return PROJECT_STEP_KEYS.indexOf(stepKey)
+  return PROJECT_STEP_KEYS.indexOf(normalizePhaseKey(stepKey))
 }
 
 export function projectStatusLabel(status) {
-  const key = `followup.status.${status}`
-  if (i18n.global.te(key)) return i18n.global.t(key)
+  if (status === 'on_hold') return i18n.global.t('followup.status.on_hold')
+  const key = normalizePhaseKey(status)
+  const i18nKey = `followup.status.${key}`
+  if (i18n.global.te(i18nKey)) return i18n.global.t(i18nKey)
   return status
 }
 

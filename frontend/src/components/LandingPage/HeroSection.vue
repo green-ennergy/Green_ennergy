@@ -10,54 +10,67 @@
 
 
       <h1 class="hero-title animate-fade-up delay-100">
-        Power your future<br />
-        with <span class="accent">solar energy</span>
+        {{ t('landing.hero.titleLine1') }}<br />
+        {{ t('landing.hero.titleLine2Before') }} <span class="accent">{{ t('landing.hero.titleAccent') }}</span>
       </h1>
 
       <p class="hero-sub animate-fade-up delay-200">
-        Save money and reduce your carbon footprint<br class="desktop-break" />
-        with smart, premium renewable solutions.
+        {{ t('landing.hero.subtitle') }}
       </p>
 
       <div class="hero-actions animate-fade-up delay-300">
-        <a href="#" class="hero-btn-primary" id="hero-cta-primary">
-          Get Free Consultation
+        <router-link to="/services/consultation" class="hero-btn-primary" id="hero-cta-primary">
+          {{ t('landing.hero.ctaConsultation') }}
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
-        </a>
-        <a href="/store" class="hero-btn-ghost" id="hero-cta-store">Explore Store</a>
+        </router-link>
+        <router-link to="/store" class="hero-btn-ghost" id="hero-cta-store">{{ t('landing.hero.ctaStore') }}</router-link>
       </div>
 
       <p class="hero-login animate-fade-up delay-400">
-        Already have an account? <a href="/login">Sign in</a>
+        <template v-if="isLoggedIn">
+          <router-link :to="{ name: homeRoute }">
+            {{ homeRoute === 'admin' ? t('nav.admin') : homeRoute === 'operator' ? t('nav.operator') : t('nav.dashboard') }}
+          </router-link>
+        </template>
+        <template v-else>
+          {{ t('landing.hero.alreadyAccount') }}
+          <router-link to="/login">{{ t('nav.signIn') }}</router-link>
+        </template>
       </p>
 
       <!-- Trust pills -->
       <div class="hero-features animate-fade-up delay-500">
-        <div class="feature-item" v-for="f in features" :key="f.label">
+        <div class="feature-item" v-for="f in features" :key="f.key">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.3"/>
             <path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          {{ f.label }}
+          {{ t(`landing.hero.features.${f.key}`) }}
         </div>
       </div>
     </div>
 
     <!-- Scroll indicator -->
-    <a href="#features" class="scroll-indicator animate-fade-in delay-500" aria-label="Scroll down">
+    <a href="#features" class="scroll-indicator animate-fade-in delay-500" :aria-label="t('landing.hero.scrollDown')">
       <div class="scroll-dot"></div>
     </a>
   </header>
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+import { useAuth } from '../../composables/useAuth'
+
+const { t } = useI18n()
+const { isLoggedIn, homeRoute } = useAuth()
+
 const features = [
-  { label: 'No hidden fees' },
-  { label: 'Certified installation' },
-  { label: '100% reliable' },
-  { label: '25-year warranty' },
+  { key: 'noHiddenFees' },
+  { key: 'certifiedInstall' },
+  { key: 'reliable' },
+  { key: 'warranty' },
 ]
 </script>
 

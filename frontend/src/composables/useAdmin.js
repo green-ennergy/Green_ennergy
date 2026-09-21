@@ -1,40 +1,34 @@
 import { ref } from 'vue'
-import axios from 'axios'
+import api, { getApiErrorMessage } from '../api/client'
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  headers: {
-    Accept: 'application/json'
-  }
-})
-
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('ea_token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-const getApiErrorMessage = (err, fallback) => {
-  const data = err.response?.data
-  if (!data) return fallback
-  if (data.errors) {
-    const first = Object.values(data.errors).flat()[0]
-    if (first) return first
-  }
-  return data.message || fallback
-}
-
-const buildProductFormData = (data, imageFile) => {
+const buildProductFormData = (data, { imageFiles = [], documentUploads = [] } = {}) => {
   const formData = new FormData()
+  const clearable = new Set([
+    'description',
+    'climate_info',
+    'highlights',
+    'specs',
+    'product_key',
+    'existing_images',
+    'existing_documents',
+  ])
+
   Object.entries(data).forEach(([key, value]) => {
-    if (value === null || value === undefined || value === '') return
+    if (value === null || value === undefined) return
+    if (value === '' && !clearable.has(key)) return
     formData.append(key, value)
   })
-  if (imageFile) {
-    formData.append('image', imageFile)
-  }
+
+  imageFiles.forEach((file, index) => {
+    if (file) formData.append(`images[${index}]`, file)
+  })
+
+  documentUploads.forEach((doc, index) => {
+    if (!doc?.file) return
+    formData.append(`document_names[${index}]`, doc.name || '')
+    formData.append(`document_files[${index}]`, doc.file)
+  })
+
   return formData
 }
 
@@ -123,6 +117,21 @@ export function useAdmin() {
   }
 
 
+  const fetchProjectMessages = async (id) => {
+    try {
+      const response = await api.get(`/admin/projects/${id}/messages`)
+      return response.data.messages || []
+    } catch (err) {
+      error.value = getApiErrorMessage(err, 'Failed to load messages')
+      return []
+    }
+  }
+
+  const postProjectMessage = async (id, body) => {
+    const response = await api.post(`/admin/projects/${id}/messages`, { body })
+    return response.data.message
+  }
+
   const fetchProjectTraces = async (id) => {
     try {
       const response = await api.get(`/admin/projects/${id}/traces`)
@@ -133,6 +142,16 @@ export function useAdmin() {
     }
   }
 
+
+  const fetchQuotes = async () => {
+    try {
+      const response = await api.get('/admin/quotes')
+      return response.data.data || []
+    } catch (err) {
+      error.value = getApiErrorMessage(err, 'Failed to load quotes')
+      return []
+    }
+  }
 
   const createProject = async (data) => {
     try {
@@ -164,7 +183,10 @@ export function useAdmin() {
       isLoading.value = true
       error.value = null
       const response = await api.get('/admin/products', { params: filters })
-      products.value = response.data.data || response.data
+      products.value = response.data.data || response.data.products || response.data
+      if (!Array.isArray(products.value)) {
+        products.value = []
+      }
       return response.data
     } catch (err) {
       error.value = getApiErrorMessage(err, 'Failed to load products')
@@ -175,10 +197,12 @@ export function useAdmin() {
   }
 
 
-  const updateProduct = async (id, data, imageFile = null) => {
+  const updateProduct = async (id, data, media = {}) => {
     try {
-      const payload = buildProductFormData(data, imageFile)
-      const response = await api.patch(`/admin/products/${id}`, payload, {
+      const payload = buildProductFormData(data, media)
+      // Multipart bodies are unreliable with PATCH; use POST + method spoofing
+      payload.append('_method', 'PATCH')
+      const response = await api.post(`/admin/products/${id}`, payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       const index = products.value.findIndex(p => p.id === id)
@@ -193,10 +217,10 @@ export function useAdmin() {
   }
 
 
-  const createProduct = async (data, imageFile = null) => {
+  const createProduct = async (data, media = {}) => {
     try {
       error.value = null
-      const payload = buildProductFormData(data, imageFile)
+      const payload = buildProductFormData(data, media)
       const response = await api.post('/admin/products', payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
@@ -230,13 +254,24 @@ export function useAdmin() {
     }
   }
 
+  const createCategory = async (data) => {
+    try {
+      error.value = null
+      const response = await api.post('/admin/categories', data)
+      return { success: true, category: response.data.category }
+    } catch (err) {
+      error.value = getApiErrorMessage(err, 'Failed to create category')
+      return { success: false, error: error.value }
+    }
+  }
+
   
   const fetchUsers = async (filters = {}) => {
     try {
       isLoading.value = true
       error.value = null
-      const response = await api.get('/admin/users', { params: filters })
-      users.value = response.data.data || response.data
+      const response = await api.get('/admin/clients', { params: filters })
+      users.value = response.data.users || []
       return response.data
     } catch (err) {
       error.value = getApiErrorMessage(err, 'Failed to load users')
@@ -275,6 +310,9 @@ export function useAdmin() {
     fetchProjects,
     updateProject,
     fetchProjectTraces,
+    fetchProjectMessages,
+    postProjectMessage,
+    fetchQuotes,
     createProject,
     deleteProject,
     fetchProducts,
@@ -282,6 +320,7 @@ export function useAdmin() {
     createProduct,
     deleteProduct,
     fetchCategories,
+    createCategory,
     fetchUsers,
     quoteRfq
   }

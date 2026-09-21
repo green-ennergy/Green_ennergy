@@ -51,8 +51,9 @@ export function rfqQuoteTotal(rfq) {
 }
 
 export function buildQuoteLinesFromRfq(rfq) {
-  return (rfq?.items || []).map(item => ({
+  return (rfq?.items || []).map((item, index) => ({
     id: item.id,
+    _uid: item.id != null ? `item-${item.id}` : `line-${index}-${item.label || 'x'}`,
     label: rfqItemLabel(item),
     quantity: item.quantity,
     unit_price: item.unit_price ?? '',
@@ -64,6 +65,7 @@ export function buildQuoteLinesFromRfq(rfq) {
 export function createManualQuoteLine(type = 'installation') {
   return {
     id: null,
+    _uid: `line-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     label: '',
     quantity: 1,
     unit_price: '',

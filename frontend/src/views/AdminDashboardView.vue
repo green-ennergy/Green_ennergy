@@ -1,45 +1,62 @@
 <template>
   <!-- <div class="admin-page" v-if="user"> -->
   <div class="admin-page">
-    <header class="admin-header animate-fade-in">
-      <div class="header-brand">
-        <router-link to="/" class="brand-link">
-          <div class="brand-icon"><AdminIcon name="bolt" :size="18" /></div>
-          <div>
-            <span class="brand-title">ENERGY AGENCY</span>
-            <span class="brand-sub">{{ t('admin.console') }}</span>
-          </div>
-        </router-link>
-      </div>
-
-      <div class="header-meta">
-        <!-- <LanguageSwitcher variant="compact" class="dark" /> -->
-        <!-- <span class="admin-name">{{ user.name }}</span> -->
-         <span class="admin-name">{{ user?.name || 'Admin' }}</span>
-        <button @click="handleLogout" class="logout-btn">{{ t('common.signOut') }}</button>
-      </div>
-    </header>
-
-    <div class="admin-layout animate-fade-in">
+    <div class="admin-layout">
       <aside class="admin-sidebar">
+        <div class="sidebar-brand">
+          <router-link to="/" class="brand-link">
+            <div class="brand-icon"><AdminIcon name="bolt" :size="18" /></div>
+            <div>
+              <span class="brand-title">ENERGY AGENCY</span>
+              <span class="brand-sub">{{ t('admin.console') }}</span>
+            </div>
+          </router-link>
+        </div>
+
         <nav class="sidebar-nav">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            class="nav-btn"
-            :class="{ active: activeTab === tab.id }"
-            @click="switchTab(tab.id)"
-          >
-            <span class="nav-icon"><AdminIcon :name="tab.icon" :size="18" /></span>
-            <span>{{ tab.label }}</span>
-            <span v-if="tab.badge" class="nav-badge">{{ tab.badge }}</span>
-          </button>
+          <template v-for="tab in tabs" :key="tab.id">
+            <button
+              class="nav-btn"
+              :class="{ active: activeTab === tab.id, open: tab.children && missionMenuOpen }"
+              @click="tab.children ? toggleMissionMenu() : switchTab(tab.id)"
+            >
+              <span class="nav-icon"><AdminIcon :name="tab.icon" :size="18" /></span>
+              <span>{{ tab.label }}</span>
+              <span v-if="tab.badge" class="nav-badge">{{ tab.badge }}</span>
+              <span v-if="tab.children" class="nav-caret" :class="{ open: missionMenuOpen }" aria-hidden="true"></span>
+            </button>
+            <div v-if="tab.children && missionMenuOpen" class="nav-sub">
+              <button
+                v-for="child in tab.children"
+                :key="child.id"
+                type="button"
+                class="nav-sub-btn"
+                :class="{ active: activeTab === tab.id && opsSection === child.id }"
+                @click="openOpsSection(child.id)"
+              >
+                {{ child.label }}
+              </button>
+            </div>
+          </template>
         </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-profile">
+            <div class="profile-avatar" aria-hidden="true">
+              {{ userInitials }}
+            </div>
+            <div class="profile-meta">
+              <span class="admin-name">{{ user?.name || 'Admin' }}</span>
+              <span class="admin-role">{{ user?.email || t('admin.console') }}</span>
+            </div>
+          </div>
+          <button type="button" @click="handleLogout" class="logout-btn">
+            {{ t('common.signOut') }}
+          </button>
+        </div>
       </aside>
 
       <main class="admin-main">
-        <div v-if="error" class="alert-banner">{{ error }}</div>
-
         <!-- Overview -->
         <section v-if="activeTab === 'overview'" class="panel">
           <header class="panel-header">
@@ -251,6 +268,240 @@
 
         <!-- Marketplace -->
         <section v-if="activeTab === 'marketplace'" class="panel catalog-panel">
+          <!-- Full-screen product editor -->
+          <div v-if="showProductForm" class="product-editor">
+            <header class="product-editor-header">
+              <div>
+                <button type="button" class="back-catalog-btn" @click="closeProductForm">
+                  ← {{ t('admin.marketplace.backToCatalog') }}
+                </button>
+                <p class="drawer-eyebrow">{{ editingProduct ? t('admin.marketplace.editProduct') : t('admin.marketplace.newProduct') }}</p>
+                <h1>{{ editingProduct ? editingProduct.title : t('admin.marketplace.addToCatalog') }}</h1>
+              </div>
+              <div class="product-editor-actions">
+                <button type="button" class="ghost-btn" @click="closeProductForm">{{ t('common.cancel') }}</button>
+                <button type="button" class="primary-btn" :disabled="productSaving" @click="handleSaveProduct">
+                  {{ productSaving ? t('admin.projects.saving') : (editingProduct ? t('admin.marketplace.saveChanges') : t('admin.marketplace.createProduct')) }}
+                </button>
+              </div>
+            </header>
+
+            <form class="product-editor-form" @submit.prevent="handleSaveProduct">
+              <div class="product-editor-grid">
+                <aside class="product-editor-media">
+                  <div class="media-card">
+                    <div class="media-card-header">
+                      <h2>{{ t('admin.marketplace.images') }}</h2>
+                      <span>{{ productImages.length }} {{ t('admin.marketplace.filesCount') }}</span>
+                    </div>
+
+                    <div
+                      class="upload-zone upload-zone-lg"
+                      :class="{ 'has-image': activeImagePreview }"
+                      @dragover.prevent
+                      @drop.prevent="handleImageDrop"
+                    >
+                      <img v-if="activeImagePreview" :src="activeImagePreview" alt="Preview" class="upload-preview" />
+                      <div v-else class="upload-placeholder">
+                        <AdminIcon name="image" :size="36" />
+                        <p>{{ t('admin.marketplace.dropImages') }}</p>
+                        <span>{{ t('admin.marketplace.chooseFiles') }}</span>
+                      </div>
+                      <input type="file" accept="image/*" multiple class="upload-input" @change="handleImagePick" />
+                    </div>
+
+                    <div class="image-thumbs">
+                      <button
+                        v-for="(img, index) in productImages"
+                        :key="img.id"
+                        type="button"
+                        class="image-thumb"
+                        :class="{ active: activeImageIndex === index }"
+                        @click="activeImageIndex = index"
+                      >
+                        <img :src="img.preview" :alt="`Image ${index + 1}`" />
+                        <span class="thumb-remove" @click.stop="removeProductImage(index)">×</span>
+                      </button>
+                      <label class="image-thumb add-thumb">
+                        <span>+</span>
+                        <input type="file" accept="image/*" multiple hidden @change="handleImagePick" />
+                      </label>
+                    </div>
+                  </div>
+                </aside>
+
+                <div class="product-editor-fields">
+                  <section class="editor-section">
+                    <h2>{{ t('admin.marketplace.sectionBasic') }}</h2>
+                    <div class="editor-section-grid">
+                      <label class="span-2">
+                        {{ t('admin.marketplace.productName') }}
+                        <input v-model="productForm.title" type="text" required maxlength="50" placeholder="e.g. Atlas Bifacial 550W Panel" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.sku') }}
+                        <input v-model="productForm.product_key" type="text" maxlength="50" placeholder="e.g. PV-450W" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.colCategory') }}
+                        <select v-model="productForm.category_id" :required="!showNewCategory" :disabled="showNewCategory">
+                          <option disabled value="">{{ t('admin.marketplace.selectCategory') }}</option>
+                          <option v-for="cat in adminCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                        </select>
+                        <button
+                          type="button"
+                          class="linkish-btn"
+                          @click="toggleNewCategory"
+                        >
+                          {{ showNewCategory ? t('admin.marketplace.useExistingCategory') : t('admin.marketplace.createNewCategory') }}
+                        </button>
+                      </label>
+
+                      <div v-if="showNewCategory" class="new-category-box span-2">
+                        <label>
+                          {{ t('admin.marketplace.newCategoryName') }}
+                          <input
+                            v-model="newCategoryForm.name"
+                            type="text"
+                            maxlength="255"
+                            :placeholder="t('admin.marketplace.newCategoryPlaceholder')"
+                          />
+                        </label>
+                        <label>
+                          {{ t('admin.marketplace.newCategoryDescription') }}
+                          <input
+                            v-model="newCategoryForm.description"
+                            type="text"
+                            maxlength="1000"
+                            :placeholder="t('admin.marketplace.newCategoryDescPlaceholder')"
+                          />
+                        </label>
+                        <div class="new-category-actions">
+                          <button
+                            type="button"
+                            class="primary-btn"
+                            :disabled="categorySaving || !newCategoryForm.name.trim()"
+                            @click="handleCreateCategory"
+                          >
+                            {{ categorySaving ? t('admin.projects.saving') : t('admin.marketplace.saveCategory') }}
+                          </button>
+                        </div>
+                        <p v-if="categoryFormError" class="form-error">{{ categoryFormError }}</p>
+                      </div>
+                      <label>
+                        {{ t('admin.marketplace.stock') }}
+                        <input v-model.number="productForm.stock" type="number" min="0" required />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.rating') }}
+                        <input v-model.number="productForm.rating" type="number" min="0" max="5" step="0.1" />
+                      </label>
+                      <label class="span-2 visibility-toggle">
+                        <span class="toggle-row">
+                          <input id="product-visible" v-model="productForm.is_visible" type="checkbox" />
+                          <span>
+                            <strong>{{ t('admin.marketplace.visibleInStore') }}</strong>
+                            <small>{{ t('admin.marketplace.visibleInStoreHint') }}</small>
+                          </span>
+                        </span>
+                      </label>
+                      <label class="span-2">
+                        {{ t('common.description') }}
+                        <textarea v-model="productForm.description" rows="3" maxlength="200" :placeholder="t('admin.marketplace.describePlaceholder')"></textarea>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="editor-section">
+                    <h2>{{ t('admin.marketplace.sectionTechnical') }}</h2>
+                    <div class="editor-section-grid">
+                      <label>
+                        {{ t('admin.marketplace.capacity') }}
+                        <input v-model.number="productForm.capacity" type="number" min="0" step="0.01" placeholder="450" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.weight') }}
+                        <input v-model.number="productForm.weight_kg" type="number" min="0" step="0.01" placeholder="22.5" />
+                      </label>
+                      <label>
+                        {{ t('admin.marketplace.surface') }}
+                        <input v-model.number="productForm.surface" type="number" min="0" step="0.01" placeholder="2.1" />
+                      </label>
+                      <label class="span-2">
+                        {{ t('admin.marketplace.climateInfo') }}
+                        <textarea v-model="productForm.climate_info" rows="3" maxlength="250" :placeholder="t('admin.marketplace.climatePlaceholder')"></textarea>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="editor-section">
+                    <h2>{{ t('admin.marketplace.sectionDetails') }}</h2>
+                    <div class="editor-section-grid">
+                      <label class="span-2">
+                        {{ t('admin.marketplace.highlights') }}
+                        <textarea v-model="productForm.highlights_text" rows="4" :placeholder="t('admin.marketplace.highlightsPlaceholder')"></textarea>
+                        <small class="field-hint">{{ t('admin.marketplace.kvHint') }}</small>
+                      </label>
+                      <label class="span-2">
+                        {{ t('admin.marketplace.specs') }}
+                        <textarea v-model="productForm.specs_text" rows="4" :placeholder="t('admin.marketplace.specsPlaceholder')"></textarea>
+                        <small class="field-hint">{{ t('admin.marketplace.kvHint') }}</small>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="editor-section">
+                    <div class="section-head-row">
+                      <h2>{{ t('admin.marketplace.documents') }}</h2>
+                      <button type="button" class="ghost-btn small-btn" @click="addDocumentRow">
+                        + {{ t('admin.marketplace.addDocument') }}
+                      </button>
+                    </div>
+
+                    <div v-if="!productDocuments.length" class="docs-empty">
+                      {{ t('admin.marketplace.documentsEmpty') }}
+                    </div>
+
+                    <div v-else class="document-rows">
+                      <div v-for="(doc, index) in productDocuments" :key="doc.id" class="document-row">
+                        <label class="doc-name">
+                          {{ t('admin.marketplace.documentName') }}
+                          <input v-model="doc.name" type="text" maxlength="255" :placeholder="t('admin.marketplace.documentNamePlaceholder')" />
+                        </label>
+                        <label class="doc-file">
+                          {{ t('admin.marketplace.documentFile') }}
+                          <div class="doc-file-box">
+                            <span class="doc-file-label">
+                              {{ doc.file?.name || doc.size || t('admin.marketplace.chooseFile') }}
+                            </span>
+                            <input
+                              type="file"
+                              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.webp,.txt,.csv"
+                              @change="handleDocumentFilePick($event, index)"
+                            />
+                          </div>
+                        </label>
+                        <button type="button" class="action-btn danger doc-remove" @click="removeDocumentRow(index)" title="Remove">
+                          <AdminIcon name="trash" :size="15" />
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+
+              <p v-if="productFormError" class="form-error">{{ productFormError }}</p>
+
+              <footer class="product-editor-footer">
+                <button type="button" class="ghost-btn" @click="closeProductForm">{{ t('common.cancel') }}</button>
+                <button type="submit" class="primary-btn" :disabled="productSaving">
+                  {{ productSaving ? t('admin.projects.saving') : (editingProduct ? t('admin.marketplace.saveChanges') : t('admin.marketplace.createProduct')) }}
+                </button>
+              </footer>
+            </form>
+          </div>
+
+          <template v-else>
           <header class="catalog-header">
             <div>
               <h1>{{ t('admin.marketplace.title') }}</h1>
@@ -301,6 +552,11 @@
               <option value="low">{{ t('admin.marketplace.stockLow') }}</option>
               <option value="out">{{ t('admin.marketplace.stockOut') }}</option>
             </select>
+            <select v-model="productVisibilityFilter" class="filter-select">
+              <option value="">{{ t('admin.marketplace.allVisibility') }}</option>
+              <option value="visible">{{ t('admin.marketplace.onlyVisible') }}</option>
+              <option value="hidden">{{ t('admin.marketplace.onlyHidden') }}</option>
+            </select>
           </div>
 
           <div v-if="isLoading && !products.length" class="catalog-loading">{{ t('admin.marketplace.loading') }}</div>
@@ -321,11 +577,16 @@
                   <th>{{ t('admin.marketplace.colStock') }}</th>
                   <th>{{ t('admin.marketplace.colDemand') }}</th>
                   <th>{{ t('admin.marketplace.colSold') }}</th>
+                  <th>{{ t('admin.marketplace.colVisibility') }}</th>
                   <th class="col-actions">{{ t('admin.marketplace.colActions') }}</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="product in filteredCatalogProducts" :key="product.id">
+                <tr
+                  v-for="product in filteredCatalogProducts"
+                  :key="product.id"
+                  :class="{ 'row-hidden': product.is_visible === false }"
+                >
                   <td class="col-product">
                     <div class="product-cell">
                       <div class="product-thumb-sm">
@@ -350,12 +611,28 @@
                   </td>
                   <td class="col-num">{{ product.rfq_demand || 0 }}</td>
                   <td class="col-num">{{ product.units_sold || 0 }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      class="visibility-pill"
+                      :class="product.is_visible === false ? 'hidden' : 'visible'"
+                      @click="toggleProductVisibility(product)"
+                    >
+                      {{ product.is_visible === false ? t('admin.marketplace.hidden') : t('admin.marketplace.visible') }}
+                    </button>
+                  </td>
                   <td class="col-actions">
                     <div class="row-actions">
                       <button type="button" class="action-btn" title="Edit" @click="openProductForm(product)">
                         <AdminIcon name="edit" :size="15" />
                       </button>
-                      <router-link :to="`/store/${product.id}`" class="action-btn" title="View in store" target="_blank">
+                      <router-link
+                        v-if="product.is_visible !== false"
+                        :to="`/store/${product.id}`"
+                        class="action-btn"
+                        title="View in store"
+                        target="_blank"
+                      >
                         <AdminIcon name="external" :size="15" />
                       </router-link>
                       <button type="button" class="action-btn danger" title="Delete" @click="handleDeleteProduct(product)">
@@ -367,79 +644,7 @@
               </tbody>
             </table>
           </div>
-
-          <!-- Product drawer -->
-          <div v-if="showProductForm" class="drawer-overlay" @click.self="closeProductForm">
-            <aside class="product-drawer">
-              <header class="drawer-header">
-                <div>
-                  <p class="drawer-eyebrow">{{ editingProduct ? t('admin.marketplace.editProduct') : t('admin.marketplace.newProduct') }}</p>
-                  <h2>{{ editingProduct ? editingProduct.title : t('admin.marketplace.addToCatalog') }}</h2>
-                </div>
-                <button type="button" class="drawer-close" @click="closeProductForm">×</button>
-              </header>
-
-              <form class="drawer-form" @submit.prevent="handleSaveProduct">
-                <div class="drawer-layout">
-                  <div
-                    class="upload-zone"
-                    :class="{ 'has-image': productImagePreview }"
-                    @dragover.prevent
-                    @drop.prevent="handleImageDrop"
-                  >
-                    <img v-if="productImagePreview" :src="productImagePreview" alt="Preview" class="upload-preview" />
-                    <div v-else class="upload-placeholder">
-                      <AdminIcon name="image" :size="28" />
-                      <p>{{ t('admin.marketplace.dropImage') }}</p>
-                      <span>{{ t('admin.marketplace.chooseFile') }}</span>
-                    </div>
-                    <input type="file" accept="image/*" class="upload-input" @change="handleImagePick" />
-                    <button v-if="productImagePreview" type="button" class="upload-clear" @click="clearProductImage">{{ t('admin.marketplace.removeImage') }}</button>
-                  </div>
-
-                  <div class="drawer-fields">
-                    <label>
-                      {{ t('admin.marketplace.productName') }}
-                      <input v-model="productForm.title" type="text" required placeholder="e.g. Atlas Bifacial 550W Panel" />
-                    </label>
-
-                    <label>
-                      {{ t('admin.marketplace.colCategory') }}
-                      <select v-model="productForm.category_id" required>
-                        <option disabled value="">{{ t('admin.marketplace.selectCategory') }}</option>
-                        <option v-for="cat in adminCategories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-                      </select>
-                    </label>
-
-                    <div class="drawer-row">
-                      <label>
-                        {{ t('admin.marketplace.stock') }}
-                        <input v-model.number="productForm.stock" type="number" min="0" required />
-                      </label>
-                      <label>
-                        {{ t('admin.marketplace.rating') }}
-                        <input v-model.number="productForm.rating" type="number" min="0" max="5" step="0.1" />
-                      </label>
-                    </div>
-
-                    <label>
-                      {{ t('common.description') }}
-                      <textarea v-model="productForm.description" rows="4" :placeholder="t('admin.marketplace.describePlaceholder')"></textarea>
-                    </label>
-                  </div>
-                </div>
-
-                <p v-if="productFormError" class="form-error">{{ productFormError }}</p>
-
-                <footer class="drawer-footer">
-                  <button type="button" class="ghost-btn" @click="closeProductForm">{{ t('common.cancel') }}</button>
-                  <button type="submit" class="primary-btn" :disabled="productSaving">
-                    {{ productSaving ? t('admin.projects.saving') : (editingProduct ? t('admin.marketplace.saveChanges') : t('admin.marketplace.createProduct')) }}
-                  </button>
-                </footer>
-              </form>
-            </aside>
-          </div>
+          </template>
         </section>
 
         <!-- Projects -->
@@ -449,14 +654,20 @@
               <h1>{{ t('admin.projects.title') }}</h1>
               <p>{{ t('admin.projects.subtitle') }}</p>
             </div>
-            <select v-model="projectFilter" @change="loadProjects" class="filter-select">
-              <option value="">{{ t('admin.projects.allPhases') }}</option>
-              <option value="premier_contact">{{ t('followup.steps.premier_contact.label') }}</option>
-              <option value="data_collection">{{ t('followup.steps.data_collection.label') }}</option>
-              <option value="energy_data">{{ t('followup.steps.energy_data.label') }}</option>
-              <option value="completed">{{ t('followup.steps.completed.label') }}</option>
-              <option value="on_hold">{{ t('followup.status.on_hold') }}</option>
-            </select>
+            <div class="header-actions">
+              <select v-model="projectFilter" @change="loadProjects" class="filter-select">
+                <option value="">{{ t('admin.projects.allPhases') }}</option>
+                <option value="quote_confirmed">{{ t('followup.steps.quote_confirmed.label') }}</option>
+                <option value="order_prep">{{ t('followup.steps.order_prep.label') }}</option>
+                <option value="installation">{{ t('followup.steps.installation.label') }}</option>
+                <option value="completed">{{ t('followup.steps.completed.label') }}</option>
+                <option value="on_hold">{{ t('followup.status.on_hold') }}</option>
+              </select>
+              <button type="button" class="primary-btn" @click="openCreateProject">
+                <AdminIcon name="plus" size="16" />
+                <span>{{ t('admin.projects.newProject') }}</span>
+              </button>
+            </div>
           </header>
 
           <div v-if="projects.length" class="followup-stats">
@@ -489,62 +700,101 @@
               variant="admin"
             >
               <template #action>
-                <button type="button" class="primary-btn followup-btn" @click="openProjectDrawer(project)">
+                <button type="button" class="ghost-btn followup-btn" @click="openProjectDrawer(project)">
                   {{ t('admin.projects.updateFollowup') }}
                 </button>
               </template>
             </FollowupCard>
           </div>
 
-          <div v-if="showProjectDrawer && editingProject" class="drawer-overlay" @click.self="closeProjectDrawer">
-            <aside class="product-drawer project-drawer">
-              <header class="drawer-header">
-                <div>
-                  <p class="drawer-eyebrow">{{ t('admin.drawer.sakFollowup') }}</p>
+          <div v-if="showProjectDrawer && editingProject" class="project-workspace">
+            <header class="project-workspace-header">
+              <div class="project-workspace-title">
+                <button type="button" class="pw-back" @click="closeProjectDrawer">
+                  ← {{ t('admin.projects.backToList') }}
+                </button>
+                <div class="pw-title-row">
                   <h2>{{ editingProject.name }}</h2>
-                  <p v-if="editingProject.rfq_ticket" class="drawer-sub">
-                    {{ t('admin.drawer.quoteLabel') }} {{ editingProject.rfq_ticket.ticket_number }} · {{ editingProject.user?.company || editingProject.user?.name }}
-                  </p>
+                  <span class="pw-status" :class="editingProject.status">
+                    {{ projectStatusLabel(editingProject.status) }}
+                  </span>
                 </div>
-                <button type="button" class="drawer-close" @click="closeProjectDrawer">×</button>
-              </header>
+                <div class="pw-meta">
+                  <span v-if="editingProject.user" class="pw-chip">
+                    {{ editingProject.user.company || editingProject.user.name }}
+                  </span>
+                  <span
+                    v-for="ticket in editingQuotes"
+                    :key="ticket.id"
+                    class="pw-chip"
+                  >{{ ticket.ticket_number }}</span>
+                  <span class="pw-chip muted">
+                    {{ t('admin.drawer.stepCounter', { current: previewStepNumber, total: projectStepDefs.length }) }}
+                  </span>
+                </div>
+              </div>
+            </header>
 
-              <form class="drawer-form" @submit.prevent="handleSaveProject">
-                <div class="drawer-layout">
-                  <section v-if="editingOrderLines.length || legacyOrderSummary" class="drawer-section order-recap">
-                    <div class="section-head">
+            <form class="project-workspace-form" @submit.prevent="handleSaveProject">
+              <div class="project-workspace-layout">
+                <aside class="pw-rail">
+                  <section class="drawer-section workflow-section">
+                    <div class="wf-head">
                       <div>
-                        <h3>{{ t('admin.drawer.confirmedOrder') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.confirmedOrderHint') }}</p>
+                        <p class="wf-kicker">{{ t('admin.drawer.workflowPhase') }}</p>
+                        <h3 class="wf-title">
+                          {{ projectForm.on_hold ? t('followup.onHoldTitle') : (projectStepDefs[previewStepNumber - 1]?.label || '') }}
+                        </h3>
                       </div>
-                      <span v-if="editingOrderTotal != null" class="order-total">{{ formatMoney(editingOrderTotal) }}</span>
+                      <span class="phase-counter">{{ previewStepNumber }}/{{ projectStepDefs.length }}</span>
                     </div>
-                    <table v-if="editingOrderLines.length" class="order-lines-table">
-                      <thead>
-                        <tr>
-                          <th>{{ t('rfq.table.item') }}</th>
-                          <th>{{ t('common.quantity') }}</th>
-                          <th>{{ t('common.total') }}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="item in editingOrderLines" :key="item.id">
-                          <td>{{ rfqItemLabel(item) }}</td>
-                          <td>{{ item.quantity }}</td>
-                          <td>{{ item.line_total != null ? formatMoney(item.line_total) : '—' }}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <p v-else class="legacy-order-text">{{ legacyOrderSummary }}</p>
+
+                    <div class="wf-progress" aria-hidden="true">
+                      <span
+                        class="wf-progress-fill"
+                        :style="{ width: `${(previewStepNumber / projectStepDefs.length) * 100}%` }"
+                      />
+                    </div>
+
+                    <ol class="wf-steps">
+                      <li
+                        v-for="(step, index) in projectStepDefs"
+                        :key="step.key"
+                        class="wf-step"
+                        :class="{
+                          done: !projectForm.on_hold && index + 1 < previewStepNumber,
+                          current: !projectForm.on_hold && projectForm.current_phase === step.key,
+                          muted: projectForm.on_hold || index + 1 > previewStepNumber
+                        }"
+                      >
+                        <button
+                          type="button"
+                          class="wf-step-btn"
+                          @click="projectForm.current_phase = step.key; projectForm.on_hold = false"
+                        >
+                          <span class="wf-dot" aria-hidden="true">
+                            <span v-if="!projectForm.on_hold && index + 1 < previewStepNumber" class="wf-check">✓</span>
+                            <span v-else>{{ index + 1 }}</span>
+                          </span>
+                          <span class="wf-step-copy">
+                            <span class="wf-step-name">{{ step.label }}</span>
+                            <span
+                              v-if="projectForm.current_phase === step.key && !projectForm.on_hold"
+                              class="wf-step-hint"
+                            >{{ step.adminHint }}</span>
+                          </span>
+                        </button>
+                      </li>
+                    </ol>
+
+                    <label class="hold-toggle" :class="{ active: projectForm.on_hold }">
+                      <input type="checkbox" v-model="projectForm.on_hold" />
+                      <span>{{ t('admin.drawer.putOnHold') }}</span>
+                    </label>
                   </section>
 
                   <section class="drawer-section site-section">
-                    <div class="section-head">
-                      <div>
-                        <h3>{{ t('admin.drawer.installationSite') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.siteHint') }}</p>
-                      </div>
-                    </div>
+                    <h3>{{ t('admin.drawer.installationSite') }}</h3>
                     <div class="drawer-fields">
                       <label>
                         {{ t('admin.drawer.location') }}
@@ -558,139 +808,417 @@
                     </div>
                   </section>
 
-                  <section class="drawer-section client-update-section">
+                  <section class="drawer-section">
+                    <h3>{{ t('admin.projects.assignQuotes') }}</h3>
+                    <div class="quote-picks">
+                      <label v-for="quote in clientQuotes" :key="quote.id">
+                        <input v-model="selectedQuoteIds" type="checkbox" :value="quote.id" />
+                        <span>{{ quote.ticket_number }}</span>
+                        <small>{{ quote.company || '—' }}</small>
+                      </label>
+                      <p v-if="!clientQuotes.length" class="thread-empty">{{ t('admin.projects.noQuotes') }}</p>
+                    </div>
+                  </section>
+                </aside>
+
+                <div class="pw-main">
+                  <section v-for="ticket in editingQuotes" :key="ticket.id" class="drawer-section order-recap">
                     <div class="section-head">
                       <div>
-                        <h3>{{ t('admin.drawer.clientUpdate') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.clientUpdateHint') }}</p>
+                        <p class="pw-kicker">{{ t('admin.drawer.followup') }}</p>
+                        <h3>{{ ticket.ticket_number }}</h3>
                       </div>
-                      <span class="visibility-badge">{{ t('admin.drawer.clientVisible') }}</span>
+                      <span v-if="ticket.quoted_total != null" class="order-total">{{ formatMoney(ticket.quoted_total) }}</span>
                     </div>
-                    <div class="drawer-fields">
-                      <label>
-                        {{ t('admin.drawer.message') }}
-                        <textarea
-                          v-model="projectForm.client_message"
-                          rows="4"
-                          :placeholder="t('admin.drawer.messagePlaceholder')"
-                        ></textarea>
-                      </label>
-                    </div>
-                    <div v-if="projectForm.client_message?.trim()" class="client-message-preview">
-                      <span class="preview-label">{{ t('admin.drawer.clientPreview') }}</span>
-                      <p>{{ projectForm.client_message.trim() }}</p>
-                    </div>
-                    <p v-else class="empty-client-message">{{ t('admin.drawer.noClientMessage') }}</p>
+                    <table v-if="ticket.items?.length" class="order-lines-table">
+                      <thead>
+                        <tr>
+                          <th>{{ t('rfq.table.item') }}</th>
+                          <th>{{ t('common.quantity') }}</th>
+                          <th>{{ t('admin.projects.unitPrice') }}</th>
+                          <th>{{ t('common.total') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="item in ticket.items" :key="item.id">
+                          <td>{{ rfqItemLabel(item) }}</td>
+                          <td>{{ item.quantity }}</td>
+                          <td>{{ item.unit_price != null ? formatMoney(Number(item.unit_price)) : '—' }}</td>
+                          <td>{{ item.line_total != null ? formatMoney(item.line_total) : '—' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </section>
 
-                  <section class="drawer-section workflow-section">
-                    <div class="section-title-row">
-                      <h3>{{ t('admin.drawer.workflowPhase') }}</h3>
-                      <span class="phase-counter">{{ t('admin.drawer.stepCounter', { current: previewStepNumber, total: projectStepDefs.length }) }}</span>
-                    </div>
-                    <p class="section-hint">{{ t('admin.drawer.workflowHint') }}</p>
-
-                    <div class="phase-picker">
-                      <button
-                        v-for="(step, index) in projectStepDefs"
-                        :key="step.key"
-                        type="button"
-                        class="phase-option"
-                        :class="{ selected: projectForm.current_phase === step.key && !projectForm.on_hold }"
-                        @click="projectForm.current_phase = step.key"
-                      >
-                        <span class="phase-index">{{ index + 1 }}</span>
-                        <span class="phase-copy">
-                          <span class="phase-name">{{ step.label }}</span>
-                          <span class="phase-hint">{{ step.adminHint }}</span>
-                        </span>
-                      </button>
-                    </div>
-
-                    <ProjectTimeline
-                      :project="previewProject"
-                      variant="track"
-                      audience="admin"
+                  <section class="drawer-section">
+                    <ProjectCatalogPicker
+                      :model-value="projectLines"
+                      :products="products"
+                      :categories="adminCategories"
+                      :loading="isLoading && !products.length"
+                      :price-references="projectPriceReferences"
+                      @update:model-value="onProjectLinesUpdate"
+                      @refresh="loadCatalogForPicker"
                     />
-
-                    <label class="hold-toggle">
-                      <input type="checkbox" v-model="projectForm.on_hold" />
-                      <span>{{ t('admin.drawer.putOnHold') }}</span>
-                    </label>
                   </section>
 
-                  <section class="drawer-section internal-section">
-                    <div class="section-head">
-                      <div>
-                        <h3>{{ t('admin.drawer.internalNotes') }}</h3>
-                        <p class="section-hint">{{ t('admin.drawer.internalHint') }}</p>
+                  <div class="pw-services">
+                    <section class="drawer-section">
+                      <div class="section-head">
+                        <h3>{{ t('admin.projects.installations') }}</h3>
+                        <button
+                          type="button"
+                          class="action-btn"
+                          :title="t('admin.projects.addInstallation')"
+                          :aria-label="t('admin.projects.addInstallation')"
+                          @click="projectInstallations.push(blankInstallation())"
+                        >
+                          <AdminIcon name="plus" :size="15" />
+                        </button>
                       </div>
-                      <span class="team-badge">{{ t('admin.drawer.teamBadge') }}</span>
-                    </div>
+                      <p v-if="!projectInstallations.length" class="pw-empty">{{ t('admin.projects.noInstallations') }}</p>
+                      <div v-for="(row, index) in projectInstallations" :key="row.id || index" class="service-card service-card-simple">
+                        <div class="service-simple-top">
+                          <label class="service-price-field">
+                            <span>{{ t('admin.projects.price') }}</span>
+                            <div class="price-input-wrap">
+                              <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                              <span class="price-suffix">MAD</span>
+                            </div>
+                          </label>
+                          <button
+                            type="button"
+                            class="action-btn danger service-remove"
+                            :title="t('admin.projects.remove')"
+                            :aria-label="t('admin.projects.remove')"
+                            @click="projectInstallations.splice(index, 1)"
+                          >
+                            <AdminIcon name="trash" :size="15" />
+                          </button>
+                        </div>
+                        <label class="service-details-field">
+                          <span>{{ t('admin.projects.description') }}</span>
+                          <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
+                        </label>
+                      </div>
+                    </section>
 
-                    <div class="note-suggestions">
-                      <button
-                        v-for="suggestion in noteSuggestions"
-                        :key="suggestion"
-                        type="button"
-                        class="note-chip"
-                        @click="appendInternalNote(suggestion)"
-                      >
-                        + {{ suggestion }}
-                      </button>
-                    </div>
+                    <section class="drawer-section">
+                      <div class="section-head">
+                        <h3>{{ t('admin.projects.maintenances') }}</h3>
+                        <button
+                          type="button"
+                          class="action-btn"
+                          :title="t('admin.projects.addMaintenance')"
+                          :aria-label="t('admin.projects.addMaintenance')"
+                          @click="projectMaintenances.push(blankMaintenance())"
+                        >
+                          <AdminIcon name="plus" :size="15" />
+                        </button>
+                      </div>
+                      <p v-if="!projectMaintenances.length" class="pw-empty">{{ t('admin.projects.noMaintenances') }}</p>
+                      <div v-for="(row, index) in projectMaintenances" :key="row.id || index" class="service-card service-card-simple">
+                        <div class="service-simple-top">
+                          <label class="service-price-field">
+                            <span>{{ t('admin.projects.price') }}</span>
+                            <div class="price-input-wrap">
+                              <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                              <span class="price-suffix">MAD</span>
+                            </div>
+                          </label>
+                          <button
+                            type="button"
+                            class="action-btn danger service-remove"
+                            :title="t('admin.projects.remove')"
+                            :aria-label="t('admin.projects.remove')"
+                            @click="projectMaintenances.splice(index, 1)"
+                          >
+                            <AdminIcon name="trash" :size="15" />
+                          </button>
+                        </div>
+                        <label class="service-details-field">
+                          <span>{{ t('admin.projects.description') }}</span>
+                          <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
+                        </label>
+                      </div>
+                    </section>
+                  </div>
 
-                    <div class="drawer-fields">
-                      <label>
-                        {{ t('admin.drawer.notes') }}
+                  <div class="pw-comms">
+                    <section class="drawer-section client-update-section">
+                      <h3>{{ t('admin.drawer.messagesTitle') }}</h3>
+                      <div class="thread">
+                        <p v-if="!projectMessages.length" class="thread-empty">{{ t('admin.drawer.emptyThread') }}</p>
+                        <article
+                          v-for="message in projectMessages"
+                          :key="message.id"
+                          class="thread-item"
+                          :class="message.author"
+                        >
+                          <header>
+                            <strong>{{ message.author === 'client' ? (message.user?.name || t('admin.drawer.clientLabel')) : (message.user?.name || t('admin.drawer.teamLabel')) }}</strong>
+                            <time>{{ formatDate(message.created_at) }}</time>
+                          </header>
+                          <p>{{ message.body }}</p>
+                        </article>
+                      </div>
+                      <div class="thread-compose">
                         <textarea
-                          v-model="projectForm.admin_notes"
-                          rows="5"
-                          :placeholder="t('admin.drawer.notesPlaceholder')"
+                          v-model="replyDraft"
+                          rows="3"
+                          :placeholder="t('admin.drawer.replyPlaceholder')"
+                          @keydown.enter.exact.prevent="sendProjectReply"
                         ></textarea>
+                        <button type="button" class="primary-btn" :disabled="replySending || !replyDraft.trim()" @click="sendProjectReply">
+                          {{ t('admin.drawer.sendReply') }}
+                        </button>
+                      </div>
+                    </section>
+
+                    <section class="drawer-section internal-section">
+                      <div class="section-head">
+                        <h3>{{ t('admin.drawer.internalNotes') }}</h3>
+                        <span class="team-badge">{{ t('admin.drawer.teamBadge') }}</span>
+                      </div>
+
+                      <div class="note-suggestions">
+                        <button
+                          v-for="suggestion in noteSuggestions"
+                          :key="suggestion"
+                          type="button"
+                          class="note-chip"
+                          @click="appendInternalNote(suggestion)"
+                        >
+                          + {{ suggestion }}
+                        </button>
+                      </div>
+
+                      <div class="drawer-fields">
+                        <label>
+                          {{ t('admin.drawer.notes') }}
+                          <textarea
+                            v-model="projectForm.admin_notes"
+                            rows="5"
+                            :placeholder="t('admin.drawer.notesPlaceholder')"
+                          ></textarea>
+                        </label>
+                      </div>
+
+                      <div class="trace-panel">
+                        <div class="trace-panel-head">
+                          <h4>{{ t('admin.drawer.activityLog') }}</h4>
+                          <span class="trace-count" v-if="projectTraces.length">{{ projectTraces.length }}</span>
+                        </div>
+
+                        <div v-if="tracesLoading" class="trace-empty">{{ t('admin.drawer.loadingActivity') }}</div>
+                        <ul v-else-if="projectTraces.length" class="trace-list">
+                          <li v-for="trace in projectTraces" :key="trace.id" class="trace-item">
+                            <div class="trace-meta">
+                              <strong>{{ traceActorLabel(trace) }}</strong>
+                              <time>{{ formatDate(trace.created_at) }}</time>
+                            </div>
+                            <p class="trace-summary">{{ formatTraceSummary(trace) }}</p>
+                            <ul v-if="trace.changes?.length" class="trace-changes">
+                              <li v-for="(change, index) in trace.changes" :key="index">
+                                {{ formatTraceChange(change) }}
+                              </li>
+                            </ul>
+                          </li>
+                        </ul>
+                        <p v-else class="trace-empty">{{ t('admin.drawer.noTraces') }}</p>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+
+              <p v-if="projectSaveSuccess" class="form-success project-workspace-msg">{{ projectSaveSuccess }}</p>
+              <p v-if="projectFormError" class="form-error project-workspace-msg">{{ projectFormError }}</p>
+
+              <footer class="project-workspace-footer">
+                <button type="button" class="ghost-btn" @click="closeProjectDrawer">{{ t('common.cancel') }}</button>
+                <button type="submit" class="primary-btn" :disabled="projectSaving">
+                  {{ projectSaving ? t('admin.projects.saving') : t('admin.projects.saveFollowup') }}
+                </button>
+              </footer>
+            </form>
+          </div>
+
+          <div v-if="showCreateProject" class="modal-overlay project-create-overlay" @click.self="showCreateProject = false">
+            <div class="ops-modal project-create-modal" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <div>
+                  <p class="modal-kicker">{{ t('admin.projects.newProject') }}</p>
+                  <h3>{{ t('admin.projects.createTitle') }}</h3>
+                </div>
+                <button type="button" class="close-btn" @click="showCreateProject = false">×</button>
+              </header>
+              <form class="task-form" @submit.prevent="submitCreateProject">
+                <div class="modal-body project-create-body">
+                  <section class="create-section">
+                    <div class="create-section-head">
+                      <h4>{{ t('admin.projects.createEssentials') }}</h4>
+                      <p>{{ t('admin.projects.createEssentialsHint') }}</p>
+                    </div>
+                    <div class="create-essentials-grid">
+                      <label>
+                        <span>{{ t('admin.projects.projectName') }}</span>
+                        <input v-model="createProjectForm.name" type="text" required />
+                      </label>
+                      <label>
+                        <span>{{ t('admin.projects.selectClient') }}</span>
+                        <select v-model="createProjectForm.id_client" required @change="onCreateClientChange">
+                          <option value="">{{ t('admin.projects.selectClientPlaceholder') }}</option>
+                          <option v-for="client in users" :key="client.id_client" :value="client.id_client">
+                            {{ client.company || client.name }}
+                          </option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>{{ t('admin.drawer.location') }}</span>
+                        <input v-model="createProjectForm.location" type="text" :placeholder="t('admin.drawer.locationPlaceholder')" />
+                      </label>
+                      <label class="create-span-2">
+                        <span>{{ t('admin.projects.description') }}</span>
+                        <textarea v-model="createProjectForm.description" rows="2" :placeholder="t('admin.projects.descriptionPlaceholder')"></textarea>
                       </label>
                     </div>
+                  </section>
 
-                    <div class="trace-panel">
-                      <div class="trace-panel-head">
-                        <h4>{{ t('admin.drawer.activityLog') }}</h4>
-                        <span class="trace-count" v-if="projectTraces.length">{{ projectTraces.length }}</span>
+                  <section class="create-section">
+                    <div class="create-section-head">
+                      <h4>{{ t('admin.projects.assignQuotes') }}</h4>
+                      <p>{{ t('admin.projects.assignQuotesHint') }}</p>
+                    </div>
+                    <div class="create-quotes">
+                      <template v-if="!createProjectForm.id_client">
+                        <p class="create-empty">{{ t('admin.projects.pickClientFirst') }}</p>
+                      </template>
+                      <template v-else-if="!createClientQuotes.length">
+                        <p class="create-empty">{{ t('admin.projects.noQuotes') }}</p>
+                      </template>
+                      <div v-else class="quote-picks create-quote-picks">
+                        <label v-for="quote in createClientQuotes" :key="quote.id" class="create-quote-chip">
+                          <input v-model="createProjectForm.quote_ids" type="checkbox" :value="quote.id" />
+                          <span>{{ quote.ticket_number }}</span>
+                          <small v-if="quote.amount != null">{{ formatMoney(quote.amount) }}</small>
+                        </label>
                       </div>
-                      <p class="trace-intro">{{ t('admin.drawer.traceIntro') }}</p>
+                    </div>
+                  </section>
 
-                      <div v-if="tracesLoading" class="trace-empty">{{ t('admin.drawer.loadingActivity') }}</div>
-                      <ul v-else-if="projectTraces.length" class="trace-list">
-                        <li v-for="trace in projectTraces" :key="trace.id" class="trace-item">
-                          <div class="trace-meta">
-                            <strong>{{ traceActorLabel(trace) }}</strong>
-                            <time>{{ formatDate(trace.created_at) }}</time>
+                  <section class="create-section">
+                    <ProjectCatalogPicker
+                      ref="createCatalogPickerRef"
+                      :model-value="createProjectForm.lines"
+                      :products="products"
+                      :categories="adminCategories"
+                      :loading="isLoading && !products.length"
+                      :price-references="createPriceReferences"
+                      @update:model-value="onCreateProjectLinesUpdate"
+                      @refresh="loadCatalogForPicker"
+                    />
+                  </section>
+
+                  <section class="create-section create-services-section">
+                    <div class="create-section-head">
+                      <h4>{{ t('admin.projects.createServices') }}</h4>
+                      <p>{{ t('admin.projects.createServicesHint') }}</p>
+                    </div>
+                    <div class="project-create-services">
+                      <div class="create-service-block">
+                        <div class="section-head">
+                          <h5>{{ t('admin.projects.installations') }}</h5>
+                          <button
+                            type="button"
+                            class="action-btn"
+                            :title="t('admin.projects.addInstallation')"
+                            :aria-label="t('admin.projects.addInstallation')"
+                            @click="createProjectForm.installations.push(blankInstallation())"
+                          >
+                            <AdminIcon name="plus" :size="15" />
+                          </button>
+                        </div>
+                        <p v-if="!createProjectForm.installations.length" class="create-empty muted">{{ t('admin.projects.noInstallations') }}</p>
+                        <div v-for="(row, index) in createProjectForm.installations" :key="index" class="service-card service-card-simple">
+                          <div class="service-simple-top">
+                            <label class="service-price-field">
+                              <span>{{ t('admin.projects.price') }}</span>
+                              <div class="price-input-wrap">
+                                <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                                <span class="price-suffix">MAD</span>
+                              </div>
+                            </label>
+                            <button
+                              type="button"
+                              class="action-btn danger service-remove"
+                              :title="t('admin.projects.remove')"
+                              :aria-label="t('admin.projects.remove')"
+                              @click="createProjectForm.installations.splice(index, 1)"
+                            >
+                              <AdminIcon name="trash" :size="15" />
+                            </button>
                           </div>
-                          <p class="trace-summary">{{ formatTraceSummary(trace) }}</p>
-                          <ul v-if="trace.changes?.length" class="trace-changes">
-                            <li v-for="(change, index) in trace.changes" :key="index">
-                              {{ formatTraceChange(change) }}
-                            </li>
-                          </ul>
-                        </li>
-                      </ul>
-                      <p v-else class="trace-empty">{{ t('admin.drawer.noTraces') }}</p>
+                          <label class="service-details-field">
+                            <span>{{ t('admin.projects.description') }}</span>
+                            <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
+                          </label>
+                        </div>
+                      </div>
+
+                      <div class="create-service-block">
+                        <div class="section-head">
+                          <h5>{{ t('admin.projects.maintenances') }}</h5>
+                          <button
+                            type="button"
+                            class="action-btn"
+                            :title="t('admin.projects.addMaintenance')"
+                            :aria-label="t('admin.projects.addMaintenance')"
+                            @click="createProjectForm.maintenances.push(blankMaintenance())"
+                          >
+                            <AdminIcon name="plus" :size="15" />
+                          </button>
+                        </div>
+                        <p v-if="!createProjectForm.maintenances.length" class="create-empty muted">{{ t('admin.projects.noMaintenances') }}</p>
+                        <div v-for="(row, index) in createProjectForm.maintenances" :key="index" class="service-card service-card-simple">
+                          <div class="service-simple-top">
+                            <label class="service-price-field">
+                              <span>{{ t('admin.projects.price') }}</span>
+                              <div class="price-input-wrap">
+                                <input v-model="row.price" type="number" min="0" step="0.01" placeholder="0.00" />
+                                <span class="price-suffix">MAD</span>
+                              </div>
+                            </label>
+                            <button
+                              type="button"
+                              class="action-btn danger service-remove"
+                              :title="t('admin.projects.remove')"
+                              :aria-label="t('admin.projects.remove')"
+                              @click="createProjectForm.maintenances.splice(index, 1)"
+                            >
+                              <AdminIcon name="trash" :size="15" />
+                            </button>
+                          </div>
+                          <label class="service-details-field">
+                            <span>{{ t('admin.projects.description') }}</span>
+                            <textarea v-model="row.description" rows="2" :placeholder="t('admin.projects.serviceDetailsPlaceholder')"></textarea>
+                          </label>
+                        </div>
+                      </div>
                     </div>
                   </section>
                 </div>
-
-                <p v-if="projectSaveSuccess" class="form-success">{{ projectSaveSuccess }}</p>
-                <p v-if="projectFormError" class="form-error">{{ projectFormError }}</p>
-
-                <footer class="drawer-footer">
-                  <button type="button" class="ghost-btn" @click="closeProjectDrawer">{{ t('common.cancel') }}</button>
-                  <button type="submit" class="primary-btn" :disabled="projectSaving">
-                    {{ projectSaving ? t('admin.projects.saving') : t('admin.projects.saveFollowup') }}
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showCreateProject = false">{{ t('common.cancel') }}</button>
+                  <button type="submit" class="primary-btn" :disabled="creatingProject">
+                    {{ creatingProject ? t('admin.projects.saving') : t('admin.projects.create') }}
                   </button>
                 </footer>
               </form>
-            </aside>
+            </div>
           </div>
         </section>
+
 
         <!-- Clients -->
         <section v-if="activeTab === 'clients'" class="panel">
@@ -720,7 +1248,7 @@
                   <td>{{ client.company }}</td>
                   <td>{{ client.email }}</td>
                   <td>{{ client.phone || '—' }}</td>
-                  <td>{{ client.rfq_tickets_count }}</td>
+                  <td>{{ client.quoteRequests }}</td>
                   <td>{{ client.projects_count }}</td>
                   <td>{{ formatDate(client.created_at) }}</td>
                 </tr>
@@ -740,11 +1268,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useAdmin } from '../composables/useAdmin'
+import { useOperatorAdmin } from '../composables/useOperatorAdmin'
+import { useServices } from '../composables/useServices'
 import { useLocale } from '../composables/useLocale'
 import AdminIcon from '../components/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
@@ -771,10 +1301,8 @@ import {
 } from '../utils/projectTrace'
 import {
   getWorkflowSteps,
-  extractClientMessage,
   getCurrentPhase,
   getFollowupStepNumber,
-  parseLegacyOrderSummary,
   phaseToCompletedSteps,
   projectStatusLabel
 } from '../utils/projectSteps'
@@ -784,6 +1312,23 @@ const router = useRouter()
 const { t } = useI18n()
 const { locale } = useLocale()
 const { user, isAdmin, logoutUser } = useAuth()
+const toast = useToast()
+const {
+  servicesConfig,
+  serviceRequests,
+  toggleServiceEnabled,
+  updateService,
+  createService,
+  deleteService,
+  acceptAndAssignRequest,
+  rejectServiceRequest,
+  updateRequestPhase,
+  reloadServices,
+  getRequestSteps,
+  getPhaseLabel,
+  error: servicesError
+} = useServices()
+const assignOperatorMap = ref({})
 const {
   stats,
   rfqs,
@@ -798,14 +1343,25 @@ const {
   fetchProjects,
   updateProject,
   fetchProjectTraces,
+  fetchProjectMessages,
+  postProjectMessage,
+  fetchQuotes,
+  createProject,
   fetchProducts,
   updateProduct,
   createProduct,
   deleteProduct,
   fetchCategories,
+  createCategory,
   fetchUsers,
   quoteRfq
 } = useAdmin()
+
+watch(error, (message) => {
+  if (!message) return
+  toast.error(message)
+  error.value = null
+})
 
 const activeTab = ref('overview')
 const quoteSaving = ref(false)
@@ -823,6 +1379,18 @@ const projectSaving = ref(false)
 const projectFormError = ref('')
 const projectForm = ref(emptyProjectForm())
 const projectTraces = ref([])
+const projectMessages = ref([])
+const selectedQuoteIds = ref([])
+const availableQuotes = ref([])
+const showCreateProject = ref(false)
+const creatingProject = ref(false)
+const createProjectForm = ref(emptyCreateProject())
+const projectLines = ref([])
+const projectInstallations = ref([])
+const projectMaintenances = ref([])
+const createCatalogPickerRef = ref(null)
+const replyDraft = ref('')
+const replySending = ref(false)
 const tracesLoading = ref(false)
 const projectSaveSuccess = ref('')
 const noteSuggestions = computed(() => {
@@ -838,21 +1406,48 @@ const noteSuggestions = computed(() => {
 const productSearch = ref('')
 const productCategoryFilter = ref('')
 const productStockFilter = ref('')
+const productVisibilityFilter = ref('')
 const showProductForm = ref(false)
 const editingProduct = ref(null)
 const productSaving = ref(false)
 const productFormError = ref('')
-const productImageFile = ref(null)
-const productImagePreview = ref('')
+const productImages = ref([])
+const activeImageIndex = ref(0)
+const productDocuments = ref([])
 const adminCategories = ref([])
-const productForm = ref({
-  title: '',
-  category_id: '',
-  stock: 10,
-  rating: 4.5,
-  description: ''
-})
+const showNewCategory = ref(false)
+const categorySaving = ref(false)
+const categoryFormError = ref('')
+const newCategoryForm = ref({ name: '', description: '' })
+const productForm = ref(emptyProductForm())
 let productSearchTimer = null
+let mediaIdCounter = 0
+
+function nextMediaId() {
+  mediaIdCounter += 1
+  return `media-${mediaIdCounter}`
+}
+
+function emptyProductForm() {
+  return {
+    title: '',
+    product_key: '',
+    category_id: '',
+    stock: 10,
+    rating: 4.5,
+    description: '',
+    capacity: null,
+    weight_kg: null,
+    surface: null,
+    climate_info: '',
+    highlights_text: '',
+    specs_text: '',
+    is_visible: true,
+  }
+}
+
+const activeImagePreview = computed(() => productImages.value[activeImageIndex.value]?.preview || '')
+
 
 const projectStepDefs = computed(() => {
   locale.value
@@ -878,38 +1473,551 @@ const followupOnHoldCount = computed(() => projects.value.filter((project) => pr
 
 const followupCompletedCount = computed(() => projects.value.filter((project) => project.status === 'completed').length)
 
-const editingOrderLines = computed(() => editingProject.value?.rfq_ticket?.items || [])
+const editingQuotes = computed(() => editingProject.value?.rfq_tickets || (editingProject.value?.rfq_ticket ? [editingProject.value.rfq_ticket] : []))
 
-const editingOrderTotal = computed(() => {
-  const total = editingProject.value?.rfq_ticket?.quoted_total
-  return total != null && total !== '' ? Number(total) : null
+function buildPriceReferences(rfqTickets, lines) {
+  const refs = []
+  ;(rfqTickets || []).forEach((ticket) => {
+    ;(ticket.items || []).forEach((item) => {
+      const id = Number(item.id ?? item.id_product)
+      if (!id || item.unit_price == null) return
+      refs.push({
+        id_product: id,
+        unit_price: Number(item.unit_price),
+        source: 'rfq',
+        label: item.display_name || item.title
+      })
+    })
+  })
+  ;(lines || []).forEach((line) => {
+    const id = Number(line.id_product)
+    if (!id || line.unit_price == null) return
+    refs.push({
+      id_product: id,
+      unit_price: Number(line.unit_price),
+      source: 'list',
+      label: line.title
+    })
+  })
+  return refs
+}
+
+const projectPriceReferences = computed(() =>
+  buildPriceReferences(editingQuotes.value, projectLines.value)
+)
+
+const createSelectedQuotes = computed(() => {
+  const ids = new Set((createProjectForm.value.quote_ids || []).map(Number))
+  return availableQuotes.value.filter((quote) => ids.has(Number(quote.id)))
 })
 
-const legacyOrderSummary = computed(() => {
-  if (editingOrderLines.value.length) return null
-  return parseLegacyOrderSummary(editingProject.value?.description)
+const createPriceReferences = computed(() =>
+  buildPriceReferences(createSelectedQuotes.value, createProjectForm.value.lines)
+)
+
+const clientQuotes = computed(() => {
+  const clientId = Number(editingProject.value?.id_client)
+  if (!clientId) return []
+  return availableQuotes.value.filter((quote) => Number(quote.id_client) === clientId)
 })
+
+const createClientQuotes = computed(() => {
+  const clientId = Number(createProjectForm.value.id_client)
+  if (!clientId) return []
+  return availableQuotes.value.filter((quote) => Number(quote.id_client) === clientId)
+})
+
+function emptyCreateProject() {
+  return {
+    name: '',
+    id_client: '',
+    location: '',
+    description: '',
+    quote_ids: [],
+    lines: [],
+    installations: [],
+    maintenances: []
+  }
+}
+
+function onProjectLinesUpdate(lines) {
+  projectLines.value = Array.isArray(lines) ? lines.map((line) => ({ ...line })) : []
+}
+
+function onCreateProjectLinesUpdate(lines) {
+  createProjectForm.value.lines = Array.isArray(lines) ? lines.map((line) => ({ ...line })) : []
+}
+
+function onCreateClientChange() {
+  createProjectForm.value.quote_ids = []
+}
+
+function blankInstallation() {
+  return { id: null, name: '', price: '', description: '' }
+}
+
+function blankMaintenance() {
+  return { id: null, type: '', price: '', description: '' }
+}
+
+async function loadCatalogForPicker(filters = {}) {
+  if (!adminCategories.value.length) {
+    adminCategories.value = await fetchCategories()
+  }
+  await fetchProducts({ sort: 'title', ...filters })
+}
+
+function hasServiceContent(row) {
+  return String(row.description || '').trim() !== '' || (row.price !== '' && row.price != null)
+}
+
+function cleanInstallations(rows) {
+  return rows.filter(hasServiceContent).map((row) => ({
+    id: row.id || null,
+    name: String(row.name || '').trim() || t('admin.projects.installations'),
+    location: null,
+    energy_type: null,
+    description: row.description || null,
+    scheduled_at: null,
+    price: row.price === '' || row.price == null ? null : Number(row.price)
+  }))
+}
+
+function cleanMaintenances(rows) {
+  return rows.filter(hasServiceContent).map((row) => ({
+    id: row.id || null,
+    type: String(row.type || '').trim() || t('admin.projects.maintenances'),
+    description: row.description || null,
+    scheduled_at: null,
+    price: row.price === '' || row.price == null ? null : Number(row.price)
+  }))
+}
 
 function emptyProjectForm() {
   return {
     location: '',
-    client_message: '',
-    current_phase: 'premier_contact',
+    current_phase: 'quote_confirmed',
     on_hold: false,
     admin_notes: ''
   }
 }
 
+const {
+  tasks: opsTasks,
+  operators: opsOperators,
+  stats: opsStats,
+  createTask: createOpsTask,
+  updateTask: updateOpsTask,
+  createOperator: createOpsOperator,
+  updateOperator: updateOpsOperator,
+  deleteOperator: deleteOpsOperator,
+  updateTaskStatus: updateOpsTaskStatus,
+  reassignTask: reassignOpsTask,
+  deleteTask: deleteOpsTask,
+  toggleOperatorDuty,
+  getOperatorActiveTaskCount,
+  reloadOperations
+} = useOperatorAdmin()
+
+const opsSection = ref('jobs')
+const selectedCalendarDate = ref('2026-09-15')
+const showTaskModal = ref(false)
+const showOperatorModal = ref(false)
+const editingOperator = ref(null)
+const operatorForm = ref({ name: '', role: '', phone: '', email: '', city: '', password: '' })
+const editingTask = ref(null)
+
+const taskForm = ref({
+  type: 'installation',
+  title: '',
+  operatorId: '',
+  priority: 'medium',
+  scheduledDate: '2026-09-15',
+  timeSlot: '09:00 - 12:00',
+  clientName: '',
+  clientPhone: '',
+  clientEmail: '',
+  clientAddress: '',
+  clientCity: 'Casablanca',
+  adminNotes: ''
+})
+
+const opsFilterType = ref('all')
+const opsFilterStatus = ref('all')
+const opsFilterPerson = ref('all')
+const opsFilterDate = ref('')
+const opsSearch = ref('')
+
+const calendarDays = computed(() => {
+  return [
+    { date: '2026-09-14', dayName: 'Mon', dayNum: '14' },
+    { date: '2026-09-15', dayName: 'Tue', dayNum: '15' },
+    { date: '2026-09-16', dayName: 'Wed', dayNum: '16' },
+    { date: '2026-09-17', dayName: 'Thu', dayNum: '17' },
+    { date: '2026-09-18', dayName: 'Fri', dayNum: '18' },
+    { date: '2026-09-19', dayName: 'Sat', dayNum: '19' }
+  ]
+})
+
+const calendarTasksForSelectedDay = computed(() => {
+  return opsTasks.value.filter(t => t.scheduledDate === selectedCalendarDate.value)
+})
+
+const filteredOpsTasks = computed(() => {
+  const q = (opsSearch.value || '').toLowerCase()
+  return opsTasks.value.filter(task => {
+    const matchType = opsFilterType.value === 'all' || task.type === opsFilterType.value
+    const matchStatus = opsFilterStatus.value === 'all' || task.status === opsFilterStatus.value
+    const matchSearch = !q ||
+      String(task.title || '').toLowerCase().includes(q) ||
+      String(task.id || '').toLowerCase().includes(q) ||
+      String(task.client?.name || '').toLowerCase().includes(q) ||
+      String(task.operatorName || '').toLowerCase().includes(q)
+    const matchPerson = opsFilterPerson.value === 'all' || task.operatorId === opsFilterPerson.value
+    const matchDate = !opsFilterDate.value || task.scheduledDate === opsFilterDate.value
+    return matchType && matchStatus && matchPerson && matchDate && matchSearch
+  })
+})
+
+function openCreateOperatorModal() {
+  editingOperator.value = null
+  operatorForm.value = { name: '', role: '', phone: '', email: '', city: '', password: '' }
+  showOperatorModal.value = true
+}
+
+function openEditOperatorModal(operator) {
+  editingOperator.value = operator
+  operatorForm.value = {
+    name: operator.name,
+    role: operator.role,
+    phone: operator.phone,
+    email: operator.email,
+    city: operator.city
+  }
+  showOperatorModal.value = true
+}
+
+async function submitOperatorForm() {
+  if (!operatorForm.value.name.trim() || !operatorForm.value.email.trim()) {
+    toast.error('Name and email are required.')
+    return
+  }
+  if (!operatorForm.value.phone?.trim()) {
+    toast.error('Phone is required for operator accounts.')
+    return
+  }
+  try {
+    if (editingOperator.value) {
+      await updateOpsOperator(editingOperator.value.id, {
+        ...operatorForm.value,
+        email: operatorForm.value.email.trim().toLowerCase()
+      })
+      toast.success('Operator updated.')
+    } else {
+      const result = await createOpsOperator({
+        ...operatorForm.value,
+        email: operatorForm.value.email.trim().toLowerCase()
+      })
+      const password = result.temporary_password
+      toast.success(password ? `Operator added. Temporary password: ${password}` : 'Operator added.', 8000)
+    }
+    showOperatorModal.value = false
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not save operator.'))
+  }
+}
+
+async function handleDeleteOperator(operatorId) {
+  if (!confirm(t('admin.operations.deleteOperatorConfirm'))) return
+  try {
+    await deleteOpsOperator(operatorId)
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not remove operator.'))
+  }
+}
+
+function openCreateTaskModal(opId = null) {
+  editingTask.value = null
+  taskForm.value = {
+    type: 'installation',
+    title: '',
+    operatorId: opId || (opsOperators.value[0]?.id || ''),
+    priority: 'medium',
+    scheduledDate: selectedCalendarDate.value || '2026-09-15',
+    timeSlot: '09:00 - 12:00',
+    clientName: '',
+    clientPhone: '',
+    clientEmail: '',
+    clientAddress: '',
+    clientCity: 'Casablanca',
+    adminNotes: ''
+  }
+  showTaskModal.value = true
+}
+
+function openEditTaskModal(task) {
+  editingTask.value = task
+  taskForm.value = {
+    type: task.type,
+    title: task.title,
+    operatorId: task.operatorId,
+    priority: task.priority,
+    scheduledDate: task.scheduledDate,
+    timeSlot: task.timeSlot,
+    clientName: task.client.name,
+    clientPhone: task.client.phone,
+    clientEmail: task.client.email,
+    clientAddress: task.client.address,
+    clientCity: task.client.city,
+    adminNotes: task.adminNotes
+  }
+  showTaskModal.value = true
+}
+
+async function submitTaskForm() {
+  if (!taskForm.value.title || !taskForm.value.operatorId) return
+  try {
+    if (editingTask.value) {
+      await updateOpsTask(editingTask.value.id, taskForm.value)
+    } else {
+      await createOpsTask(taskForm.value)
+    }
+    showTaskModal.value = false
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not save job.'))
+  }
+}
+
+async function handleDeleteTask(taskId) {
+  if (!confirm('Are you sure you want to delete this task assignment?')) return
+  try {
+    await deleteOpsTask(taskId)
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not delete job.'))
+  }
+}
+
+function getOpsTypeLabel(type) {
+  const map = {
+    installation: t('admin.operations.types.installation'),
+    maintenance: t('admin.operations.types.maintenance'),
+    delivery: t('admin.operations.types.delivery'),
+    study: t('admin.operations.types.study')
+  }
+  return map[type] || type
+}
+
+function opsStatusLabel(status) {
+  const map = {
+    assigned: t('admin.operations.list.assigned'),
+    in_progress: t('admin.operations.list.inProgress'),
+    on_hold: t('admin.operations.list.onHold'),
+    completed: t('admin.operations.list.completed')
+  }
+  return map[status] || status
+}
+
+function opsPriorityLabel(priority) {
+  const map = {
+    low: t('admin.operations.modal.priorityLow'),
+    medium: t('admin.operations.modal.priorityMedium'),
+    high: t('admin.operations.modal.priorityHigh'),
+    urgent: t('admin.operations.modal.priorityUrgent')
+  }
+  return map[priority] || priority
+}
+
+function operatorInitials(name) {
+  return String(name || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase()
+}
+
+function getDutyStatusLabel(status) {
+  if (status === 'onDuty') return 'On Duty'
+  if (status === 'onBreak') return 'On Break'
+  return 'Off Duty'
+}
+
+function getDutyStatusClass(status) {
+  if (status === 'onDuty') return 'duty-onduty'
+  if (status === 'onBreak') return 'duty-onbreak'
+  return 'duty-offduty'
+}
+
+const showServiceModal = ref(false)
+const editingService = ref(null)
+const serviceForm = ref({
+  title: '',
+  category: '',
+  startingPrice: '',
+  estimatedDuration: '',
+  desc: '',
+  bulletsText: '',
+  enabled: true
+})
+
+function resetServiceForm() {
+  serviceForm.value = {
+    title: '',
+    category: 'General',
+    startingPrice: '',
+    estimatedDuration: '',
+    desc: '',
+    bulletsText: '',
+    enabled: true
+  }
+}
+
+function openCreateServiceModal() {
+  editingService.value = null
+  resetServiceForm()
+  showServiceModal.value = true
+}
+
+function openEditServiceModal(srv) {
+  editingService.value = srv
+  serviceForm.value = {
+    title: srv.title || '',
+    category: srv.category || '',
+    startingPrice: srv.startingPrice || '',
+    estimatedDuration: srv.estimatedDuration || '',
+    desc: srv.desc || '',
+    bulletsText: Array.isArray(srv.bullets) ? srv.bullets.join('\n') : '',
+    enabled: srv.enabled !== false
+  }
+  showServiceModal.value = true
+}
+
+async function submitServiceForm() {
+  const payload = {
+    title: serviceForm.value.title,
+    category: serviceForm.value.category,
+    startingPrice: serviceForm.value.startingPrice,
+    estimatedDuration: serviceForm.value.estimatedDuration,
+    desc: serviceForm.value.desc,
+    enabled: serviceForm.value.enabled,
+    bullets: serviceForm.value.bulletsText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+  }
+
+  if (editingService.value) {
+    const updated = await updateService(editingService.value.id, payload)
+    if (updated) {
+      toast.success('Service updated')
+      showServiceModal.value = false
+    } else {
+      toast.error(servicesError.value || 'Update failed')
+    }
+  } else {
+    const result = await createService(payload)
+    if (result?.success) {
+      toast.success('Service created')
+      showServiceModal.value = false
+    } else {
+      toast.error(result?.error || 'Create failed')
+    }
+  }
+}
+
+async function handleToggleService(srv) {
+  const updated = await toggleServiceEnabled(srv.id)
+  if (updated) toast.success(updated.enabled ? 'Service enabled' : 'Service disabled')
+  else toast.error('Toggle failed')
+}
+
+async function handleDeleteService(srv) {
+  const okConfirm = confirm(
+    `Supprimer « ${srv.title} » ?\n\nAttention: toutes les demandes de service liées seront aussi supprimées.`
+  )
+  if (!okConfirm) return
+  const ok = await deleteService(srv.id)
+  if (ok) toast.success('Service deleted')
+  else toast.error('Delete failed')
+}
+
+async function handleAssignServiceRequest(req) {
+  const opId = assignOperatorMap.value[req.id]
+  if (!opId) return
+  const updated = await acceptAndAssignRequest(req.id, opId)
+  if (updated) toast.success('Operator assigned')
+  else toast.error('Assign failed')
+}
+
+async function handleRejectServiceRequest(req) {
+  if (!confirm(`Rejeter la demande ${req.id} ?`)) return
+  const updated = await rejectServiceRequest(req.id, 'Rejected by admin')
+  if (updated) toast.success('Request rejected')
+  else toast.error('Reject failed')
+}
+
+async function handleUpdateServicePhase(req, step) {
+  const updated = await updateRequestPhase(req.id, step)
+  if (updated) toast.success(`Phase set to ${step}`)
+  else toast.error('Phase update failed')
+}
+
+async function loadServicesTab() {
+  await reloadServices({ admin: true, withRequests: true })
+  if (!opsOperators.value.length) {
+    try {
+      await loadOperations()
+    } catch (_) {
+      /* operators optional for catalog edit */
+    }
+  }
+  for (const req of serviceRequests.value) {
+    if (req.assignedOperatorId && !assignOperatorMap.value[req.id]) {
+      assignOperatorMap.value[req.id] = req.assignedOperatorId
+    }
+  }
+}
+
+let servicesPollTimer = null
+watch(
+  () => activeTab.value,
+  (tab) => {
+    if (servicesPollTimer) {
+      clearInterval(servicesPollTimer)
+      servicesPollTimer = null
+    }
+    if (tab === 'services') {
+      servicesPollTimer = setInterval(() => {
+        reloadServices({ admin: true, withRequests: true })
+      }, 15000)
+    }
+  }
+)
+
+const pendingServiceRequestCount = computed(
+  () => serviceRequests.value.filter((r) => r.status === 'pending' || r.status === 'accepted').length
+)
+
 const tabs = computed(() => {
   locale.value
+  const ordersBadge = stats.value?.totals?.pending_rfqs || null
   return [
     { id: 'overview', label: t('admin.tabs.overview'), icon: 'overview' },
-    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: stats.value?.totals?.pending_rfqs || null },
+    { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: ordersBadge || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
     { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
     { id: 'ai-analysis', label: t('admin.tabs.aiAnalysis'), icon: 'ai' }
   ]
+})
+
+const userInitials = computed(() => {
+  const name = user.value?.name?.trim()
+  if (!name) return 'A'
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 })
 
 const kpiCards = computed(() => {
@@ -947,6 +2055,12 @@ const filteredCatalogProducts = computed(() => {
     list = list.filter(p => p.stock === 0)
   }
 
+  if (productVisibilityFilter.value === 'visible') {
+    list = list.filter(p => p.is_visible !== false)
+  } else if (productVisibilityFilter.value === 'hidden') {
+    list = list.filter(p => p.is_visible === false)
+  }
+
   return list
 })
 
@@ -960,6 +2074,10 @@ const filteredCatalogProducts = computed(() => {
 
 onMounted(async () => {
   await loadOverview()
+  await reloadServices({ admin: true, withRequests: true }).catch(() => {})
+  window.addEventListener('focus', () => {
+    if (activeTab.value === 'services') loadServicesTab()
+  })
 })
 
 //
@@ -968,8 +2086,14 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+const missionMenuOpen = ref(false)
+
 const switchTab = async (tabId) => {
+  if (tabId !== 'projects' && showProjectDrawer.value) {
+    closeProjectDrawer()
+  }
   activeTab.value = tabId
+  if (tabId !== 'operations') missionMenuOpen.value = false
   if (tabId === 'overview') await loadOverview()
   if (tabId === 'orders') await loadOrders()
   if (tabId === 'marketplace') await loadMarketplace()
@@ -1048,12 +2172,12 @@ const handleSendQuote = async () => {
   }))
 
   if (!lines.length) {
-    alert('Add at least one quote line.')
+    toast.error('Add at least one quote line.')
     return
   }
 
   if (lines.some(line => !line.quantity || line.unit_price <= 0 || (!line.id && !line.label?.trim()))) {
-    alert('Fill description, quantity and unit price for every line.')
+    toast.error('Fill description, quantity and unit price for every line.')
     return
   }
 
@@ -1066,7 +2190,7 @@ const handleSendQuote = async () => {
     await loadOrders()
     await loadOverview()
   } else {
-    alert(result.error || 'Could not send quote')
+    toast.error(result.error || 'Could not send quote')
   }
 }
 
@@ -1082,52 +2206,159 @@ const loadMarketplace = async () => {
 
 const openProductForm = (product = null) => {
   productFormError.value = ''
-  productImageFile.value = null
   editingProduct.value = product
+  activeImageIndex.value = 0
+
   if (product) {
     productForm.value = {
-      title: product.title,
-      category_id: product.category_id,
-      stock: product.stock,
+      title: product.title || '',
+      product_key: product.product_key || '',
+      category_id: product.category_id || '',
+      stock: product.stock ?? 0,
       rating: product.rating ?? 4.5,
-      description: product.description || ''
+      description: product.description || '',
+      capacity: product.unit_capacity ?? product.capacity ?? null,
+      weight_kg: product.unit_weight ?? product.weight_kg ?? null,
+      surface: product.unit_area ?? product.surface ?? null,
+      climate_info: product.climate_info || '',
+      highlights_text: objectToLines(product.highlights),
+      specs_text: objectToLines(product.specs),
+      is_visible: product.is_visible !== false,
     }
-    productImagePreview.value = resolveProductImage(product)
+
+    const gallery = product.images?.length
+      ? product.images
+      : product.image || product.image_url
+        ? [{ path: product.image, url: product.image_url || resolveProductImage(product) }]
+        : []
+
+    productImages.value = gallery.map((img) => ({
+      id: nextMediaId(),
+      path: img.path || null,
+      preview: resolveMediaUrl(img.url || img.path),
+      file: null,
+    }))
+
+    productDocuments.value = (product.documents || []).map((doc) => ({
+      id: nextMediaId(),
+      name: doc.name || '',
+      path: doc.path || null,
+      size: doc.size || '',
+      url: doc.url || null,
+      file: null,
+    }))
   } else {
-    productForm.value = { title: '', category_id: '', stock: 10, rating: 4.5, description: '' }
-    productImagePreview.value = ''
+    productForm.value = emptyProductForm()
+    productImages.value = []
+    productDocuments.value = []
   }
+
   showProductForm.value = true
 }
 
 const closeProductForm = () => {
   showProductForm.value = false
   editingProduct.value = null
-  productImageFile.value = null
-  productImagePreview.value = ''
+  productImages.value = []
+  productDocuments.value = []
+  activeImageIndex.value = 0
   productFormError.value = ''
+  showNewCategory.value = false
+  categoryFormError.value = ''
+  newCategoryForm.value = { name: '', description: '' }
+}
+
+const toggleNewCategory = () => {
+  showNewCategory.value = !showNewCategory.value
+  categoryFormError.value = ''
+  if (!showNewCategory.value) {
+    newCategoryForm.value = { name: '', description: '' }
+  }
+}
+
+const handleCreateCategory = async () => {
+  categoryFormError.value = ''
+  const name = newCategoryForm.value.name.trim()
+  if (!name) {
+    categoryFormError.value = t('admin.marketplace.newCategoryRequired')
+    return
+  }
+
+  categorySaving.value = true
+  const result = await createCategory({
+    name,
+    description: newCategoryForm.value.description.trim() || null,
+  })
+  categorySaving.value = false
+
+  if (!result.success) {
+    categoryFormError.value = result.error || t('admin.marketplace.newCategoryFailed')
+    return
+  }
+
+  adminCategories.value = [...adminCategories.value, result.category]
+    .sort((a, b) => a.name.localeCompare(b.name))
+  productForm.value.category_id = result.category.id
+  showNewCategory.value = false
+  newCategoryForm.value = { name: '', description: '' }
+}
+
+const addImageFiles = (files) => {
+  const list = Array.from(files || []).filter((file) => file.type.startsWith('image/'))
+  if (!list.length) return
+
+  list.forEach((file) => {
+    productImages.value.push({
+      id: nextMediaId(),
+      path: null,
+      preview: URL.createObjectURL(file),
+      file,
+    })
+  })
+  activeImageIndex.value = productImages.value.length - 1
 }
 
 const handleImagePick = (event) => {
-  const file = event.target.files?.[0]
-  if (!file) return
-  setProductImageFile(file)
+  addImageFiles(event.target.files)
+  event.target.value = ''
 }
 
 const handleImageDrop = (event) => {
-  const file = event.dataTransfer?.files?.[0]
-  if (!file || !file.type.startsWith('image/')) return
-  setProductImageFile(file)
+  addImageFiles(event.dataTransfer?.files)
 }
 
-const setProductImageFile = (file) => {
-  productImageFile.value = file
-  productImagePreview.value = URL.createObjectURL(file)
+const removeProductImage = (index) => {
+  productImages.value.splice(index, 1)
+  if (activeImageIndex.value >= productImages.value.length) {
+    activeImageIndex.value = Math.max(0, productImages.value.length - 1)
+  }
 }
 
-const clearProductImage = () => {
-  productImageFile.value = null
-  productImagePreview.value = editingProduct.value ? resolveProductImage(editingProduct.value) : ''
+const addDocumentRow = () => {
+  productDocuments.value.push({
+    id: nextMediaId(),
+    name: '',
+    path: null,
+    size: '',
+    url: null,
+    file: null,
+  })
+}
+
+const removeDocumentRow = (index) => {
+  productDocuments.value.splice(index, 1)
+}
+
+const handleDocumentFilePick = (event, index) => {
+  const file = event.target.files?.[0]
+  if (!file) return
+  const doc = productDocuments.value[index]
+  doc.file = file
+  doc.size = `${Math.max(1, Math.round(file.size / 1024))} KB`
+  if (!doc.name) {
+    doc.name = file.name.replace(/\.[^.]+$/, '')
+  }
+  event.target.value = ''
 }
 
 const adjustStock = async (product, delta) => {
@@ -1135,6 +2366,13 @@ const adjustStock = async (product, delta) => {
   if (next === product.stock) return
   await updateProduct(product.id, { stock: next })
   await fetchStats()
+}
+
+const toggleProductVisibility = async (product) => {
+  const nextVisible = product.is_visible === false
+  await updateProduct(product.id, {
+    is_visible: nextVisible ? '1' : '0',
+  })
 }
 
 const stockLevelClass = (stock) => {
@@ -1152,13 +2390,65 @@ const handleSaveProduct = async () => {
   productFormError.value = ''
   productSaving.value = true
 
-  const payload = { ...productForm.value }
-  let result
+  const form = productForm.value
+  const highlights = linesToObject(form.highlights_text)
+  const specs = linesToObject(form.specs_text)
 
+  const existingImages = productImages.value
+    .filter((img) => img.path && !img.file)
+    .map((img) => img.path)
+
+  const imageFiles = productImages.value
+    .filter((img) => img.file)
+    .map((img) => img.file)
+
+  const existingDocuments = productDocuments.value
+    .filter((doc) => doc.path && !doc.file)
+    .map((doc) => ({
+      name: doc.name,
+      path: doc.path,
+      size: doc.size,
+    }))
+
+  const documentUploads = productDocuments.value
+    .filter((doc) => doc.file)
+    .map((doc) => ({
+      name: doc.name,
+      file: doc.file,
+    }))
+
+  const incompleteDoc = productDocuments.value.find((doc) => !doc.name?.trim() || (!doc.file && !doc.path))
+  if (incompleteDoc) {
+    productSaving.value = false
+    productFormError.value = t('admin.marketplace.documentIncomplete')
+    return
+  }
+
+  const payload = {
+    title: form.title,
+    product_key: form.product_key || undefined,
+    category_id: form.category_id,
+    stock: form.stock,
+    rating: form.rating,
+    description: form.description || '',
+    climate_info: form.climate_info || '',
+    capacity: form.capacity,
+    weight_kg: form.weight_kg,
+    surface: form.surface,
+    highlights: highlights ? JSON.stringify(highlights) : '',
+    specs: specs ? JSON.stringify(specs) : '',
+    is_visible: form.is_visible ? '1' : '0',
+    existing_images: JSON.stringify(existingImages),
+    existing_documents: JSON.stringify(existingDocuments),
+  }
+
+  const media = { imageFiles, documentUploads }
+
+  let result
   if (editingProduct.value) {
-    result = await updateProduct(editingProduct.value.id, payload, productImageFile.value)
+    result = await updateProduct(editingProduct.value.id, payload, media)
   } else {
-    result = await createProduct(payload, productImageFile.value)
+    result = await createProduct(payload, media)
   }
 
   productSaving.value = false
@@ -1186,15 +2476,41 @@ const openProjectDrawer = async (project) => {
   editingProject.value = project
   projectForm.value = {
     location: project.location || '',
-    client_message: extractClientMessage(project.description),
     current_phase: getCurrentPhase(project),
     on_hold: project.status === 'on_hold',
     admin_notes: project.admin_notes || ''
   }
+  selectedQuoteIds.value = (project.rfq_tickets || []).map((quote) => quote.id)
+  projectLines.value = (project.lines || []).map((line) => ({ ...line }))
+  projectInstallations.value = (project.installations || []).map((row) => ({ ...row, price: row.price ?? '' }))
+  projectMaintenances.value = (project.maintenances || []).map((row) => ({ ...row, price: row.price ?? '' }))
+  availableQuotes.value = await fetchQuotes()
+  await loadCatalogForPicker()
+  replyDraft.value = ''
   showProjectDrawer.value = true
   tracesLoading.value = true
-  projectTraces.value = await fetchProjectTraces(project.id)
+  const [traces, messages] = await Promise.all([
+    fetchProjectTraces(project.id),
+    fetchProjectMessages(project.id)
+  ])
+  projectTraces.value = traces
+  projectMessages.value = messages
   tracesLoading.value = false
+}
+
+const sendProjectReply = async () => {
+  const body = replyDraft.value.trim()
+  if (!editingProject.value || !body || replySending.value) return
+  replySending.value = true
+  try {
+    const message = await postProjectMessage(editingProject.value.id, body)
+    projectMessages.value = [...projectMessages.value, message]
+    replyDraft.value = ''
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not send the reply.'))
+  } finally {
+    replySending.value = false
+  }
 }
 
 const closeProjectDrawer = () => {
@@ -1202,7 +2518,13 @@ const closeProjectDrawer = () => {
   editingProject.value = null
   projectFormError.value = ''
   projectSaveSuccess.value = ''
+  selectedQuoteIds.value = []
+  projectLines.value = []
+  projectInstallations.value = []
+  projectMaintenances.value = []
   projectTraces.value = []
+  projectMessages.value = []
+  replyDraft.value = ''
 }
 
 function appendInternalNote(text) {
@@ -1214,10 +2536,19 @@ const buildProjectPayload = () => {
   const form = projectForm.value
   return {
     location: form.location,
-    description: form.client_message?.trim() || null,
     admin_notes: form.admin_notes || null,
     completed_steps: phaseToCompletedSteps(form.current_phase),
-    on_hold: form.on_hold
+    on_hold: form.on_hold,
+    quote_ids: selectedQuoteIds.value,
+    lines: projectLines.value.map((line) => ({
+      id_product: line.id_product,
+      title: line.title,
+      quantity: Number(line.quantity) || 1,
+      unit_price: Number(line.unit_price),
+      locked: !!line.locked
+    })),
+    installations: cleanInstallations(projectInstallations.value),
+    maintenances: cleanMaintenances(projectMaintenances.value)
   }
 }
 
@@ -1231,10 +2562,16 @@ const handleSaveProject = async () => {
   projectSaving.value = false
 
   if (result) {
-    editingProject.value = result.project
+    await loadProjects()
+    const refreshed = projects.value.find((project) => project.id === editingProject.value.id)
+    const project = refreshed || result.project
+    editingProject.value = project
+    selectedQuoteIds.value = (project.rfq_tickets || []).map((quote) => quote.id)
+    projectLines.value = (project.lines || []).map((line) => ({ ...line }))
+    projectInstallations.value = (project.installations || []).map((row) => ({ ...row, price: row.price ?? '' }))
+    projectMaintenances.value = (project.maintenances || []).map((row) => ({ ...row, price: row.price ?? '' }))
     projectTraces.value = result.traces || []
     projectSaveSuccess.value = t('admin.projects.saved')
-    await loadProjects()
     await fetchStats()
   } else {
     projectFormError.value = error.value || 'Could not save follow-up.'
@@ -1242,7 +2579,47 @@ const handleSaveProject = async () => {
 }
 
 const loadProjects = async () => {
-  await fetchProjects(projectFilter.value ? { status: projectFilter.value } : {})
+  await Promise.all([
+    fetchProjects(projectFilter.value ? { status: projectFilter.value } : {}),
+    fetchUsers()
+  ])
+  availableQuotes.value = await fetchQuotes()
+}
+
+const openCreateProject = async () => {
+  createProjectForm.value = emptyCreateProject()
+  showCreateProject.value = true
+  if (!users.value.length) await fetchUsers()
+  availableQuotes.value = await fetchQuotes()
+  await loadCatalogForPicker()
+  createCatalogPickerRef.value?.resetFilters()
+}
+
+const submitCreateProject = async () => {
+  creatingProject.value = true
+  const result = await createProject({
+    name: createProjectForm.value.name.trim(),
+    id_client: Number(createProjectForm.value.id_client),
+    location: createProjectForm.value.location.trim() || null,
+    description: createProjectForm.value.description.trim() || null,
+    quote_ids: createProjectForm.value.quote_ids,
+    lines: createProjectForm.value.lines.map((line) => ({
+      id_product: line.id_product,
+      title: line.title,
+      quantity: Number(line.quantity) || 1,
+      unit_price: Number(line.unit_price),
+      locked: !!line.locked
+    })),
+    installations: cleanInstallations(createProjectForm.value.installations),
+    maintenances: cleanMaintenances(createProjectForm.value.maintenances)
+  })
+  creatingProject.value = false
+  if (result.success) {
+    showCreateProject.value = false
+    await loadProjects()
+  } else {
+    toast.error(result.error || 'Could not create project.')
+  }
 }
 
 const loadClients = async () => {
@@ -1268,19 +2645,10 @@ const handleStockChange = async (product, stock) => {
 
 <style scoped>
 .admin-page {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: #eef4f0;
   font-family: 'Outfit', sans-serif;
-}
-
-.admin-header {
-  background: #020d07;
-  color: #f0fdf4;
-  padding: 1rem 2rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid rgba(74, 222, 128, 0.15);
 }
 
 .brand-link {
@@ -1305,6 +2673,7 @@ const handleStockChange = async (product, stock) => {
   align-items: center;
   justify-content: center;
   color: #4ade80;
+  flex-shrink: 0;
 }
 
 .brand-title {
@@ -1324,10 +2693,73 @@ const handleStockChange = async (product, stock) => {
   letter-spacing: 0.5px;
 }
 
-.header-meta {
+.admin-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: 100%;
+}
+
+.admin-sidebar {
+  background: #020d07;
+  color: #f0fdf4;
+  border-right: 1px solid rgba(74, 222, 128, 0.12);
+  padding: 1.15rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 0.35rem 0.55rem 1rem;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.12);
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(74, 222, 128, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar-profile {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.7rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(74, 222, 128, 0.16);
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.profile-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .admin-name {
@@ -1336,35 +2768,20 @@ const handleStockChange = async (product, stock) => {
 }
 
 .logout-btn {
+  width: 100%;
   background: transparent;
-  border: 1px solid rgba(240, 253, 244, 0.25);
+  border: 1px solid rgba(240, 253, 244, 0.22);
   color: #f0fdf4;
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
   cursor: pointer;
   font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .logout-btn:hover {
   background: rgba(240, 253, 244, 0.08);
-}
-
-.admin-layout {
-  display: grid;
-  grid-template-columns: 240px 1fr;
-  min-height: calc(100vh - 68px);
-}
-
-.admin-sidebar {
-  background: #fff;
-  border-right: 1px solid rgba(0, 0, 0, 0.06);
-  padding: 1.5rem 1rem;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  border-color: rgba(74, 222, 128, 0.35);
 }
 
 .nav-btn {
@@ -1379,17 +2796,60 @@ const handleStockChange = async (product, stock) => {
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 600;
-  color: #374151;
+  color: rgba(240, 253, 244, 0.72);
   text-align: left;
 }
 
 .nav-btn:hover {
-  background: #f3f7f4;
+  background: rgba(74, 222, 128, 0.08);
+  color: #f0fdf4;
 }
 
 .nav-btn.active {
-  background: rgba(34, 197, 94, 0.1);
-  color: #15803d;
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+}
+
+.nav-caret {
+  margin-left: auto;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  opacity: 0.7;
+  transition: transform 0.15s ease;
+}
+
+.nav-caret.open {
+  transform: rotate(180deg);
+}
+
+.nav-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.55rem 0.85rem;
+  padding: 0.2rem 0 0.2rem 0.75rem;
+  border-left: 1px solid rgba(74, 222, 128, 0.28);
+}
+
+.nav-sub-btn {
+  border: none;
+  background: transparent;
+  text-align: left;
+  color: rgba(240, 253, 244, 0.62);
+  font-size: 0.84rem;
+  font-weight: 650;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.nav-sub-btn:hover,
+.nav-sub-btn.active {
+  color: #4ade80;
+  background: rgba(74, 222, 128, 0.1);
 }
 
 .nav-icon {
@@ -1408,11 +2868,14 @@ const handleStockChange = async (product, stock) => {
   white-space: nowrap;
 }
 
-.status-pill.project.completed { background: #dcfce7; color: #15803d; }
-.status-pill.project.on_hold { background: #fef3c7; color: #b45309; }
-.status-pill.project.premier_contact { background: #dbeafe; color: #1d4ed8; }
-.status-pill.project.data_collection { background: #ede9fe; color: #6d28d9; }
-.status-pill.project.energy_data { background: #cffafe; color: #0e7490; }
+.status-pill.project.completed,
+.status-pill.project.on_hold,
+.status-pill.project.quote_confirmed,
+.status-pill.project.order_prep,
+.status-pill.project.installation {
+  background: #f5f5f4;
+  color: #44403c;
+}
 
 .nav-badge {
   margin-left: auto;
@@ -1425,17 +2888,16 @@ const handleStockChange = async (product, stock) => {
 }
 
 .admin-main {
-  padding: 2rem;
-  overflow-x: auto;
+  min-width: 0;
+  height: 100%;
+  padding: 1.15rem 1.5rem 1.5rem;
+  overflow: auto;
 }
 
-.alert-banner {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #b91c1c;
-  padding: 0.85rem 1rem;
-  border-radius: 10px;
-  margin-bottom: 1rem;
+/* Global `section { padding: 7rem 0 }` is for marketing pages — reset in admin */
+.admin-main > .panel,
+.admin-main .drawer-section {
+  padding: 0;
 }
 
 .panel-header {
@@ -1444,6 +2906,10 @@ const handleStockChange = async (product, stock) => {
   align-items: flex-start;
   gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.operators-panel .panel-header {
+  margin-bottom: 0.85rem;
 }
 
 .panel-header h1 {
@@ -1822,18 +3288,27 @@ const handleStockChange = async (product, stock) => {
 }
 
 @media (max-width: 900px) {
+  .admin-page {
+    height: auto;
+    overflow: visible;
+  }
+
   .admin-layout {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .admin-sidebar {
+    height: auto;
+    overflow: visible;
     border-right: none;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(74, 222, 128, 0.12);
   }
 
   .sidebar-nav {
     flex-direction: row;
     overflow-x: auto;
+    flex: none;
   }
 
   .nav-btn {
@@ -1841,8 +3316,26 @@ const handleStockChange = async (product, stock) => {
     flex-shrink: 0;
   }
 
+  .sidebar-footer {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 0;
+  }
+
+  .logout-btn {
+    width: auto;
+    flex-shrink: 0;
+  }
+
   .admin-main {
+    height: auto;
+    overflow: visible;
     padding: 1rem;
+  }
+
+  .project-workspace {
+    left: 0;
+    right: 0;
   }
 
   .order-head,
@@ -2131,6 +3624,68 @@ const handleStockChange = async (product, stock) => {
   padding: 0.2rem;
 }
 
+.visibility-pill {
+  border: none;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.visibility-pill.visible {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.visibility-pill.hidden {
+  background: rgba(107, 114, 128, 0.15);
+  color: #4b5563;
+}
+
+.row-hidden {
+  opacity: 0.62;
+}
+
+.row-hidden .product-thumb-sm {
+  filter: grayscale(0.35);
+}
+
+.visibility-toggle {
+  margin-top: 0.15rem;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.toggle-row input[type='checkbox'] {
+  margin-top: 0.2rem;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #16a34a;
+}
+
+.toggle-row strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #052e16;
+}
+
+.toggle-row small {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+}
+
 .qty-btn {
   width: 28px;
   height: 28px;
@@ -2235,13 +3790,13 @@ const handleStockChange = async (product, stock) => {
   gap: 0.15rem;
   padding: 0.85rem 1rem;
   border-radius: 14px;
-  background: linear-gradient(180deg, #f8fcf9, #f3faf6);
-  border: 1px solid rgba(34, 197, 94, 0.12);
+  background: #fff;
+  border: 1px solid #e7e5e4;
 }
 
 .followup-stat strong {
   font-size: 1.35rem;
-  color: #052e16;
+  color: #1c1917;
   line-height: 1;
 }
 
@@ -2268,6 +3823,158 @@ const handleStockChange = async (product, stock) => {
   border: 1px solid #bbf7d0;
 }
 
+.wf-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.wf-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+.wf-title {
+  margin: 0 !important;
+  font-size: 1rem !important;
+  font-weight: 750 !important;
+  color: #14532d !important;
+  line-height: 1.3;
+}
+
+.wf-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: #f5f5f4;
+  overflow: hidden;
+  margin: 0.85rem 0 1rem;
+}
+
+.wf-progress-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #15803d;
+  transition: width 0.25s ease;
+}
+
+.wf-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+}
+
+.wf-step {
+  position: relative;
+  padding-bottom: 0.55rem;
+}
+
+.wf-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 0.85rem;
+  top: 1.85rem;
+  bottom: 0;
+  width: 2px;
+  background: #e7e5e4;
+}
+
+.wf-step.done:not(:last-child)::before {
+  background: #86efac;
+}
+
+.wf-step-btn {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  gap: 0.7rem;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.15rem 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.wf-dot {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 750;
+  flex-shrink: 0;
+  background: #fafaf9;
+  border: 1.5px solid #d6d3d1;
+  color: #78716c;
+  position: relative;
+  z-index: 1;
+}
+
+.wf-check {
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.wf-step.done .wf-dot {
+  background: #15803d;
+  border-color: #15803d;
+  color: #fff;
+}
+
+.wf-step.current .wf-dot {
+  background: #fff;
+  border-color: #15803d;
+  color: #15803d;
+  box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.15);
+}
+
+.wf-step-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding-top: 0.2rem;
+}
+
+.wf-step-name {
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: #44403c;
+}
+
+.wf-step.current .wf-step-name {
+  color: #14532d;
+  font-weight: 750;
+}
+
+.wf-step.done .wf-step-name {
+  color: #57534e;
+}
+
+.wf-step.muted .wf-step-name {
+  color: #a8a29e;
+  font-weight: 550;
+}
+
+.wf-step-hint {
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: #78716c;
+}
+
 .phase-picker {
   display: flex;
   flex-direction: column;
@@ -2289,14 +3996,14 @@ const handleStockChange = async (product, stock) => {
 }
 
 .phase-option:hover {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: #f8fcf9;
+  border-color: #d6d3d1;
+  background: #fafaf9;
 }
 
 .phase-option.selected {
-  border-color: #16a34a;
-  background: #f0fdf4;
-  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.25);
+  border-color: #1c1917;
+  background: #fafaf9;
+  box-shadow: none;
 }
 
 .phase-index {
@@ -2308,15 +4015,15 @@ const handleStockChange = async (product, stock) => {
   justify-content: center;
   font-size: 0.78rem;
   font-weight: 800;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   flex-shrink: 0;
 }
 
 .phase-option.selected .phase-index {
-  background: #052e16;
-  border-color: #052e16;
+  background: #1c1917;
+  border-color: #1c1917;
   color: #fff;
 }
 
@@ -2346,6 +4053,17 @@ const handleStockChange = async (product, stock) => {
   color: #6b7280;
 }
 
+.workflow-section,
+.internal-section,
+.order-recap,
+.site-section,
+.client-update-section {
+  padding: 1.35rem 1.4rem;
+  border-radius: 16px;
+  border: 1px solid #e7e5e4;
+  background: #fff;
+}
+
 .workflow-section {
   gap: 0.85rem;
 }
@@ -2358,30 +4076,46 @@ const handleStockChange = async (product, stock) => {
 }
 
 .phase-counter {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: #57534e;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   border-radius: 999px;
-  padding: 0.22rem 0.55rem;
+  padding: 0.28rem 0.55rem;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .hold-toggle {
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  margin-top: 0.75rem;
-  font-size: 0.86rem;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid #e7e5e4;
+  background: #fafaf9;
+  font-size: 0.82rem;
   font-weight: 600;
-  color: #374151;
+  color: #57534e;
+  cursor: pointer;
+}
+
+.hold-toggle.active {
+  border-color: #fcd34d;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.hold-toggle input {
+  accent-color: #d97706;
 }
 
 .followup-btn {
-  width: 100%;
+  width: auto;
+  margin-left: auto;
 }
 
 .read-only-block {
@@ -2403,19 +4137,16 @@ const handleStockChange = async (product, stock) => {
 }
 
 .order-recap {
-  padding: 1rem 1.05rem;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #fafafa 0%, #f5f7f6 100%);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fff;
 }
 
 .order-total {
   flex-shrink: 0;
   font-size: 0.92rem;
   font-weight: 800;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  color: #1c1917;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   border-radius: 999px;
   padding: 0.3rem 0.65rem;
 }
@@ -2469,16 +4200,90 @@ const handleStockChange = async (product, stock) => {
   color: #374151;
 }
 
-.site-section,
-.client-update-section {
-  padding: 1rem 1.05rem;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+.site-section {
   background: #fff;
 }
 
+.client-update-section h3 {
+  margin: 0;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  max-height: 280px;
+  overflow: auto;
+  margin-bottom: 0.85rem;
+}
+
+.thread-empty {
+  margin: 0;
+  color: #a8a29e;
+  font-size: 0.84rem;
+}
+
+.thread-item {
+  max-width: 85%;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
+}
+
+.thread-item.team {
+  margin-left: auto;
+  background: #1c1917;
+  border-color: #1c1917;
+  color: #fff;
+}
+
+.thread-item header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.72rem;
+}
+
+.thread-item header time,
+.thread-item.client header strong {
+  color: #78716c;
+  font-weight: 600;
+}
+
+.thread-item.team header strong,
+.thread-item.team header time {
+  color: #d6d3d1;
+}
+
+.thread-item p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.thread-compose {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.thread-compose textarea {
+  width: 100%;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  resize: vertical;
+}
+
+.thread-compose .primary-btn {
+  justify-self: end;
+}
+
 .site-section {
-  background: linear-gradient(180deg, #fff 0%, #f8fcf9 100%);
+  background: #fff;
 }
 
 .rg-tag,
@@ -2499,17 +4304,17 @@ const handleStockChange = async (product, stock) => {
 }
 
 .visibility-badge {
-  color: #1e3a8a;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
 }
 
 .client-message-preview {
   margin-top: 0.15rem;
   padding: 0.85rem 0.95rem;
   border-radius: 12px;
-  background: #f8fcf9;
-  border: 1px dashed rgba(34, 197, 94, 0.35);
+  background: #fafaf9;
+  border: 1px dashed #d6d3d1;
 }
 
 .preview-label {
@@ -2519,7 +4324,7 @@ const handleStockChange = async (product, stock) => {
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: #16a34a;
+  color: #78716c;
 }
 
 .client-message-preview p {
@@ -2537,10 +4342,9 @@ const handleStockChange = async (product, stock) => {
 }
 
 .internal-section {
-  padding: 1rem 1.05rem;
-  border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  background: linear-gradient(180deg, #fff 0%, #fafafa 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
 }
 
 .team-badge {
@@ -2576,14 +4380,14 @@ const handleStockChange = async (product, stock) => {
 }
 
 .note-chip:hover {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: #f8fcf9;
+  border-color: #d6d3d1;
+  background: #fafaf9;
 }
 
 .trace-panel {
-  margin-top: 1rem;
+  margin-top: 0.35rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid #e7e5e4;
 }
 
 .trace-panel-head {
@@ -2603,9 +4407,9 @@ const handleStockChange = async (product, stock) => {
 .trace-count {
   font-size: 0.68rem;
   font-weight: 800;
-  color: #15803d;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
+  color: #44403c;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
   border-radius: 999px;
   padding: 0.12rem 0.4rem;
 }
@@ -2631,7 +4435,7 @@ const handleStockChange = async (product, stock) => {
   padding: 0.75rem 0.85rem;
   border-radius: 12px;
   background: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid #e7e5e4;
 }
 
 .trace-meta {
@@ -2681,7 +4485,7 @@ const handleStockChange = async (product, stock) => {
   content: '•';
   position: absolute;
   left: 0;
-  color: #16a34a;
+  color: #a8a29e;
 }
 
 .trace-empty {
@@ -2735,6 +4539,655 @@ const handleStockChange = async (product, stock) => {
 
 .project-drawer {
   width: min(680px, 100vw);
+}
+
+.project-workspace {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 260px;
+  z-index: 200;
+  background:
+    radial-gradient(ellipse at top right, rgba(34, 197, 94, 0.06), transparent 42%),
+    #f5f5f4;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.project-workspace-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.25rem;
+  padding: 1.1rem 1.75rem 1.2rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid #e7e5e4;
+  flex-shrink: 0;
+}
+
+.pw-back {
+  border: none;
+  background: transparent;
+  color: #78716c;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.45rem;
+  cursor: pointer;
+}
+
+.pw-back:hover {
+  color: #15803d;
+}
+
+.pw-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.project-workspace-title h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+  font-weight: 800;
+  color: #052e16;
+}
+
+.pw-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
+  color: #44403c;
+}
+
+.pw-status.completed {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.pw-status.on_hold {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+}
+
+.pw-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.pw-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  background: #fafaf9;
+  border: 1px solid #e7e5e4;
+  color: #44403c;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pw-chip.muted {
+  color: #78716c;
+  font-weight: 500;
+}
+
+.pw-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.project-workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+  padding-top: 0.35rem;
+}
+
+.project-workspace-form {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-workspace-layout {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.35rem 1.75rem 1rem;
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 1.15rem;
+  align-items: start;
+}
+
+.pw-rail,
+.pw-main,
+.pw-services,
+.pw-comms {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  min-width: 0;
+}
+
+.pw-rail {
+  position: sticky;
+  top: 0;
+}
+
+.pw-services,
+.pw-comms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+
+.project-workspace .drawer-section {
+  padding: 1.25rem 1.35rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 18px;
+  background: #fff;
+  margin: 0;
+  box-shadow: 0 1px 0 rgba(28, 25, 23, 0.03);
+}
+
+.project-workspace .drawer-section h3 {
+  margin: 0 0 0.85rem;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: #1c1917;
+}
+
+.project-workspace .section-head h3 {
+  margin: 0;
+}
+
+.pw-picker-wrap {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.project-workspace .service-card:not(.service-card-simple) {
+  background: #fafaf9;
+}
+
+.create-services-section .service-card:not(.service-card-simple) {
+  background: #fafaf9;
+}
+
+.project-workspace .thread {
+  max-height: 280px;
+  overflow-y: auto;
+  margin-bottom: 0.85rem;
+  padding-right: 0.25rem;
+}
+
+.project-workspace-msg {
+  margin: 0 1.75rem;
+}
+
+.project-workspace-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.96);
+  border-top: 1px solid #e7e5e4;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1100px) {
+  .pw-services,
+  .pw-comms {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .project-workspace {
+    left: 0;
+  }
+
+  .project-workspace-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .pw-rail {
+    position: static;
+  }
+
+  .project-workspace-header {
+    flex-direction: column;
+  }
+
+  .project-workspace-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.project-drawer .drawer-section {
+  padding: 1.5rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 16px;
+  background: #fff;
+}
+
+.quote-picks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.quote-picks label {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.88rem;
+}
+
+.quote-picks small {
+  color: #78716c;
+}
+
+.line-pick {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.55fr 0.7fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.line-list {
+  list-style: none;
+  margin: 0.7rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.line-list li,
+.service-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 12px;
+  background: #fafaf9;
+}
+
+.service-card-simple {
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  background: #fff;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(28, 25, 23, 0.04);
+}
+
+.service-simple-top {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.65rem;
+}
+
+.service-price-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.service-price-field span,
+.service-details-field span {
+  display: block;
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #78716c;
+}
+
+.price-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 200px;
+  padding: 0 0.75rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.price-input-wrap:focus-within {
+  border-color: #22c55e;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.price-input-wrap input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0.65rem 0;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1c1917;
+  outline: none;
+}
+
+.price-input-wrap input::-webkit-outer-spin-button,
+.price-input-wrap input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.price-input-wrap input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.price-suffix {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #a8a29e;
+}
+
+.service-remove {
+  flex-shrink: 0;
+  margin-bottom: 0.1rem;
+}
+
+.service-details-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.service-details-field textarea {
+  width: 100%;
+  min-height: 4.5rem;
+  resize: vertical;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  padding: 0.7rem 0.8rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: #1c1917;
+  line-height: 1.45;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.service-details-field textarea::placeholder {
+  color: #a8a29e;
+}
+
+.service-details-field textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.line-list li {
+  grid-template-columns: 1.4fr 0.6fr 0.8fr auto auto;
+  align-items: center;
+}
+
+.service-card label span,
+.modal-group h4 {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-size: 0.78rem;
+  color: #57534e;
+}
+
+.modal-group .section-head,
+.drawer-section .section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.project-create-overlay {
+  padding: 1rem 1.25rem;
+}
+
+.project-create-modal {
+  width: min(920px, calc(100vw - 2.5rem));
+  max-height: min(94vh, 920px);
+}
+
+.project-create-modal .modal-header {
+  align-items: flex-start;
+}
+
+.project-create-modal .modal-kicker {
+  margin: 0 0 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #15803d;
+}
+
+.project-create-modal .modal-header h3 {
+  margin: 0;
+}
+
+.project-create-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+  overflow-y: auto;
+  padding: 1.15rem 1.35rem;
+}
+
+.create-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.create-section-head h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: #1c1917;
+}
+
+.create-section-head p {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #78716c;
+  line-height: 1.4;
+}
+
+.create-essentials-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.create-essentials-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #57534e;
+}
+
+.create-essentials-grid input,
+.create-essentials-grid select,
+.create-essentials-grid textarea {
+  width: 100%;
+  border: 1px solid rgba(5, 46, 22, 0.12);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+  color: #1c1917;
+  background: #fff;
+}
+
+.create-span-2 {
+  grid-column: 1 / -1;
+}
+
+.create-empty {
+  margin: 0;
+  padding: 0.85rem 0.95rem;
+  border-radius: 10px;
+  border: 1px dashed #d6d3d1;
+  background: #fafaf9;
+  color: #78716c;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.create-empty.muted {
+  border-style: solid;
+  border-color: #f1f5f9;
+  background: transparent;
+  padding: 0.35rem 0;
+  font-size: 0.82rem;
+}
+
+.create-quote-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.create-quote-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 999px;
+  background: #fafaf9;
+  cursor: pointer;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #292524;
+}
+
+.create-quote-chip:has(input:checked) {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #14532d;
+}
+
+.create-quote-chip input {
+  accent-color: #15803d;
+}
+
+.create-quote-chip small {
+  font-weight: 500;
+  color: #78716c;
+}
+
+.project-create-services {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.create-service-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.create-service-block h5 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #44403c;
+}
+
+.create-services-section .service-card:not(.service-card-simple) {
+  background: #fafaf9;
+}
+
+@media (max-width: 800px) {
+  .create-essentials-grid,
+  .project-create-services {
+    grid-template-columns: 1fr;
+  }
+
+  .project-create-modal {
+    width: 100%;
+    max-height: 96vh;
+  }
+}
+
+.project-create-sidebar {
+  display: none;
+}
+
+.line-pick-wide {
+  grid-template-columns: 1.2fr 1.4fr 0.55fr 0.75fr auto;
+}
+
+.line-list-wide li {
+  grid-template-columns: minmax(0, 1.6fr) 0.55fr 0.75fr auto auto;
+}
+
+@media (max-width: 720px) {
+  .line-pick-wide {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .line-list-wide li {
+    grid-template-columns: 1fr;
+  }
 }
 
 .drawer-section {
@@ -2822,6 +5275,352 @@ const handleStockChange = async (product, stock) => {
   display: flex;
   flex-direction: column;
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.12);
+}
+
+.product-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: calc(100vh - 8rem);
+}
+
+.product-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.product-editor-header h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+  font-weight: 800;
+  color: #052e16;
+  margin: 0.15rem 0 0;
+}
+
+.back-catalog-btn {
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-weight: 600;
+  font-size: 0.85rem;
+  padding: 0;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.back-catalog-btn:hover {
+  color: #16a34a;
+}
+
+.product-editor-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.product-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+.product-editor-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.product-editor-media {
+  position: sticky;
+  top: 1rem;
+}
+
+.media-card {
+  background: #f8faf9;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.media-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.media-card-header h2 {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #15803d;
+}
+
+.media-card-header span {
+  font-size: 0.75rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.upload-zone-lg {
+  min-height: 280px;
+}
+
+.upload-zone-lg .upload-preview {
+  height: 280px;
+}
+
+.image-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.image-thumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  padding: 0;
+  background: #eef4f0;
+  cursor: pointer;
+}
+
+.image-thumb.active {
+  border-color: #22c55e;
+}
+
+.image-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.add-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed rgba(34, 197, 94, 0.4);
+  color: #16a34a;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.section-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.section-head-row h2 {
+  margin: 0;
+}
+
+.small-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.docs-empty {
+  padding: 1rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px dashed rgba(0, 0, 0, 0.1);
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.document-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.document-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr auto;
+  gap: 0.75rem;
+  align-items: end;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 12px;
+  padding: 0.85rem;
+}
+
+.doc-name,
+.doc-file {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.doc-name input {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+}
+
+.doc-file-box {
+  position: relative;
+  border: 1px dashed rgba(34, 197, 94, 0.4);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  background: #f7fcf9;
+  overflow: hidden;
+}
+
+.doc-file-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #15803d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.doc-file-box input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.doc-remove {
+  margin-bottom: 0.15rem;
+}
+
+@media (max-width: 960px) {
+  .document-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.product-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.editor-section {
+  background: #f8faf9;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+}
+
+.editor-section h2 {
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #15803d;
+  margin: 0 0 0.9rem;
+}
+
+.editor-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem 1rem;
+}
+
+.editor-section-grid .span-2 {
+  grid-column: span 2;
+}
+
+.editor-section-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.editor-section-grid input,
+.editor-section-grid select,
+.editor-section-grid textarea {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+  color: #052e16;
+  background: #fff;
+}
+
+.editor-section-grid input:focus,
+.editor-section-grid select:focus,
+.editor-section-grid textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.product-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding-bottom: 0.25rem;
+}
+
+@media (max-width: 960px) {
+  .product-editor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .product-editor-media {
+    position: static;
+  }
+
+  .product-editor-header {
+    flex-direction: column;
+  }
+
+  .editor-section-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-section-grid .span-2 {
+    grid-column: span 1;
+  }
 }
 
 .drawer-header {
@@ -2941,6 +5740,79 @@ const handleStockChange = async (product, stock) => {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  max-height: min(70vh, 640px);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.drawer-row-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.linkish-btn {
+  margin-top: 0.4rem;
+  border: none;
+  background: transparent;
+  color: #15803d;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.linkish-btn:hover {
+  color: #166534;
+  text-decoration: underline;
+}
+
+.new-category-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1rem;
+  padding: 0.9rem;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px dashed rgba(34, 197, 94, 0.45);
+}
+
+.new-category-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.new-category-box input {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+}
+
+.new-category-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 960px) {
+  .new-category-box {
+    grid-template-columns: 1fr;
+  }
 }
 
 .drawer-fields label {
@@ -3000,7 +5872,8 @@ const handleStockChange = async (product, stock) => {
 }
 
 @media (max-width: 768px) {
-  .drawer-row {
+  .drawer-row,
+  .drawer-row-3 {
     grid-template-columns: 1fr;
   }
 }
@@ -3094,6 +5967,11 @@ const handleStockChange = async (product, stock) => {
   margin-top: 0.5rem;
 }
 
+.ghost-btn.small {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.82rem;
+}
+
 .confirmed-tag {
   margin-left: 0.5rem;
   font-size: 0.78rem;
@@ -3113,4 +5991,1525 @@ const handleStockChange = async (product, stock) => {
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── Operations Dispatch Section ────────────────── */
+.ops-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ops-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ops-people {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.person-chip {
+  border: 1px solid rgba(5, 46, 22, 0.12);
+  background: #fff;
+  color: #052e16;
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.person-chip.active {
+  background: #052e16;
+  color: #f0fdf4;
+  border-color: #052e16;
+}
+
+.person-chip.add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-style: dashed;
+  color: #15803d;
+}
+
+.filter-group input[type='date'] {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+}
+
+.ops-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.ops-kpi-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.kpi-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kpi-icon-wrap.green { background: #dcfce7; color: #16a34a; }
+.kpi-icon-wrap.blue { background: #e0f2fe; color: #0284c7; }
+.kpi-icon-wrap.orange { background: #ffedd5; color: #ea580c; }
+.kpi-icon-wrap.purple { background: #f3e8ff; color: #9333ea; }
+
+.kpi-num {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #052e16;
+  line-height: 1.1;
+}
+
+.kpi-lbl {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.ops-nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 0.5rem;
+}
+
+.ops-subtab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  background: transparent;
+  border: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ops-subtab-btn:hover {
+  background: rgba(22, 163, 74, 0.06);
+  color: #16a34a;
+}
+
+.ops-subtab-btn.active {
+  background: #052e16;
+  color: #4ade80;
+}
+
+.tab-badge {
+  background: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* Calendar Date Strip */
+.date-strip {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.day-chip {
+  flex: 1;
+  min-width: 80px;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  padding: 0.75rem 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.day-chip:hover {
+  border-color: #16a34a;
+}
+
+.day-chip.selected {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+}
+
+.day-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
+
+.day-num {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+.day-dot {
+  width: 6px;
+  height: 6px;
+  background: #3b82f6;
+  border-radius: 50%;
+  margin-top: 4px;
+}
+.day-chip.selected .day-dot {
+  background: #ffffff;
+}
+
+/* Schedule Matrix */
+.calendar-grid-container {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+.schedule-matrix {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.matrix-header {
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #374151;
+  padding: 0.75rem 1rem;
+}
+
+.matrix-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 1fr;
+  border-bottom: 1px solid #f3f4f6;
+  min-height: 110px;
+}
+
+.op-cell {
+  padding: 1rem;
+  border-right: 1px solid #f3f4f6;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  background: #fafafa;
+}
+
+.op-mini-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.op-mini-info strong {
+  display: block;
+  font-size: 0.88rem;
+  color: #111827;
+}
+
+.duty-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.duty-onduty { background: #22c55e; }
+.duty-onbreak { background: #f59e0b; }
+.duty-offduty { background: #9ca3af; }
+
+.slot-cell {
+  padding: 0.75rem;
+  border-right: 1px solid #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.schedule-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #3b82f6;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.schedule-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.schedule-card.installation { border-left-color: #16a34a; background: #f0fdf4; }
+.schedule-card.maintenance { border-left-color: #d97706; background: #fffbeb; }
+.schedule-card.delivery { border-left-color: #9333ea; background: #faf5ff; }
+.schedule-card.study { border-left-color: #0891b2; background: #ecfeff; }
+
+.sched-card-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.sched-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 0.25rem 0;
+}
+
+.sched-client {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.add-slot-btn {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.add-slot-btn:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+/* Agenda Sidebar */
+.day-agenda-sidebar {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.day-agenda-sidebar h3 {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #052e16;
+  margin-bottom: 0.25rem;
+}
+
+.agenda-date-label {
+  font-size: 0.82rem;
+  color: #6b7280;
+  margin-bottom: 1rem;
+}
+
+.agenda-empty {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agenda-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.agenda-card:hover { background: #f9fafb; }
+
+.agenda-card-head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.agenda-card h4 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+}
+
+.agenda-op, .agenda-time {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin: 0;
+}
+
+/* Operators Roster Grid */
+.roster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.add-op-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 220px;
+  border: 1.5px dashed rgba(22, 163, 74, 0.45);
+  background: #f8fcf9;
+  color: #15803d;
+  cursor: pointer;
+  font: inherit;
+}
+
+.add-op-card:hover {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+.op-roster-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.op-card-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.op-avatar-lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.op-header-text h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0 0 0.15rem 0;
+}
+
+.op-role {
+  display: block;
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-bottom: 0.35rem;
+}
+
+.op-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.duty-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+.duty-badge.duty-onduty { background: #dcfce7; color: #15803d; }
+.duty-badge.duty-onbreak { background: #fef3c7; color: #b45309; }
+.duty-badge.duty-offduty { background: #f3f4f6; color: #4b5563; }
+
+.op-rating {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.op-card-body {
+  border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+  padding: 0.85rem 0;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.op-detail-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+}
+.op-detail-item .lbl { color: #6b7280; }
+.op-detail-item .val { font-weight: 600; color: #1f2937; }
+
+.workload-tag {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+}
+
+.op-specialties {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.spec-chip {
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  text-transform: capitalize;
+}
+
+.op-card-footer .full {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Jobs list */
+.ops-simple-stats {
+  display: flex;
+  gap: 1.25rem;
+  margin: -0.5rem 0 1.15rem;
+  color: #6b7280;
+  font-size: 0.88rem;
+}
+
+.ops-simple-stats strong {
+  color: #052e16;
+  font-size: 1.05rem;
+  margin-right: 0.25rem;
+}
+
+.ops-simple-toolbar {
+  margin-bottom: 1rem;
+}
+
+/* Tasks Queue View */
+.queue-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.filter-group select,
+.filter-group input[type="date"] {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.ops-empty {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+}
+
+.job-grid,
+.op-manage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+.job-card,
+.op-manage-card {
+  background: #fff;
+  border: 1px solid #e7e5e4;
+  border-radius: 14px;
+  padding: 1.35rem 1.4rem;
+}
+
+.ops-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #44403c;
+  background: #f5f5f4;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
+
+.ops-quiet {
+  font-size: 0.75rem;
+  color: #78716c;
+}
+
+.job-card-top,
+.job-card-actions,
+.op-manage-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.job-card h3,
+.op-manage-card h3 {
+  margin: 0.7rem 0 0.2rem;
+  font-size: 1rem;
+  color: #0f172a;
+}
+
+.job-client,
+.op-manage-head p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.job-meta,
+.op-manage-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: #334155;
+  font-size: 0.82rem;
+}
+
+.job-card-actions,
+.op-manage-foot {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #f1f5f9;
+}
+
+.action-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.op-manage-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.op-manage-head h3 { margin: 0; }
+
+.op-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #f5f5f4;
+  color: #292524;
+  font-size: 0.78rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ops-task-title {
+  font-size: 0.88rem;
+  color: #0f172a;
+}
+
+.ops-task-sub {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.type-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+.type-badge.installation { background: #dcfce7; color: #15803d; }
+.type-badge.maintenance { background: #fef3c7; color: #b45309; }
+.type-badge.delivery { background: #f3e8ff; color: #6d28d9; }
+.type-badge.study { background: #cff4fc; color: #055160; }
+
+.prio-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.prio-badge.urgent { color: #dc2626; font-weight: 800; }
+.prio-badge.high { color: #ea580c; }
+.prio-badge.medium { color: #d97706; }
+.prio-badge.low { color: #16a34a; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 13, 7, 0.45);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.25rem;
+}
+
+.service-edit-overlay {
+  z-index: 1400;
+}
+
+.ops-modal {
+  background: #fff;
+  border-radius: 18px;
+  width: min(720px, 100%);
+  max-height: min(86vh, 820px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(2, 13, 7, 0.22);
+  overflow: hidden;
+}
+
+.ops-modal-sm {
+  width: min(520px, 100%);
+}
+
+.ops-modal .task-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem 1rem;
+  border-bottom: 1px solid rgba(5, 46, 22, 0.08);
+}
+
+.modal-kicker {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #16a34a;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #052e16;
+}
+
+.close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  background: #f8faf9;
+  color: #052e16;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.close-btn:hover {
+  background: #eef4f0;
+}
+
+.modal-body {
+  overflow-y: auto;
+  padding: 1.1rem 1.25rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal-group {
+  background: #f8faf9;
+  border: 1px solid rgba(5, 46, 22, 0.06);
+  border-radius: 14px;
+  padding: 0.9rem 0.95rem 1rem;
+}
+
+.modal-group h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #15803d;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.form-grid .span-2 {
+  grid-column: span 2;
+}
+
+.ops-modal label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.ops-modal input,
+.ops-modal select,
+.ops-modal textarea {
+  width: 100%;
+  border: 1px solid rgba(5, 46, 22, 0.12);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  font-weight: 500;
+  color: #052e16;
+}
+
+.ops-modal input:focus,
+.ops-modal select:focus,
+.ops-modal textarea:focus {
+  outline: none;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+.priority-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #374151;
+}
+
+.priority-pills {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.priority-pill {
+  border: 1px solid rgba(5, 46, 22, 0.1);
+  background: #fff;
+  color: #374151;
+  border-radius: 999px;
+  padding: 0.32rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.priority-pill.active {
+  background: #1c1917;
+  color: #fff;
+  border-color: #1c1917;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  padding: 0.9rem 1.25rem 1.1rem;
+  border-top: 1px solid rgba(5, 46, 22, 0.08);
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .form-grid,
+  .form-grid .span-2 {
+    grid-template-columns: 1fr;
+    grid-column: auto;
+  }
+
+  .priority-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Service Admin Controls & Realization Progress CSS */
+.ops-assign-hint {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  color: #166534;
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.ops-services-config-view .config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}
+
+.service-config-card {
+  background: #ffffff;
+  border: 1px solid rgba(5, 46, 22, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+}
+
+.service-config-card.disabled {
+  background: #f8fafc;
+  border-style: dashed;
+  opacity: 0.75;
+}
+
+.service-config-card .card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.cat-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #16a34a;
+  text-transform: uppercase;
+}
+
+.service-config-card h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0.2rem 0 0 0;
+}
+
+.toggle-switch-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: .3s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .3s;
+}
+
+input:checked + .slider {
+  background-color: #16a34a;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.toggle-lbl {
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.toggle-lbl.enabled { color: #16a34a; }
+.toggle-lbl.disabled { color: #b45309; }
+
+.config-desc {
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.config-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  background: #f8fafc;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.realization-summary {
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.steps-mini-list {
+  padding-left: 1.2rem;
+  margin: 0.35rem 0 0 0;
+}
+
+/* Service Requests Phase Controls */
+.assign-op-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.assign-op-box select {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.phase-badge-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 130px;
+}
+
+.phase-num {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.mini-progress-bar {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mini-fill {
+  height: 100%;
+  background: #16a34a;
+  border-radius: 999px;
+}
+
+.phase-step-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.phase-step-buttons span {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.step-btn-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.step-toggle-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-weight: 800;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.step-toggle-btn.active {
+  background: #052e16;
+  color: #4ade80;
+  border-color: #052e16;
+}
+
+/* Operator Table Profile & Service Editing */
+.op-table-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.card-footer-actions {
+  margin-top: 1rem;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 0.85rem;
+}
+
+.edit-service-btn {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.edit-service-btn:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+  color: #166534;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.15);
+}
+
+.service-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.service-card-actions .edit-service-btn,
+.service-card-actions .danger-service-btn {
+  flex: 1;
+  width: auto;
+}
+
+.danger-service-btn {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+
+.danger-service-btn:hover {
+  background: #fee2e2;
+}
+
+.service-requests-block {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.subpanel-header {
+  margin-bottom: 1rem;
+}
+
+.subpanel-header h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.subpanel-header p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.service-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.service-req-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+}
+
+.req-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.req-top h3 {
+  margin: 0.25rem 0;
+  font-size: 1rem;
+}
+
+.req-top p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.req-notes {
+  margin: 0.65rem 0;
+  color: #64748b;
+  font-size: 0.88rem;
+}
+
+.req-assign-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.phase-track-labeled {
+  margin: 0.85rem 0 0.35rem;
+}
+
+.phase-track-hint {
+  margin: 0 0 0.55rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.phase-steps-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.45rem;
+}
+
+.phase-step-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.phase-step-chip:hover {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.phase-step-chip.done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.phase-step-chip.active {
+  border-color: #16a34a;
+  background: #dcfce7;
+  box-shadow: 0 0 0 1px #16a34a inset;
+}
+
+.phase-num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-step-chip.active .phase-num,
+.phase-step-chip.done .phase-num {
+  background: #16a34a;
+  color: #fff;
+}
+
+.phase-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.phase-text strong {
+  font-size: 0.78rem;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.phase-text em {
+  font-style: normal;
+  font-size: 0.68rem;
+  color: #64748b;
+  line-height: 1.25;
+}
+
+.empty-state.compact {
+  padding: 1rem;
+}
+
+.ghost-btn.full {
+  width: 100%;
+  justify-content: center;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+  width: 100%;
+}
+
+/* Modals styled in 'Demande ce service' design */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 1.25rem;
+}
+
+.modal-card {
+  background: #ffffff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 1.75rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.modal-card.modal-lg {
+  max-width: 720px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #052e16;
+  margin: 0;
+}
+
+.modal-sub {
+  font-size: 0.88rem;
+  color: #16a34a;
+  font-weight: 700;
+  margin-top: 0.2rem;
+}
+
+.close-btn {
+  background: #f1f5f9;
+  border: none;
+  font-size: 1.4rem;
+  cursor: pointer;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.form-section-head {
+  border-left: 3px solid #16a34a;
+  padding-left: 0.65rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.form-section-head h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #052e16;
+  margin: 0;
+}
+
+.form-row {
+  display: flex;
+  gap: 1rem;
+}
+
+.form-row label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.form-row label.full {
+  flex: 100%;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea {
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: #0f172a;
+  background: #ffffff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-row input:focus,
+.form-row select:focus,
+.form-row textarea:focus {
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  outline: none;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1.25rem;
+  margin-top: 0.75rem;
+}
 </style>
+

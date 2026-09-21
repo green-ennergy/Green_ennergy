@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
@@ -12,27 +14,46 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'company' => 'required|string|max:255',
             'phone' => ['required', 'string', 'max:20', 'regex:/^[+0-9\s\-()]{8,20}$/'],
-            'email' => 'required|string|email|unique:users',
+            'email' => [
+                'required',
+                'string',
+                'email:filter',
+                'max:255',
+                'regex:/^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$/',
+                'unique:users,email',
+            ],
             'password' => ['required', 'confirmed', Password::min(8)->letters()->mixedCase()->numbers()],
         ]);
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'company' => $validated['company'],
-            'phone' => preg_replace('/\s+/', ' ', trim($validated['phone'])),
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-            'role' => 'user',
-        ]);
+        $user = DB::transaction(function () use ($validated) {
+            $user = User::create([
+                'name' => $validated['name'],
+                'company' => $validated['company'],
+                'phone' => preg_replace('/\s+/', ' ', trim($validated['phone'])),
+                'email' => $validated['email'],
+                'password' => $validated['password'],
+                'creation_date' => now(),
+            ]);
+
+            Client::create([
+                'id_user' => $user->id_user,
+            ]);
+
+            return $user;
+        });
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => $this->presentUser($user),
             'token' => $token,
             'message' => 'User registered successfully',
         ], 201);
@@ -40,8 +61,18 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $validated = $request->validate([
-            'email' => 'required|string|email',
+            'email' => [
+                'required',
+                'string',
+                'email:filter',
+                'max:255',
+                'regex:/^[^@\\s]+@[^@\\s]+\\.[^@\\s]{2,}$/',
+            ],
             'password' => 'required|string',
         ]);
 
@@ -56,7 +87,7 @@ class AuthController extends Controller
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'user' => $user,
+            'user' => $this->presentUser($user),
             'token' => $token,
             'message' => 'Login successful',
         ]);
@@ -73,7 +104,7 @@ class AuthController extends Controller
 
     public function me(Request $request)
     {
-        return response()->json($request->user());
+        return response()->json($this->presentUser($request->user()));
     }
 
     public function updateProfile(Request $request)
@@ -81,7 +112,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'company' => 'sometimes|string|max:255',
-            'phone' => ['required', 'string', 'max:20', 'regex:/^[+0-9\s\-()]{8,20}$/'],
+            'phone' => ['sometimes', 'string', 'max:20', 'regex:/^[+0-9\s\-()]{8,20}$/'],
         ]);
 
         if (isset($validated['phone'])) {
@@ -91,8 +122,15 @@ class AuthController extends Controller
         $request->user()->update($validated);
 
         return response()->json([
-            'user' => $request->user()->fresh(),
+            'user' => $this->presentUser($request->user()->fresh()),
             'message' => 'Profile updated successfully',
         ]);
+    }
+
+    private function presentUser(User $user): User
+    {
+        $user->loadMissing('client');
+
+        return $user->makeHidden(['client']);
     }
 }

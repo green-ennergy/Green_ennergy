@@ -240,7 +240,7 @@ const stepClass = (stepKey) => ({
 
   border-radius: inherit;
 
-  background: linear-gradient(90deg, #4ade80, #16a34a);
+  background: #1c1917;
 
   transition: width 0.35s ease;
 
@@ -250,7 +250,7 @@ const stepClass = (stepKey) => ({
 
 .is-hold .track-bar-fill {
 
-  background: linear-gradient(90deg, #fcd34d, #f59e0b);
+  background: #a8a29e;
 
 }
 
@@ -264,7 +264,7 @@ const stepClass = (stepKey) => ({
 
   font-weight: 800;
 
-  color: #15803d;
+  color: #44403c;
 
   min-width: 2.5rem;
 
@@ -276,7 +276,7 @@ const stepClass = (stepKey) => ({
 
 .is-hold .track-percent {
 
-  color: #b45309;
+  color: #78716c;
 
 }
 
@@ -388,11 +388,11 @@ const stepClass = (stepKey) => ({
 
 .track-step.done .track-node {
 
-  background: #ecfdf5;
+  background: #f5f5f4;
 
-  border-color: #86efac;
+  border-color: #d6d3d1;
 
-  color: #15803d;
+  color: #44403c;
 
 }
 
@@ -402,13 +402,13 @@ const stepClass = (stepKey) => ({
 
 .track-step.hold .track-node {
 
-  background: #052e16;
+  background: #1c1917;
 
-  border-color: #052e16;
+  border-color: #1c1917;
 
   color: #fff;
 
-  box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.16);
+  box-shadow: none;
 
 }
 
@@ -416,7 +416,7 @@ const stepClass = (stepKey) => ({
 
 .track-step.hold .track-node {
 
-  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.16);
+  box-shadow: none;
 
 }
 
@@ -580,7 +580,7 @@ const stepClass = (stepKey) => ({
 
 .timeline-item.done .timeline-line {
 
-  background: linear-gradient(180deg, #86efac 0%, #e5e7eb 100%);
+  background: #d6d3d1;
 
 }
 
@@ -588,11 +588,11 @@ const stepClass = (stepKey) => ({
 
 .timeline-item.done .timeline-marker {
 
-  background: #ecfdf5;
+  background: #f5f5f4;
 
-  border-color: #86efac;
+  border-color: #d6d3d1;
 
-  color: #15803d;
+  color: #44403c;
 
 }
 
@@ -630,9 +630,9 @@ const stepClass = (stepKey) => ({
 
 .timeline-item.active .timeline-body {
 
-  border-color: rgba(34, 197, 94, 0.22);
+  border-color: #e7e5e4;
 
-  background: linear-gradient(180deg, #f8fcf9 0%, #f3faf6 100%);
+  background: #fafaf9;
 
   box-shadow: 0 10px 24px rgba(5, 46, 22, 0.06);
 
@@ -642,9 +642,9 @@ const stepClass = (stepKey) => ({
 
 .timeline-item.hold .timeline-body {
 
-  border-color: #fde68a;
+  border-color: #e7e5e4;
 
-  background: #fffbeb;
+  background: #fafaf9;
 
 }
 
@@ -692,11 +692,11 @@ const stepClass = (stepKey) => ({
 
   text-transform: uppercase;
 
-  color: #166534;
+  color: #44403c;
 
-  background: #ecfdf5;
+  background: #f5f5f4;
 
-  border: 1px solid #bbf7d0;
+  border: 1px solid #e7e5e4;
 
   border-radius: 999px;
 
@@ -730,7 +730,7 @@ const stepClass = (stepKey) => ({
 
 .now-tag.hold {
 
-  background: #b45309;
+  background: #78716c;
 
 }
 
@@ -746,9 +746,9 @@ const stepClass = (stepKey) => ({
 
   letter-spacing: 0.04em;
 
-  color: #15803d;
+  color: #44403c;
 
-  background: #ecfdf5;
+  background: #f5f5f4;
 
   border-radius: 999px;
 
