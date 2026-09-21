@@ -157,6 +157,10 @@
       <polyline points="12 6 12 12 16 14" />
     </template>
 
+    <template v-else-if="name === 'messages'">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </template>
+
     <template v-else-if="name === 'map-pin'">
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
       <circle cx="12" cy="10" r="3" />

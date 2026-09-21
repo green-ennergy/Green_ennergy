@@ -3,38 +3,38 @@
     <div class="container">
       <div class="header text-center animate-fade-up">
 
-        <h2 class="section-title">Everything you need<br />for clean energy</h2>
-        <p class="section-subtitle-desc">From sourcing premium equipment to installation and lifetime maintenance — we've got you covered.</p>
+        <h2 class="section-title">{{ t('landing.servicesBlock.titleLine1') }}<br />{{ t('landing.servicesBlock.titleLine2') }}</h2>
+        <p class="section-subtitle-desc">{{ t('landing.servicesBlock.subtitle') }}</p>
       </div>
 
       <div class="services-grid">
         <div
           class="service-card"
           v-for="(s, i) in services"
-          :key="s.title"
+          :key="s.key"
           :class="[`service-card-${i}`, { 'featured-card': s.featured }, `animate-fade-up delay-${(i + 1) * 100}`]"
         >
-          <div class="service-badge" v-if="s.featured">Most Popular</div>
+          <div class="service-badge" v-if="s.featured">{{ t('landing.servicesBlock.mostPopular') }}</div>
 
           <div class="service-icon-wrap">
             <div class="service-icon" v-html="s.icon" aria-hidden="true"></div>
           </div>
 
-          <h3 class="service-title">{{ s.title }}</h3>
-          <p class="service-desc">{{ s.desc }}</p>
+          <h3 class="service-title">{{ t(`landing.servicesBlock.items.${s.key}.title`) }}</h3>
+          <p class="service-desc">{{ t(`landing.servicesBlock.items.${s.key}.desc`) }}</p>
 
           <ul class="service-bullets">
-            <li v-for="b in s.bullets" :key="b">
+            <li v-for="(b, bi) in tm(`landing.servicesBlock.items.${s.key}.bullets`)" :key="bi">
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none" aria-hidden="true">
                 <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.2"/>
                 <path d="M4.5 7l2 2 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
-              {{ b }}
+              {{ typeof b === 'string' ? b : String(b) }}
             </li>
           </ul>
 
           <router-link :to="s.route" class="service-link" :id="`service-learn-${i}`">
-            Learn more
+            {{ t('landing.servicesBlock.learnMore') }}
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
@@ -48,27 +48,25 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t, tm } = useI18n()
+
 const services = [
   {
-    title: 'Equipment Sales',
-    desc: 'Premium tier-1 solar panels, inverters, and battery storage systems from our trusted manufacturing partners.',
-    bullets: ['Tier-1 solar panels', 'Smart inverters', 'Battery storage', 'Competitive pricing'],
+    key: 'sales',
     featured: false,
     route: '/store',
     icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>`,
   },
   {
-    title: 'Installation',
-    desc: 'Professional, permitted, and inspected installations by our certified in-house engineering team. Typically completed in 1-2 days.',
-    bullets: ['Certified engineers', '1-2 day install', 'Permit handling', 'Grid connection'],
+    key: 'installation',
     featured: true,
     route: '/services/installation',
     icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>`,
   },
   {
-    title: 'Maintenance',
-    desc: 'Ongoing monitoring, cleaning, and preventative maintenance to keep your system operating at peak performance year after year.',
-    bullets: ['24/7 monitoring', 'Annual cleaning', 'Performance reports', '25yr warranty support'],
+    key: 'maintenance',
     featured: false,
     route: '/services/maintenance',
     icon: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>`,

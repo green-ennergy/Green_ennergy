@@ -22,7 +22,7 @@
                         <p>{{ isLoginMode ? t('auth.signInSubtitle') : t('auth.registerSubtitle') }}</p>
                     </header>
 
-                    <form @submit.prevent="handleSubmit" class="portal-form">
+                    <form @submit.prevent="handleSubmit" class="portal-form" novalidate>
                         <div class="form-group" v-if="!isLoginMode">
                             <label for="reg-name">{{ t('auth.fullName') }}</label>
                             <input id="reg-name" v-model="fullName" type="text" required />
@@ -43,7 +43,14 @@
 
                         <div class="form-group">
                             <label for="portal-email">{{ t('auth.email') }}</label>
-                            <input id="portal-email" v-model="email" type="email" required />
+                            <input
+                                id="portal-email"
+                                v-model="email"
+                                type="text"
+                                inputmode="email"
+                                autocomplete="email"
+                                required
+                            />
                             <span v-if="emailError" class="input-error">{{ emailError }}</span>
                         </div>
 
@@ -67,7 +74,11 @@
                             {{ alertMessage }}
                         </div>
 
-                        <button type="submit" class="submit-btn" :disabled="isLoading">
+                        <button
+                            type="submit"
+                            class="submit-btn"
+                            :disabled="isLoading || !!emailError || (email && !isValidEmail(email))"
+                        >
                             {{ isLoading ? t('auth.pleaseWait') : (isLoginMode ? t('auth.signInTitle') : t('auth.createAccount')) }}
                         </button>
                     </form>
@@ -104,6 +115,9 @@
     import {
         isStrongPassword
     } from '../utils/password'
+    import {
+        isValidEmail
+    } from '../utils/email'
     import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 
     const route = useRoute()
@@ -147,8 +161,8 @@
 
 
     watch(email, (value) => {
-        if (value && !/^[\w-.]+@([\w-]+\.)+[\w-]{2,}$/.test(value)) {
-            emailError.value = 'Invalid email format'
+        if (value && !isValidEmail(value)) {
+            emailError.value = t('auth.invalidEmail')
         } else {
             emailError.value = ''
         }
@@ -156,7 +170,7 @@
 
     watch(phone, (value) => {
         if (!isLoginMode.value && value && value.replace(/\D/g, '').length < 9) {
-            phoneError.value = 'Enter a valid phone number'
+            phoneError.value = t('auth.invalidPhone')
         } else {
             phoneError.value = ''
         }
@@ -164,6 +178,17 @@
 
     const handleSubmit = async () => {
         alertMessage.value = ''
+
+        if (!isValidEmail(email.value)) {
+            emailError.value = t('auth.invalidEmail')
+            return
+        }
+
+        if (!isLoginMode.value && phone.value && phone.value.replace(/\D/g, '').length < 9) {
+            phoneError.value = t('auth.invalidPhone')
+            return
+        }
+
         isLoading.value = true
 
         if (isLoginMode.value) {
@@ -189,7 +214,7 @@
                 fullName.value,
                 company.value,
                 phone.value,
-                email.value,
+                email.value.trim().toLowerCase(),
                 password.value
             )
             isLoading.value = false

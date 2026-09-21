@@ -15,7 +15,7 @@
             @ended="handleEnded"
           ></video>
             <!-- Play button -->
-            <button class="play-btn" aria-label="Play video" @click="openModal">
+            <button class="play-btn" :aria-label="t('landing.about.playVideo')" @click="openModal">
               <div class="play-ring" aria-hidden="true"></div>
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M8 5v14l11-7z" />
@@ -24,7 +24,7 @@
             <!-- Floating stat badge -->
             <div class="floating-badge" aria-hidden="true">
               <span class="badge-num">+500</span>
-              <span class="badge-label">Projects Done</span>
+              <span class="badge-label">{{ t('landing.about.badgeLabel') }}</span>
             </div>
           </div>
 
@@ -34,19 +34,20 @@
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
               </svg>
-              About Us
+              {{ t('landing.about.eyebrow') }}
             </span>
             <h2 class="section-title">
-              Sustainable Energy<br />for a Better Tomorrow
+              {{ t('landing.about.titleLine1') }}<br />
+              {{ t('landing.about.titleLine2') }}
             </h2>
             <p class="section-desc">
-              We are <strong>Energy Agency</strong>, specialists in the development of renewable energy projects, focusing on premium solar systems for homes and commercial facilities across the region.
+              {{ t('landing.about.p1Before') }} <strong>{{ t('landing.about.brand') }}</strong>{{ t('landing.about.p1After') }}
             </p>
             <p class="section-desc" style="margin-top: 1rem;">
-              With over a decade of expertise and 500+ successful installations, we deliver end-to-end solar solutions — from consultation and custom design through to installation and ongoing maintenance.
+              {{ t('landing.about.p2') }}
             </p>
             <router-link to="/about" class="about-cta" id="about-learn-more">
-              Learn more about us
+              {{ t('landing.about.cta') }}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                 <path d="M5 12h14M12 5l7 7-7 7"/>
               </svg>
@@ -56,10 +57,10 @@
 
         <!-- Stats row -->
         <div class="stats-grid">
-          <div class="stat-item" v-for="s in stats" :key="s.label">
+          <div class="stat-item" v-for="s in stats" :key="s.key">
             <div class="stat-icon" v-html="s.icon" aria-hidden="true"></div>
             <h3 class="stat-num">{{ s.num }}</h3>
-            <p class="stat-label">{{ s.label }}</p>
+            <p class="stat-label">{{ t(`landing.about.stats.${s.key}`) }}</p>
           </div>
         </div>
 
@@ -70,7 +71,7 @@
         <transition name="modal-fade">
           <div v-if="showModal" class="video-modal-overlay" @click.self="closeModal">
             <div class="video-modal-box">
-              <button class="modal-close-btn" aria-label="Close video" @click="closeModal">
+              <button class="modal-close-btn" :aria-label="t('landing.about.closeVideo')" @click="closeModal">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                   <path d="M18 6L6 18M6 6l12 12"/>
                 </svg>
@@ -92,7 +93,9 @@
 
   <script setup>
   import { ref, onBeforeUnmount } from 'vue'
+  import { useI18n } from 'vue-i18n'
 
+  const { t } = useI18n()
   const videoRef = ref(null)
   const showModal = ref(false)
 
@@ -124,23 +127,23 @@
 
   const stats = [
     {
+      key: 'years',
       num: '+10',
-      label: 'Years Experience',
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
     },
     {
+      key: 'projects',
       num: '+500',
-      label: 'Realised Projects',
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
     },
     {
+      key: 'satisfaction',
       num: '98%',
-      label: 'Client Satisfaction',
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`,
     },
     {
+      key: 'warranty',
       num: '25yr',
-      label: 'Panel Warranty',
       icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
     },
   ]

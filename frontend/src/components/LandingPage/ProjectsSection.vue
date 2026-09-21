@@ -8,43 +8,43 @@
             <line x1="3" y1="9" x2="21" y2="9"/>
             <line x1="9" y1="21" x2="9" y2="9"/>
           </svg>
-          Our Portfolio
+          {{ t('landing.projects.eyebrow') }}
         </span>
-        <h2 class="section-title">Recent Installations</h2>
-        <p class="section-desc">See how we're transforming energy consumption across various sectors.</p>
+        <h2 class="section-title">{{ t('landing.projects.title') }}</h2>
+        <p class="section-desc">{{ t('landing.projects.desc') }}</p>
       </div>
 
       <div class="projects-grid">
         <div 
           class="project-card" 
           v-for="(project, index) in projects" 
-          :key="project.title"
+          :key="project.id"
           :data-delay="index * 150"
         >
           <div class="project-image-wrap">
-            <img :src="project.image" :alt="project.title" class="project-image-placeholder" />
+            <img :src="project.image" :alt="t(`landing.projects.items.${project.key}.title`)" class="project-image-placeholder" />
             <div class="project-overlay">
-              <router-link :to="'/projects/' + project.id" class="view-project-btn">View Details</router-link>
+              <router-link :to="'/projects/' + project.id" class="view-project-btn">{{ t('landing.projects.viewDetails') }}</router-link>
             </div>
-            <div class="project-tag">{{ project.category }}</div>
+            <div class="project-tag">{{ t(`landing.projects.categories.${project.categoryKey}`) }}</div>
           </div>
           <div class="project-content">
-            <h3 class="project-title">{{ project.title }}</h3>
+            <h3 class="project-title">{{ t(`landing.projects.items.${project.key}.title`) }}</h3>
             <p class="project-location">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
                 <circle cx="12" cy="10" r="3"/>
               </svg>
-              {{ project.location }}
+              {{ t(`landing.projects.items.${project.key}.location`) }}
             </p>
             <div class="project-stats">
               <div class="p-stat">
                 <span class="p-val">{{ project.size }}</span>
-                <span class="p-lbl">System Size</span>
+                <span class="p-lbl">{{ t('landing.projects.systemSize') }}</span>
               </div>
               <div class="p-stat">
                 <span class="p-val">{{ project.savings }}</span>
-                <span class="p-lbl">Annual Savings</span>
+                <span class="p-lbl">{{ t('landing.projects.annualSavings') }}</span>
               </div>
             </div>
           </div>
@@ -55,30 +55,31 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
+
 const projects = [
   {
     id: 'modern-eco-home',
-    title: 'Modern Eco-Home',
-    category: 'Residential',
-    location: 'Casablanca',
+    key: 'ecoHome',
+    categoryKey: 'residential',
     size: '12 kWp',
     savings: '18,000 MAD',
     image: '/project_residential_1779051357105.png'
   },
   {
     id: 'tech-campus-hq',
-    title: 'Tech Campus HQ',
-    category: 'Commercial',
-    location: 'Rabat',
+    key: 'campus',
+    categoryKey: 'commercial',
     size: '150 kWp',
     savings: '240,000 MAD',
     image: '/project_commercial_1779051372230.png'
   },
   {
     id: 'logistics-facility',
-    title: 'Logistics Facility',
-    category: 'Industrial',
-    location: 'Marrakech',
+    key: 'logistics',
+    categoryKey: 'industrial',
     size: '500 kWp',
     savings: '850,000 MAD',
     image: '/project_industrial_1779051388968.png'

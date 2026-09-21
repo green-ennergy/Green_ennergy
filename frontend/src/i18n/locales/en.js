@@ -28,6 +28,7 @@ export default {
   nav: {
     store: 'Store',
     services: 'Services',
+    partners: 'Partners',
     admin: 'Admin space',
     operator: 'Operator space',
     dashboard: 'Client space',
@@ -37,7 +38,9 @@ export default {
     portal: 'Portal',
     consultation: 'Get Free Consultation',
     toggleMenu: 'Toggle menu',
-    homeAria: 'Energy Agency home'
+    homeAria: 'Energy Agency home',
+    mainAria: 'Main navigation',
+    mobileAria: 'Mobile navigation'
   },
   auth: {
     backToSite: '← Back to site',
@@ -58,6 +61,8 @@ export default {
     show: 'Show',
     hide: 'Hide',
     passwordHint: 'At least 8 characters with uppercase, lowercase, and a number.',
+    invalidEmail: "Enter a valid email (e.g. name{'@'}company.com).",
+    invalidPhone: 'Enter a valid phone number.',
     pleaseWait: 'Please wait...',
     createAccount: 'Create account',
     noAccount: "Don't have an account?",
@@ -72,10 +77,25 @@ export default {
     savePhone: 'Save phone'
   },
   dashboard: {
+    console: 'Client space',
+    storeLink: 'Browse store',
     tabs: {
       rfq: 'Quote requests',
+      services: 'Services',
       followup: 'Follow-up',
       messages: 'Messages'
+    },
+    services: {
+      title: 'Service requests',
+      subtitle: 'Track installation, maintenance and other service realizations.',
+      browse: 'Browse services →',
+      loading: 'Loading your service requests...',
+      emptyTitle: 'No service requests yet',
+      emptyDesc: 'Request a service from the catalog to see progress here.',
+      phase: 'Realization phase',
+      currentStep: 'Current step',
+      operator: 'Assigned operator',
+      historyTitle: 'Activity log'
     },
     rfq: {
       title: 'Quote requests',
@@ -211,6 +231,7 @@ export default {
     operations: {
       title: 'Jobs',
       subtitle: 'Operators, a date, and the jobs for that day.',
+      assignHint: 'Assign job = create a field mission for one operator (installation, maintenance, delivery, or study). Pick the operator and schedule, then save — they see it in their Tasks hub.',
       assignTaskBtn: 'Assign job',
       addOperatorBtn: 'Add operator',
       operatorsTitle: 'Operators',
@@ -230,6 +251,8 @@ export default {
         phone: 'Phone',
         email: 'Email',
         city: 'City',
+        password: 'Temporary password',
+        passwordHint: 'Leave empty to auto-generate',
         save: 'Add operator'
       },
       list: {
@@ -512,6 +535,9 @@ export default {
       tagline: 'Solar & renewable solutions — Morocco',
       title: 'Quote / Devis',
       client: 'Client',
+      name: 'Name',
+      email: 'Email',
+      phone: 'Phone',
       grandTotal: 'Grand total',
       status: 'Status:',
       clientConfirmed: 'Client confirmation:',
@@ -641,10 +667,20 @@ export default {
     },
     tabs: {
       tasks: 'Tasks Hub',
+      services: 'Service realization',
       agenda: "Today's Agenda",
       archive: 'Completed Archive',
       tasksTitle: 'Assigned Field Tasks',
       tasksSub: 'Installation, maintenance, delivery, and energy feasibility studies dispatched by Admin.'
+    },
+    services: {
+      title: 'Assigned service requests',
+      subtitle: 'Advance realization steps (1–5) for jobs assigned to you by admin.',
+      empty: 'No service requests assigned to you yet.',
+      currentStep: 'Current step',
+      setProgress: 'Set realization progress:',
+      clientNotes: 'Client notes',
+      noNotes: 'None provided'
     },
     types: {
       all: 'All Tasks',
@@ -731,11 +767,18 @@ export default {
     heroTitle: 'Professional Solar & Renewable Services',
     heroSubtitle: 'From turnkey installation and maintenance to free electricity audits and express equipment delivery.',
     ourServices: 'Our Service Offerings',
+    activeCount: 'active services',
+    emptyTitle: 'No services available',
+    emptyDesc: 'Check back soon — our catalog is being updated.',
     requestService: 'Request Service',
     viewDetails: 'View Details & Sizing',
     disabledNotice: 'This service is currently undergoing capacity upgrades and is temporarily paused.',
     requestModalTitle: 'Submit Service Request',
     requestModalSubtitle: 'Fill in your site details and our engineering team will review and assign an operator within 2 hours.',
+    requestSubmitted: 'Service request submitted',
+    requestFailed: 'Could not submit request. Please try again.',
+    notFound: 'Service not found',
+    clientsOnly: 'Only client accounts can request services.',
     form: {
       fullName: 'Full Name / Business',
       email: 'Email Address',
@@ -751,6 +794,209 @@ export default {
       currentPhase: 'Current Realization Phase',
       phaseStep: 'Step {step} of 5',
       historyTitle: 'Realization Activity Log'
+    }
+  },
+  landing: {
+    hero: {
+      titleLine1: 'Power your future',
+      titleLine2Before: 'with',
+      titleAccent: 'solar energy',
+      subtitle: 'Save money and reduce your carbon footprint with smart, premium renewable solutions.',
+      ctaConsultation: 'Get Free Consultation',
+      ctaStore: 'Explore Store',
+      alreadyAccount: 'Already have an account?',
+      scrollDown: 'Scroll down',
+      features: {
+        noHiddenFees: 'No hidden fees',
+        certifiedInstall: 'Certified installation',
+        reliable: '100% reliable',
+        warranty: '25-year warranty'
+      }
+    },
+    cta: {
+      titleLine1: 'Ready to switch',
+      titleAccent: 'solar',
+      titleLine2Before: 'to',
+      titleLine2After: '?',
+      description: 'Join hundreds of customers already reducing their electricity bills with clean, premium renewable energy from Energy Agency.',
+      ctaConsultation: 'Get Free Consultation',
+      ctaStore: 'Explore Store',
+      note: 'No commitment required · Free site survey · Financing available',
+      statsAria: 'Key statistics',
+      statNums: {
+        installations: '+500',
+        satisfaction: '98%',
+        hiddenFees: '$0',
+        warranty: '25yr'
+      },
+      stats: {
+        installations: 'Installations',
+        satisfaction: 'Satisfaction',
+        hiddenFees: 'Hidden Fees',
+        warranty: 'Warranty'
+      }
+    },
+    footer: {
+      brandName: 'ENERGY AGENCY',
+      brandDesc: 'Premium renewable energy solutions built for homes and businesses. Transitioning the world to clean power.',
+      company: 'Company',
+      services: 'Services',
+      aboutUs: 'About Us',
+      marketplace: 'Marketplace',
+      allServices: 'All Services',
+      careers: 'Careers',
+      solarInstallation: 'Solar Installation',
+      batteryStorage: 'Battery Storage',
+      systemMonitoring: 'System Monitoring',
+      maintenance: 'Maintenance',
+      stayUpdated: 'Stay Updated',
+      newsletterDesc: 'Subscribe to our newsletter for the latest solar news and exclusive offers.',
+      emailPlaceholder: 'Enter your email',
+      email: "contact{'@'}energy.inc",
+      phone: '+212 690 000 000',
+      social: {
+        twitter: 'Twitter',
+        linkedin: 'LinkedIn',
+        instagram: 'Instagram'
+      },
+      copyright: '© 2026 Energy Agency. All rights reserved.',
+      privacy: 'Privacy Policy',
+      terms: 'Terms of Service',
+      newsletterSuccess: 'Thanks! You are subscribed.',
+      newsletterError: 'Could not subscribe. Please try again.',
+      newsletterInvalid: 'Enter a valid email address.'
+    },
+    whySolar: {
+      eyebrow: 'Why solar?',
+      title: 'Why Choose Solar Energy?',
+      desc: 'Experience the multiple benefits of upgrading to renewable energy solutions designed for your future.',
+      items: {
+        bills: { title: 'Lower Energy Bills', desc: 'Dramatically reduce or even eliminate your monthly electricity costs by generating your own power from the sun.' },
+        independence: { title: 'Energy Independence', desc: 'Protect yourself against rising utility rates and grid outages with smart battery storage solutions.' },
+        eco: { title: 'Eco-Friendly', desc: 'Significantly reduce your carbon footprint and contribute to a cleaner, sustainable planet for future generations.' }
+      }
+    },
+    about: {
+      eyebrow: 'About Us',
+      titleLine1: 'Sustainable Energy',
+      titleLine2: 'for a Better Tomorrow',
+      p1Before: 'We are',
+      brand: 'Energy Agency',
+      p1After: ', specialists in the development of renewable energy projects, focusing on premium solar systems for homes and commercial facilities across the region.',
+      p2: 'With over a decade of expertise and 500+ successful installations, we deliver end-to-end solar solutions — from consultation and custom design through to installation and ongoing maintenance.',
+      cta: 'Learn more about us',
+      badgeLabel: 'Projects Done',
+      playVideo: 'Play video',
+      closeVideo: 'Close video',
+      stats: {
+        years: 'Years Experience',
+        projects: 'Realised Projects',
+        satisfaction: 'Client Satisfaction',
+        warranty: 'Panel Warranty'
+      }
+    },
+    howItWorks: {
+      eyebrow: 'Our Process',
+      title: 'How It Works',
+      desc: 'Transitioning to solar is seamless. Here is our proven 4-step process.',
+      steps: {
+        consultation: { title: 'Consultation', desc: 'We analyze your energy usage and determine the optimal system size and configuration for your needs.' },
+        design: { title: 'Custom Design', desc: 'Our engineers craft a personalized solar layout tailored specifically for your property and energy goals.' },
+        installation: { title: 'Installation', desc: 'Our certified team installs your premium equipment safely and efficiently — typically in just 1-2 days.' },
+        activation: { title: 'Activation', desc: 'We handle all inspections and grid connections. Flip the switch and start saving from day one.' }
+      }
+    },
+    partners: {
+      title: 'Trusted Equipment Partners',
+      sub: 'We work only with tier-1 manufacturers to guarantee quality and longevity.',
+      logosAria: 'Partner logos',
+      cta: 'Learn More About Our Partners'
+    },
+    servicesBlock: {
+      titleLine1: 'Everything you need',
+      titleLine2: 'for clean energy',
+      subtitle: "From sourcing premium equipment to installation and lifetime maintenance — we've got you covered.",
+      mostPopular: 'Most Popular',
+      learnMore: 'Learn more',
+      items: {
+        sales: {
+          title: 'Equipment Sales',
+          desc: 'Premium tier-1 solar panels, inverters, and battery storage systems from our trusted manufacturing partners.',
+          bullets: ['Tier-1 solar panels', 'Smart inverters', 'Battery storage', 'Competitive pricing']
+        },
+        installation: {
+          title: 'Installation',
+          desc: 'Professional, permitted, and inspected installations by our certified in-house engineering team. Typically completed in 1-2 days.',
+          bullets: ['Certified engineers', '1-2 day install', 'Permit handling', 'Grid connection']
+        },
+        maintenance: {
+          title: 'Maintenance',
+          desc: 'Ongoing monitoring, cleaning, and preventative maintenance to keep your system operating at peak performance year after year.',
+          bullets: ['24/7 monitoring', 'Annual cleaning', 'Performance reports', '25yr warranty support']
+        }
+      }
+    },
+    projects: {
+      eyebrow: 'Our Portfolio',
+      title: 'Recent Installations',
+      desc: "See how we're transforming energy consumption across various sectors.",
+      viewDetails: 'View Details',
+      systemSize: 'System Size',
+      annualSavings: 'Annual Savings',
+      categories: { residential: 'Residential', commercial: 'Commercial', industrial: 'Industrial' },
+      items: {
+        ecoHome: { title: 'Modern Eco-Home', location: 'Casablanca' },
+        campus: { title: 'Tech Campus HQ', location: 'Rabat' },
+        logistics: { title: 'Logistics Facility', location: 'Marrakech' }
+      }
+    },
+    testimonials: {
+      eyebrow: 'Reviews',
+      title: 'What Our Customers Say',
+      desc: 'Join hundreds of happy families who made the switch to clean, affordable energy.',
+      ratingBanner: 'average rating from',
+      verified: 'verified customers',
+      items: {
+        fatima: {
+          quote: 'The entire process was so smooth. Our energy bill went from 2,000 MAD/month to almost zero. The installation team was professional and fast — done in a single day!',
+          role: 'Homeowner, Casablanca'
+        },
+        youssef: {
+          quote: 'Energy Agency exceeded our expectations. The custom design fits perfectly on our roof, and the monitoring app makes tracking our production incredibly easy.',
+          role: 'Business Owner, Tangier'
+        },
+        amira: {
+          quote: 'From the first consultation to activation, everything was handled with incredible professionalism. I highly recommend Energy Agency to anyone considering solar.',
+          role: 'Property Owner, Marrakech'
+        }
+      }
+    },
+    faq: {
+      eyebrow: 'Common Questions',
+      title: 'Frequently Asked Questions',
+      desc: 'Everything you need to know about switching to solar.',
+      items: [
+        {
+          q: 'How much does a solar panel system cost?',
+          a: 'The cost varies based on your energy needs and roof size. However, with available tax credits and local incentives, most homeowners see a return on investment within 5-7 years, with immediate reduction in monthly utility bills.'
+        },
+        {
+          q: 'How long does the installation take?',
+          a: 'While the initial consultation, design, and permitting process can take a few weeks, the actual physical installation of the panels usually only takes 1-2 days with minimal disruption to your home.'
+        },
+        {
+          q: 'What happens when it rains or snows?',
+          a: 'Solar panels still generate electricity on cloudy or rainy days, though at a reduced rate. Rain actually helps keep your panels clean. Snow will melt quickly due to the dark color and angle of the panels, and battery systems can provide backup power during severe weather.'
+        },
+        {
+          q: 'How long do solar panels last?',
+          a: 'Our premium tier-1 solar panels are built to last. They come with a 25-year manufacturer warranty, but typically continue generating power for 30-40 years with only a slight decrease in efficiency over time.'
+        },
+        {
+          q: 'Will solar panels damage my roof?',
+          a: 'No. Our certified installers use specialized flashing and mounting hardware that protects your roof. In fact, panels can actually protect the portion of the roof they cover from weather damage and UV light.'
+        }
+      ]
     }
   }
 }

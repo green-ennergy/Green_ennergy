@@ -6,59 +6,57 @@
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
           </svg>
-          Reviews
+          {{ t('landing.testimonials.eyebrow') }}
         </span>
-        <h2 class="section-title">What Our Customers Say</h2>
-        <p class="section-desc">Join hundreds of happy families who made the switch to clean, affordable energy.</p>
+        <h2 class="section-title">{{ t('landing.testimonials.title') }}</h2>
+        <p class="section-desc">{{ t('landing.testimonials.desc') }}</p>
       </div>
 
-      <!-- Overall rating banner -->
       <div class="rating-banner animate-fade-up delay-100">
         <div class="rating-stars">
           <svg v-for="i in 5" :key="i" width="20" height="20" viewBox="0 0 24 24" fill="#22c55e" aria-hidden="true">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
         </div>
-        <p class="rating-label"><strong>4.9/5</strong> average rating from <strong>200+</strong> verified customers</p>
+        <p class="rating-label"><strong>4.9/5</strong> {{ t('landing.testimonials.ratingBanner') }} <strong>200+</strong> {{ t('landing.testimonials.verified') }}</p>
       </div>
 
       <div class="testimonials-grid">
         <div
           class="testimonial-card"
-          v-for="(t, i) in testimonials"
-          :key="t.name"
+          v-for="(item, i) in testimonials"
+          :key="item.key"
           :class="`animate-fade-up delay-${(i + 1) * 100}`"
         >
-          <!-- Quote icon -->
           <div class="quote-icon" aria-hidden="true">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
               <path d="M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H6a1 1 0 0 1 0-2h1a2 2 0 0 0 2-2v-1a1 1 0 0 1 1-1zm9 0h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4h-1a1 1 0 0 1 0-2h1a2 2 0 0 0 2-2v-1a1 1 0 0 1 1-1z"/>
             </svg>
           </div>
 
-          <div class="stars" :aria-label="`${t.rating} out of 5 stars`">
+          <div class="stars" :aria-label="`${item.rating} / 5`">
             <svg
               v-for="i in 5"
               :key="i"
               width="16"
               height="16"
               viewBox="0 0 24 24"
-              :fill="i <= t.rating ? '#22c55e' : 'rgba(0,0,0,0.1)'"
+              :fill="i <= item.rating ? '#22c55e' : 'rgba(0,0,0,0.1)'"
               aria-hidden="true"
             >
               <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
             </svg>
           </div>
 
-          <p class="testimonial-text">{{ t.quote }}</p>
+          <p class="testimonial-text">{{ t(`landing.testimonials.items.${item.key}.quote`) }}</p>
 
           <div class="customer-info">
-            <div class="avatar" :style="{ background: t.avatarColor }">{{ t.initials }}</div>
+            <div class="avatar" :style="{ background: item.avatarColor }">{{ item.initials }}</div>
             <div class="customer-details">
-              <h4 class="customer-name">{{ t.name }}</h4>
-              <p class="customer-role">{{ t.role }}</p>
+              <h4 class="customer-name">{{ item.name }}</h4>
+              <p class="customer-role">{{ t(`landing.testimonials.items.${item.key}.role`) }}</p>
             </div>
-            <div class="savings-badge" v-if="t.savings">{{ t.savings }}</div>
+            <div class="savings-badge" v-if="item.savings">{{ item.savings }}</div>
           </div>
         </div>
       </div>
@@ -67,34 +65,33 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const testimonials = [
   {
-    quote: 'The entire process was so smooth. Our energy bill went from 2,000 MAD/month to almost zero. The installation team was professional and fast — done in a single day!',
+    key: 'fatima',
     name: 'Fatima Zahra',
-    role: 'Homeowner, Casablanca',
     initials: 'FZ',
     rating: 4,
     avatarColor: 'linear-gradient(135deg, #4ade80, #16a34a)',
   },
   {
-    quote: 'Energy Agency exceeded our expectations. The custom design fits perfectly on our roof, and the monitoring app makes tracking our production incredibly easy.',
+    key: 'youssef',
     name: 'Youssef Alaoui',
-    role: 'Business Owner, Tangier',
     initials: 'YA',
     rating: 4.5,
     avatarColor: 'linear-gradient(135deg, #22c55e, #0a6629)',
   },
   {
-    quote: 'From the first consultation to activation, everything was handled with incredible professionalism. I highly recommend Energy Agency to anyone considering solar.',
+    key: 'amira',
     name: 'Amira Benali',
-    role: 'Property Owner, Marrakech',
     initials: 'AB',
     rating: 5,
     avatarColor: 'linear-gradient(135deg, #86efac, #15803d)',
   },
 ]
-
 </script>
 
 <style scoped>

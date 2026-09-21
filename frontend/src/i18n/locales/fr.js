@@ -28,6 +28,7 @@ export default {
   nav: {
     store: 'Boutique',
     services: 'Services',
+    partners: 'Partenaires',
     admin: 'Espace admin',
     operator: 'Espace opérateur',
     dashboard: 'Espace client',
@@ -37,7 +38,9 @@ export default {
     portal: 'Portail',
     consultation: 'Consultation gratuite',
     toggleMenu: 'Menu',
-    homeAria: 'Accueil Energy Agency'
+    homeAria: 'Accueil Energy Agency',
+    mainAria: 'Navigation principale',
+    mobileAria: 'Navigation mobile'
   },
   auth: {
     backToSite: '← Retour au site',
@@ -58,6 +61,8 @@ export default {
     show: 'Afficher',
     hide: 'Masquer',
     passwordHint: 'Au moins 8 caractères avec majuscule, minuscule et un chiffre.',
+    invalidEmail: "Entrez un email valide (ex. nom{'@'}entreprise.com).",
+    invalidPhone: 'Entrez un numéro de téléphone valide.',
     pleaseWait: 'Veuillez patienter...',
     createAccount: 'Créer un compte',
     noAccount: 'Pas encore de compte ?',
@@ -72,10 +77,25 @@ export default {
     savePhone: 'Enregistrer'
   },
   dashboard: {
+    console: 'Espace client',
+    storeLink: 'Voir la boutique',
     tabs: {
       rfq: 'Demandes de devis',
+      services: 'Services',
       followup: 'Suivi',
       messages: 'Messages'
+    },
+    services: {
+      title: 'Demandes de services',
+      subtitle: 'Suivez l’avancement de vos installations, maintenances et autres services.',
+      browse: 'Voir les services →',
+      loading: 'Chargement de vos demandes…',
+      emptyTitle: 'Aucune demande de service',
+      emptyDesc: 'Demandez un service depuis le catalogue pour suivre sa réalisation ici.',
+      phase: 'Phase de réalisation',
+      currentStep: 'Étape actuelle',
+      operator: 'Opérateur assigné',
+      historyTitle: 'Journal d’activité'
     },
     rfq: {
       title: 'Demandes de devis',
@@ -212,6 +232,7 @@ export default {
     operations: {
       title: 'Missions',
       subtitle: 'Les opérateurs, une date, et les missions du jour.',
+      assignHint: 'Assigner = créer une mission terrain pour un opérateur (installation, maintenance, livraison ou étude). Choisissez l’opérateur et le créneau, puis enregistrez.',
       assignTaskBtn: 'Assigner',
       addOperatorBtn: 'Ajouter un opérateur',
       operatorsTitle: 'Opérateurs',
@@ -231,6 +252,8 @@ export default {
         phone: 'Téléphone',
         email: 'Email',
         city: 'Ville',
+        password: 'Mot de passe temporaire',
+        passwordHint: 'Laisser vide pour génération auto',
         save: 'Ajouter'
       },
       list: {
@@ -513,6 +536,9 @@ export default {
       tagline: 'Solutions solaires et renouvelables — Maroc',
       title: 'Devis / Quote',
       client: 'Client',
+      name: 'Nom',
+      email: 'Email',
+      phone: 'Téléphone',
       grandTotal: 'Total général',
       status: 'Statut :',
       clientConfirmed: 'Confirmation client :',
@@ -642,10 +668,20 @@ export default {
     },
     tabs: {
       tasks: 'Missions',
+      services: 'Réalisation services',
       agenda: "Planning du jour",
       archive: 'Archives terminées',
       tasksTitle: 'Missions Terrain Assignées',
       tasksSub: 'Installation, maintenance, livraison et études de consommation électrique confiées par l’Admin.'
+    },
+    services: {
+      title: 'Demandes de services assignées',
+      subtitle: 'Faites avancer les étapes de réalisation (1–5) pour les missions que l’admin vous a confiées.',
+      empty: 'Aucune demande de service ne vous est assignée.',
+      currentStep: 'Étape actuelle',
+      setProgress: 'Définir la progression :',
+      clientNotes: 'Notes client',
+      noNotes: 'Aucune'
     },
     types: {
       all: 'Toutes les missions',
@@ -732,11 +768,18 @@ export default {
     heroTitle: 'Services Solaires & Énergies Renouvelables',
     heroSubtitle: 'De l’installation clé en main et la maintenance aux audits d’électricité gratuits et livraisons express.',
     ourServices: 'Nos Offres de Services',
+    activeCount: 'services actifs',
+    emptyTitle: 'Aucun service disponible',
+    emptyDesc: 'Revenez bientôt — le catalogue est en cours de mise à jour.',
     requestService: 'Demander ce service',
     viewDetails: 'Voir détails & dimensionnement',
     disabledNotice: 'Ce service fait actuellement l’objet d’une mise à niveau de capacité et est temporairement suspendu.',
     requestModalTitle: 'Soumettre une Demande de Service',
     requestModalSubtitle: 'Renseignez les coordonnées de votre site et notre équipe technique traitera votre demande sous 2 heures.',
+    requestSubmitted: 'Demande de service envoyée',
+    requestFailed: 'Impossible d’envoyer la demande. Réessayez.',
+    notFound: 'Service introuvable',
+    clientsOnly: 'Seuls les comptes clients peuvent demander un service.',
     form: {
       fullName: 'Nom Complet / Raison Sociale',
       email: 'Adresse Email',
@@ -752,6 +795,209 @@ export default {
       currentPhase: 'Phase Actuelle de Réalisation',
       phaseStep: 'Étape {step} sur 5',
       historyTitle: 'Journal d’Activité de la Mission'
+    }
+  },
+  landing: {
+    hero: {
+      titleLine1: 'Alimentez votre avenir',
+      titleLine2Before: 'avec l’',
+      titleAccent: 'énergie solaire',
+      subtitle: 'Économisez et réduisez votre empreinte carbone grâce à des solutions renouvelables intelligentes et premium.',
+      ctaConsultation: 'Consultation gratuite',
+      ctaStore: 'Explorer la boutique',
+      alreadyAccount: 'Vous avez déjà un compte ?',
+      scrollDown: 'Défiler vers le bas',
+      features: {
+        noHiddenFees: 'Sans frais cachés',
+        certifiedInstall: 'Installation certifiée',
+        reliable: '100 % fiable',
+        warranty: 'Garantie 25 ans'
+      }
+    },
+    cta: {
+      titleLine1: 'Prêt à passer',
+      titleAccent: 'solaire',
+      titleLine2Before: 'au',
+      titleLine2After: ' ?',
+      description: 'Rejoignez des centaines de clients qui réduisent déjà leur facture d’électricité avec l’énergie propre d’Energy Agency.',
+      ctaConsultation: 'Consultation gratuite',
+      ctaStore: 'Explorer la boutique',
+      note: 'Sans engagement · Étude de site gratuite · Financement disponible',
+      statsAria: 'Statistiques clés',
+      statNums: {
+        installations: '+500',
+        satisfaction: '98%',
+        hiddenFees: '0 €',
+        warranty: '25 ans'
+      },
+      stats: {
+        installations: 'Installations',
+        satisfaction: 'Satisfaction',
+        hiddenFees: 'Frais cachés',
+        warranty: 'Garantie'
+      }
+    },
+    footer: {
+      brandName: 'ENERGY AGENCY',
+      brandDesc: 'Solutions d’énergie renouvelable premium pour particuliers et entreprises. Accélérer la transition vers une énergie propre.',
+      company: 'Entreprise',
+      services: 'Services',
+      aboutUs: 'À propos',
+      marketplace: 'Boutique',
+      allServices: 'Tous les services',
+      careers: 'Carrières',
+      solarInstallation: 'Installation solaire',
+      batteryStorage: 'Stockage batterie',
+      systemMonitoring: 'Suivi de système',
+      maintenance: 'Maintenance',
+      stayUpdated: 'Restez informé',
+      newsletterDesc: 'Inscrivez-vous à notre newsletter pour les actualités solaires et offres exclusives.',
+      emailPlaceholder: 'Votre adresse e-mail',
+      email: "contact{'@'}energy.inc",
+      phone: '+212 690 000 000',
+      social: {
+        twitter: 'Twitter',
+        linkedin: 'LinkedIn',
+        instagram: 'Instagram'
+      },
+      copyright: '© 2026 Energy Agency. Tous droits réservés.',
+      privacy: 'Politique de confidentialité',
+      terms: 'Conditions d’utilisation',
+      newsletterSuccess: 'Merci ! Vous êtes inscrit.',
+      newsletterError: 'Impossible de s’inscrire. Réessayez.',
+      newsletterInvalid: 'Entrez une adresse e-mail valide.'
+    },
+    whySolar: {
+      eyebrow: 'Pourquoi le solaire ?',
+      title: 'Pourquoi choisir l’énergie solaire ?',
+      desc: 'Découvrez les nombreux avantages d’une transition vers des solutions renouvelables conçues pour votre avenir.',
+      items: {
+        bills: { title: 'Factures réduites', desc: 'Réduisez fortement, voire éliminez, vos coûts d’électricité mensuels en produisant votre propre énergie solaire.' },
+        independence: { title: 'Indépendance énergétique', desc: 'Protégez-vous contre la hausse des tarifs et les coupures grâce à des solutions de stockage intelligentes.' },
+        eco: { title: 'Écologique', desc: 'Réduisez significativement votre empreinte carbone et contribuez à une planète plus propre pour les générations futures.' }
+      }
+    },
+    about: {
+      eyebrow: 'À propos',
+      titleLine1: 'Une énergie durable',
+      titleLine2: 'pour un meilleur demain',
+      p1Before: 'Nous sommes',
+      brand: 'Energy Agency',
+      p1After: ', spécialistes du développement de projets d’énergie renouvelable, avec des systèmes solaires premium pour particuliers et entreprises dans la région.',
+      p2: 'Avec plus de dix ans d’expertise et plus de 500 installations réussies, nous livrons des solutions solaires de bout en bout — de la consultation et la conception sur mesure jusqu’à l’installation et la maintenance.',
+      cta: 'En savoir plus sur nous',
+      badgeLabel: 'Projets réalisés',
+      playVideo: 'Lire la vidéo',
+      closeVideo: 'Fermer la vidéo',
+      stats: {
+        years: 'Ans d’expérience',
+        projects: 'Projets réalisés',
+        satisfaction: 'Satisfaction client',
+        warranty: 'Garantie panneaux'
+      }
+    },
+    howItWorks: {
+      eyebrow: 'Notre processus',
+      title: 'Comment ça marche',
+      desc: 'Passer au solaire est simple. Voici notre processus éprouvé en 4 étapes.',
+      steps: {
+        consultation: { title: 'Consultation', desc: 'Nous analysons votre consommation et déterminons la taille et la configuration optimales pour vos besoins.' },
+        design: { title: 'Conception sur mesure', desc: 'Nos ingénieurs créent un plan solaire personnalisé adapté à votre propriété et à vos objectifs énergétiques.' },
+        installation: { title: 'Installation', desc: 'Notre équipe certifiée installe votre équipement premium en toute sécurité — généralement en 1 à 2 jours.' },
+        activation: { title: 'Activation', desc: 'Nous gérons inspections et raccordement réseau. Activez et commencez à économiser dès le premier jour.' }
+      }
+    },
+    partners: {
+      title: 'Partenaires équipements de confiance',
+      sub: 'Nous travaillons uniquement avec des fabricants tier-1 pour garantir qualité et longévité.',
+      logosAria: 'Logos partenaires',
+      cta: 'En savoir plus sur nos partenaires'
+    },
+    servicesBlock: {
+      titleLine1: 'Tout ce qu’il faut',
+      titleLine2: 'pour une énergie propre',
+      subtitle: 'De l’approvisionnement en équipements premium à l’installation et à la maintenance — nous nous occupons de tout.',
+      mostPopular: 'Le plus populaire',
+      learnMore: 'En savoir plus',
+      items: {
+        sales: {
+          title: 'Vente d’équipements',
+          desc: 'Panneaux solaires tier-1, onduleurs et stockage batterie premium auprès de nos partenaires fabricants.',
+          bullets: ['Panneaux solaires tier-1', 'Onduleurs intelligents', 'Stockage batterie', 'Prix compétitifs']
+        },
+        installation: {
+          title: 'Installation',
+          desc: 'Installations professionnelles, autorisées et inspectées par notre équipe d’ingénieurs certifiés. Généralement en 1 à 2 jours.',
+          bullets: ['Ingénieurs certifiés', 'Pose en 1-2 jours', 'Gestion des permis', 'Raccordement réseau']
+        },
+        maintenance: {
+          title: 'Maintenance',
+          desc: 'Suivi, nettoyage et maintenance préventive pour garder votre système au maximum de performance année après année.',
+          bullets: ['Supervision 24/7', 'Nettoyage annuel', 'Rapports de performance', 'Support garantie 25 ans']
+        }
+      }
+    },
+    projects: {
+      eyebrow: 'Notre portfolio',
+      title: 'Installations récentes',
+      desc: 'Découvrez comment nous transformons la consommation énergétique dans différents secteurs.',
+      viewDetails: 'Voir les détails',
+      systemSize: 'Taille système',
+      annualSavings: 'Économies annuelles',
+      categories: { residential: 'Résidentiel', commercial: 'Commercial', industrial: 'Industriel' },
+      items: {
+        ecoHome: { title: 'Maison éco moderne', location: 'Casablanca' },
+        campus: { title: 'Campus tech HQ', location: 'Rabat' },
+        logistics: { title: 'Site logistique', location: 'Marrakech' }
+      }
+    },
+    testimonials: {
+      eyebrow: 'Avis',
+      title: 'Ce que disent nos clients',
+      desc: 'Rejoignez des centaines de familles qui ont choisi une énergie propre et abordable.',
+      ratingBanner: 'note moyenne sur',
+      verified: 'clients vérifiés',
+      items: {
+        fatima: {
+          quote: 'Tout le processus a été fluide. Notre facture est passée de 2 000 MAD/mois à presque zéro. L’équipe d’installation était pro et rapide — terminé en une journée !',
+          role: 'Propriétaire, Casablanca'
+        },
+        youssef: {
+          quote: 'Energy Agency a dépassé nos attentes. Le design sur mesure s’adapte parfaitement à notre toit, et l’appli de suivi rend le suivi de production très simple.',
+          role: 'Chef d’entreprise, Tanger'
+        },
+        amira: {
+          quote: 'De la première consultation à l’activation, tout a été géré avec un professionnalisme remarquable. Je recommande vivement Energy Agency.',
+          role: 'Propriétaire, Marrakech'
+        }
+      }
+    },
+    faq: {
+      eyebrow: 'Questions fréquentes',
+      title: 'Foire aux questions',
+      desc: 'Tout ce qu’il faut savoir pour passer au solaire.',
+      items: [
+        {
+          q: 'Combien coûte un système de panneaux solaires ?',
+          a: 'Le coût dépend de vos besoins énergétiques et de la taille du toit. Avec les aides et crédits d’impôt disponibles, la plupart des foyers rentabilisent l’investissement en 5 à 7 ans, avec une baisse immédiate des factures.'
+        },
+        {
+          q: 'Combien de temps dure l’installation ?',
+          a: 'La consultation, la conception et les autorisations peuvent prendre quelques semaines, mais l’installation physique des panneaux dure généralement 1 à 2 jours, avec peu de perturbation.'
+        },
+        {
+          q: 'Que se passe-t-il sous la pluie ou la neige ?',
+          a: 'Les panneaux produisent encore par temps nuageux ou pluvieux, à un rythme réduit. La pluie aide à les nettoyer. La neige fond vite grâce à la couleur sombre et à l’angle, et les batteries peuvent fournir une alimentation de secours.'
+        },
+        {
+          q: 'Quelle est la durée de vie des panneaux solaires ?',
+          a: 'Nos panneaux premium tier-1 sont conçus pour durer. Ils ont une garantie fabricant de 25 ans et produisent généralement encore pendant 30 à 40 ans avec une légère baisse d’efficacité.'
+        },
+        {
+          q: 'Les panneaux endommagent-ils mon toit ?',
+          a: 'Non. Nos installateurs certifiés utilisent un matériel de fixation spécialisé qui protège votre toiture. Les panneaux peuvent même protéger la zone couverte des intempéries et des UV.'
+        }
+      ]
     }
   }
 }

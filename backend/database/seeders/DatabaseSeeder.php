@@ -15,6 +15,8 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\Project;
 use App\Models\QuoteRequest;
+use App\Models\Service;
+use App\Models\ServiceRequest;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -257,5 +259,39 @@ class DatabaseSeeder extends Seeder
             'analyzed_at' => now(),
             'id_product' => $inverter->id_product,
         ]);
+
+        $this->call(ServiceSeeder::class);
+
+        $installService = Service::where('slug', 'installation')->first();
+        if ($installService) {
+            ServiceRequest::create([
+                'number' => 'SRV-2026-DEMO',
+                'id_service' => $installService->id_service,
+                'id_client' => $client->id_client,
+                'id_operator' => $operator->id_operator,
+                'client_name' => $clientUser->name,
+                'client_email' => $clientUser->email,
+                'client_phone' => $clientUser->phone,
+                'city' => 'Casablanca',
+                'address' => 'Casa Industrie Rooftop',
+                'notes' => 'Demo service request for walkthrough.',
+                'preferred_date' => now()->addDays(5)->toDateString(),
+                'status' => 'accepted',
+                'current_phase' => 3,
+                'history' => [
+                    [
+                        'date' => now()->subDays(2)->format('Y-m-d H:i'),
+                        'actor' => 'Client',
+                        'text' => 'Service request created and sent to dispatch.',
+                    ],
+                    [
+                        'date' => now()->subDay()->format('Y-m-d H:i'),
+                        'actor' => 'Admin',
+                        'text' => 'Request accepted and assigned to Youssef Operator.',
+                    ],
+                ],
+                'creation_date' => now()->subDays(2),
+            ]);
+        }
     }
 }

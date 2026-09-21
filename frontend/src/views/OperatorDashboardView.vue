@@ -196,13 +196,13 @@
       <section v-else-if="currentTab === 'services'" class="panel">
         <header class="panel-header">
           <div>
-            <h1>Assigned Service Realization Requests</h1>
-            <p>Update realization progress phases (Step 1 to 5) for active client service installations and audits.</p>
+            <h1>{{ t('operator.services.title') }}</h1>
+            <p>{{ t('operator.services.subtitle') }}</p>
           </div>
         </header>
 
         <div v-if="operatorServiceRequests.length === 0" class="empty-state">
-          <p>No active service requests assigned.</p>
+          <p>{{ t('operator.services.empty') }}</p>
         </div>
 
         <div v-else class="services-op-list">
@@ -215,27 +215,42 @@
               </div>
 
               <div class="phase-current-badge">
-                Realization Phase: <strong>Step {{ req.currentPhase }} / 5</strong>
+                {{ t('operator.services.currentStep') }}:
+                <strong>{{ getPhaseLabel(req) }}</strong>
+                <span class="phase-frac">({{ req.currentPhase }}/5)</span>
               </div>
             </div>
 
-            <!-- Realization Progress Step buttons -->
+            <p class="phase-current-desc">{{ getPhaseDesc(req) }}</p>
+
             <div class="phase-update-box">
-              <span>Advance Realization Progress Step:</span>
-              <div class="phase-buttons">
+              <span>{{ t('operator.services.setProgress') }}</span>
+              <div class="phase-buttons labeled">
                 <button
-                  v-for="st in 5"
-                  :key="st"
-                  :class="['phase-btn', { active: req.currentPhase === st }]"
-                  @click="updateRequestPhase(req.id, st, `Operator (${user?.name || 'Field'})`, `Updated on-site realization step to ${st}`)"
+                  v-for="step in getRequestSteps(req)"
+                  :key="step.step"
+                  type="button"
+                  :class="[
+                    'phase-step-chip',
+                    {
+                      active: req.currentPhase === step.step,
+                      done: req.currentPhase > step.step
+                    }
+                  ]"
+                  :title="step.desc"
+                  @click="handleOperatorPhaseUpdate(req, step)"
                 >
-                  Step {{ st }}
+                  <span class="phase-num">{{ step.step }}</span>
+                  <span class="phase-text">
+                    <strong>{{ step.title }}</strong>
+                    <em>{{ step.desc }}</em>
+                  </span>
                 </button>
               </div>
             </div>
 
             <div class="req-notes">
-              <strong>Client Notes:</strong> {{ req.notes || 'None provided' }}
+              <strong>{{ t('operator.services.clientNotes') }}:</strong> {{ req.notes || t('operator.services.noNotes') }}
             </div>
           </div>
         </div>
@@ -301,24 +316,28 @@ import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useOperator } from '../composables/useOperator'
 import { useServices } from '../composables/useServices'
+import { useToast } from '../composables/useToast'
 import OperatorIcon from '../components/operatorDashboard/OperatorIcon.vue'
-
-const {
-  serviceRequests,
-  updateRequestPhase
-} = useServices()
-
-const operatorServiceRequests = computed(() => {
-  return serviceRequests.value
-})
 import OperatorKpiGrid from '../components/operatorDashboard/OperatorKpiGrid.vue'
 import TaskFilterBar from '../components/operatorDashboard/TaskFilterBar.vue'
 import TaskCard from '../components/operatorDashboard/TaskCard.vue'
 import TaskDetailDrawer from '../components/operatorDashboard/TaskDetailDrawer.vue'
 import IncidentReportModal from '../components/operatorDashboard/IncidentReportModal.vue'
 
+const {
+  serviceRequests,
+  updateRequestPhase,
+  fetchServiceRequests,
+  getRequestSteps,
+  getPhaseLabel,
+  getPhaseDesc
+} = useServices()
+
+const operatorServiceRequests = computed(() => serviceRequests.value)
+
 const router = useRouter()
 const { t } = useI18n()
+const toast = useToast()
 const { user, logoutUser } = useAuth()
 
 const {
@@ -349,7 +368,7 @@ const incidentTask = ref(null)
 
 const mainTabs = computed(() => [
   { id: 'tasks', label: t('operator.tabs.tasks') || 'Tasks Hub', icon: 'bolt', badge: stats.value.assigned + stats.value.inProgress },
-  { id: 'services', label: 'Service Realization', icon: 'refresh', badge: operatorServiceRequests.value.length },
+  { id: 'services', label: t('operator.tabs.services') || 'Service Realization', icon: 'refresh', badge: operatorServiceRequests.value.length },
   { id: 'agenda', label: t('operator.tabs.agenda') || "Today's Agenda", icon: 'calendar', badge: stats.value.todayPending || null },
   { id: 'archive', label: t('operator.tabs.archive') || 'Completed Archive', icon: 'check-circle' }
 ])
@@ -442,8 +461,15 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
+async function handleOperatorPhaseUpdate(req, step) {
+  const updated = await updateRequestPhase(req.id, step.step, `Updated to: ${step.title}`)
+  if (updated) toast.success(`Phase: ${step.title}`)
+  else toast.error('Phase update failed')
+}
+
 onMounted(() => {
   loadMissions().catch(() => {})
+  fetchServiceRequests().catch(() => {})
 })
 </script>
 
@@ -1039,6 +1065,83 @@ onMounted(() => {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.phase-buttons.labeled {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  width: 100%;
+}
+
+.phase-current-desc {
+  margin: 0.35rem 0 0.75rem;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.phase-frac {
+  font-weight: 600;
+  opacity: 0.7;
+  margin-left: 0.25rem;
+}
+
+.phase-step-chip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+}
+
+.phase-step-chip.done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.phase-step-chip.active {
+  border-color: #16a34a;
+  background: #dcfce7;
+}
+
+.phase-num {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phase-step-chip.active .phase-num,
+.phase-step-chip.done .phase-num {
+  background: #16a34a;
+  color: #fff;
+}
+
+.phase-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.phase-text strong {
+  font-size: 0.8rem;
+  color: #0f172a;
+}
+
+.phase-text em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #64748b;
 }
 
 .phase-btn {

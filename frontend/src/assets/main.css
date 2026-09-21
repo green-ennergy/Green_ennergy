@@ -83,14 +83,21 @@ body.locale-ar,
 }
 
 .app-rtl .dashboard-layout,
-.app-rtl .admin-layout {
+.app-rtl .admin-layout,
+.app-rtl .client-layout {
   direction: rtl;
 }
 
 .app-rtl .sidebar,
-.app-rtl .admin-sidebar {
+.app-rtl .admin-sidebar,
+.app-rtl .client-sidebar {
   border-left: none;
   border-right: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.app-rtl .project-workspace {
+  left: 0;
+  right: 260px;
 }
 
 .app-rtl .panel-header,

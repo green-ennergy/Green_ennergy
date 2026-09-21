@@ -1,211 +1,311 @@
 <template>
-  <div class="client-dashboard">
-    <header class="bar">
-      <div class="bar-left">
-        <router-link to="/" class="brand">Energy Agency</router-link>
-        <span class="user-chip">{{ user?.name || user?.email }}</span>
-      </div>
-      <div class="bar-right">
-        <router-link to="/store" class="ghost link">{{ t('dashboard.rfq.goStore') }}</router-link>
-        <button type="button" class="ghost" @click="logout">{{ t('common.signOut') }}</button>
-      </div>
-    </header>
-
-    <main>
-      <nav class="tabs" role="tablist">
-        <button
-          v-for="tab in tabs"
-          :key="tab.id"
-          type="button"
-          role="tab"
-          class="tab"
-          :class="{ active: activeTab === tab.id }"
-          :aria-selected="activeTab === tab.id"
-          @click="activeTab = tab.id"
-        >
-          {{ tab.label }}
-          <span v-if="tab.count != null" class="tab-count">{{ tab.count }}</span>
-        </button>
-      </nav>
-
-      <p v-if="pageError" class="error banner">{{ pageError }}</p>
-
-      <!-- RFQ tab -->
-      <section v-if="activeTab === 'rfq'" class="panel-block">
-        <header class="section-head">
-          <div>
-            <h1>{{ t('dashboard.rfq.title') }}</h1>
-            <p>{{ t('dashboard.rfq.subtitle') }}</p>
-          </div>
-          <router-link to="/store" class="primary-btn">{{ t('dashboard.rfq.newQuote') }}</router-link>
-        </header>
-
-        <p v-if="rfqLoading" class="muted">{{ t('dashboard.rfq.loading') }}</p>
-
-        <div v-else-if="!rfqTickets.length" class="empty-card">
-          <h2>{{ t('dashboard.rfq.emptyTitle') }}</h2>
-          <p>{{ t('dashboard.rfq.emptyDesc') }}</p>
-          <router-link to="/store" class="primary-btn">{{ t('dashboard.rfq.goStore') }}</router-link>
+  <div class="client-page">
+    <div class="client-layout">
+      <aside class="client-sidebar">
+        <div class="sidebar-brand">
+          <router-link to="/" class="brand-link">
+            <div class="brand-icon"><AdminIcon name="bolt" :size="18" /></div>
+            <div>
+              <span class="brand-title">ENERGY AGENCY</span>
+              <span class="brand-sub">{{ t('dashboard.console') }}</span>
+            </div>
+          </router-link>
         </div>
 
-        <div v-else class="rfq-list">
-          <article v-for="rfq in rfqTickets" :key="rfq.id" class="rfq-card">
-            <div class="rfq-top">
-              <div>
-                <span class="ticket">{{ rfq.ticket_number }}</span>
-                <h3>{{ rfq.company_name || user?.company || '—' }}</h3>
-                <small>{{ formatDate(rfq.created_at) }}</small>
-              </div>
-              <span class="status-pill" :class="rfq.status">{{ rfqStatusLabel(rfq.status) }}</span>
+        <nav class="sidebar-nav" aria-label="Client navigation">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            type="button"
+            class="nav-btn"
+            :class="{ active: activeTab === tab.id }"
+            @click="activeTab = tab.id"
+          >
+            <span class="nav-icon"><AdminIcon :name="tab.icon" :size="18" /></span>
+            <span>{{ tab.label }}</span>
+            <span v-if="tab.count" class="nav-badge">{{ tab.count }}</span>
+          </button>
+
+          <router-link to="/store" class="nav-btn nav-link">
+            <span class="nav-icon"><AdminIcon name="marketplace" :size="18" /></span>
+            <span>{{ t('dashboard.storeLink') }}</span>
+          </router-link>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="sidebar-profile">
+            <div class="profile-avatar" aria-hidden="true">{{ userInitials }}</div>
+            <div class="profile-meta">
+              <span class="user-name">{{ user?.name || 'Client' }}</span>
+              <span class="user-role">{{ user?.email || t('dashboard.console') }}</span>
             </div>
-
-            <ul class="line-list">
-              <li v-for="item in rfq.items" :key="`${rfq.id}-${item.id}`">
-                <span>{{ rfqItemLabel(item) }}</span>
-                <span>× {{ item.quantity }}</span>
-                <span>{{ item.unit_price != null ? formatMoney(item.unit_price) : '—' }}</span>
-              </li>
-            </ul>
-
-            <div class="rfq-foot">
-              <strong v-if="rfq.quoted_total != null">
-                {{ t('dashboard.rfq.quoteTotal') }}: {{ formatMoney(rfqQuoteTotal(rfq)) }}
-              </strong>
-              <span v-else class="muted">—</span>
-
-              <span v-if="rfq.client_confirmed" class="confirmed">
-                {{ t('dashboard.rfq.followupOpened') }}
-              </span>
-              <button
-                v-else-if="canConfirm(rfq)"
-                type="button"
-                class="primary-btn small"
-                :disabled="confirmingId === rfq.id"
-                @click="handleConfirm(rfq)"
-              >
-                {{ confirmingId === rfq.id ? t('common.loading') : t('dashboard.rfq.confirmFollowup') }}
-              </button>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <!-- Follow-up tab -->
-      <section v-else-if="activeTab === 'followup'" class="panel-block">
-        <header class="section-head">
-          <div>
-            <h1>{{ t('dashboard.followup.title') }}</h1>
-            <p>{{ t('dashboard.followup.subtitle') }}</p>
           </div>
-        </header>
-
-        <div v-if="!projects.length" class="empty-card">
-          <h2>{{ t('dashboard.followup.emptyTitle') }}</h2>
-          <p>{{ t('dashboard.followup.emptyDesc') }}</p>
-          <button type="button" class="primary-btn" @click="activeTab = 'rfq'">
-            {{ t('dashboard.followup.viewQuotes') }}
+          <button type="button" class="logout-btn" @click="logout">
+            {{ t('common.signOut') }}
           </button>
         </div>
+      </aside>
 
-        <div v-else class="followup-list">
-          <article v-for="project in projects" :key="project.id" class="followup-card">
-            <div class="followup-top">
-              <div>
-                <h3>{{ project.name }}</h3>
-                <p class="muted">{{ project.location || '—' }}</p>
-              </div>
-              <span class="status-pill">{{ getStepShortLabel(getCurrentPhase(project)) }}</span>
+      <main class="client-main">
+        <p v-if="pageError" class="error banner">{{ pageError }}</p>
+
+        <!-- RFQ tab -->
+        <section v-if="activeTab === 'rfq'" class="panel">
+          <header class="panel-header">
+            <div>
+              <h1>{{ t('dashboard.rfq.title') }}</h1>
+              <p>{{ t('dashboard.rfq.subtitle') }}</p>
             </div>
+            <router-link to="/store" class="primary-btn">{{ t('dashboard.rfq.newQuote') }}</router-link>
+          </header>
 
-            <div class="phase-track">
-              <div
-                v-for="step in workflowSteps"
-                :key="step.key"
-                class="phase-node"
-                :class="{
-                  done: isStepDone(project, step.key),
-                  current: getCurrentPhase(project) === step.key
-                }"
-              >
-                <span class="dot" />
-                <span class="label">{{ step.label }}</span>
-              </div>
-            </div>
+          <p v-if="rfqLoading" class="muted">{{ t('dashboard.rfq.loading') }}</p>
 
-            <p class="hint">{{ getStepMeta(getCurrentPhase(project))?.clientHint }}</p>
-
-            <button type="button" class="ghost small" @click="openMessagesFor(project)">
-              {{ t('dashboard.tabs.messages') }}
-            </button>
-          </article>
-        </div>
-      </section>
-
-      <!-- Messages tab -->
-      <section v-else class="panel-block">
-        <header class="section-head">
-          <div>
-            <h1>{{ t('dashboard.messages.title') }}</h1>
-            <p>{{ t('dashboard.messages.subtitle') }}</p>
+          <div v-else-if="!rfqTickets.length" class="empty-card">
+            <h2>{{ t('dashboard.rfq.emptyTitle') }}</h2>
+            <p>{{ t('dashboard.rfq.emptyDesc') }}</p>
+            <router-link to="/store" class="primary-btn">{{ t('dashboard.rfq.goStore') }}</router-link>
           </div>
-        </header>
 
-        <div v-if="!projects.length" class="empty-card">
-          <h2>{{ t('dashboard.followup.emptyTitle') }}</h2>
-          <p>{{ t('dashboard.messages.empty') }}</p>
-          <router-link to="/store" class="primary-btn">{{ t('dashboard.rfq.goStore') }}</router-link>
-        </div>
+          <div v-else class="card-list">
+            <article v-for="rfq in rfqTickets" :key="rfq.id" class="data-card">
+              <div class="card-top">
+                <div>
+                  <span class="ticket">{{ rfq.ticket_number }}</span>
+                  <h3>{{ rfq.company_name || user?.company || '—' }}</h3>
+                  <small>{{ formatDate(rfq.created_at) }}</small>
+                </div>
+                <span class="status-pill" :class="rfq.status">{{ rfqStatusLabel(rfq.status) }}</span>
+              </div>
 
-        <div v-else class="layout">
-          <aside>
-            <button
-              v-for="project in projects"
-              :key="project.id"
-              type="button"
-              class="project-pick"
-              :class="{ active: selectedId === project.id }"
-              @click="openProject(project)"
-            >
-              <strong>{{ project.name }}</strong>
-              <span>{{ project.location || '—' }}</span>
-            </button>
-          </aside>
+              <ul class="line-list">
+                <li v-for="item in rfq.items" :key="`${rfq.id}-${item.id}`">
+                  <span>{{ rfqItemLabel(item) }}</span>
+                  <span>× {{ item.quantity }}</span>
+                  <span>{{ item.unit_price != null ? formatMoney(item.unit_price) : '—' }}</span>
+                </li>
+              </ul>
 
-          <div v-if="selectedId" class="panel">
-            <div class="thread">
-              <p v-if="!messages.length" class="muted">{{ t('dashboard.messages.empty') }}</p>
-              <article
-                v-for="message in messages"
-                :key="message.id"
-                class="thread-item"
-                :class="message.author"
-              >
-                <header>
-                  <strong>
-                    {{
-                      message.author === 'client'
-                        ? (message.user?.name || t('admin.drawer.clientLabel'))
-                        : t('admin.drawer.teamLabel')
-                    }}
-                  </strong>
-                </header>
-                <p>{{ message.body }}</p>
-              </article>
+              <div class="card-foot">
+                <strong v-if="rfq.quoted_total != null">
+                  {{ t('dashboard.rfq.quoteTotal') }}: {{ formatMoney(rfqQuoteTotal(rfq)) }}
+                </strong>
+                <span v-else class="muted">—</span>
+
+                <span v-if="rfq.client_confirmed" class="confirmed">
+                  {{ t('dashboard.rfq.followupOpened') }}
+                </span>
+                <button
+                  v-else-if="canConfirm(rfq)"
+                  type="button"
+                  class="primary-btn small"
+                  :disabled="confirmingId === rfq.id"
+                  @click="handleConfirm(rfq)"
+                >
+                  {{ confirmingId === rfq.id ? t('common.loading') : t('dashboard.rfq.confirmFollowup') }}
+                </button>
+                <button
+                  v-if="canDownloadPdf(rfq)"
+                  type="button"
+                  class="ghost small"
+                  :disabled="pdfDownloadingId === rfq.id"
+                  @click="downloadPdf(rfq)"
+                >
+                  {{ pdfDownloadingId === rfq.id ? t('common.generatingPdf') : t('common.downloadPdf') }}
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- Follow-up tab -->
+        <section v-else-if="activeTab === 'followup'" class="panel">
+          <header class="panel-header">
+            <div>
+              <h1>{{ t('dashboard.followup.title') }}</h1>
+              <p>{{ t('dashboard.followup.subtitle') }}</p>
             </div>
-            <form class="compose" @submit.prevent="send">
-              <textarea
-                v-model="draft"
-                rows="3"
-                :placeholder="t('dashboard.messages.placeholder')"
-              />
-              <button type="submit" :disabled="sending || !draft.trim()">
-                {{ sending ? t('dashboard.messages.sending') : t('dashboard.messages.send') }}
+          </header>
+
+          <div v-if="!projects.length" class="empty-card">
+            <h2>{{ t('dashboard.followup.emptyTitle') }}</h2>
+            <p>{{ t('dashboard.followup.emptyDesc') }}</p>
+            <button type="button" class="primary-btn" @click="activeTab = 'rfq'">
+              {{ t('dashboard.followup.viewQuotes') }}
+            </button>
+          </div>
+
+          <div v-else class="card-list">
+            <article v-for="project in projects" :key="project.id" class="data-card">
+              <div class="card-top">
+                <div>
+                  <h3>{{ project.name }}</h3>
+                  <p class="muted">{{ project.location || '—' }}</p>
+                </div>
+                <span class="status-pill">{{ getStepShortLabel(getCurrentPhase(project)) }}</span>
+              </div>
+
+              <div class="phase-track">
+                <div
+                  v-for="step in workflowSteps"
+                  :key="step.key"
+                  class="phase-node"
+                  :class="{
+                    done: isStepDone(project, step.key),
+                    current: getCurrentPhase(project) === step.key
+                  }"
+                >
+                  <span class="dot" />
+                  <span class="label">{{ step.label }}</span>
+                </div>
+              </div>
+
+              <p class="hint">{{ getStepMeta(getCurrentPhase(project))?.clientHint }}</p>
+
+              <button type="button" class="ghost small" @click="openMessagesFor(project)">
+                {{ t('dashboard.tabs.messages') }}
               </button>
-            </form>
+            </article>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+
+        <!-- Services tab -->
+        <section v-else-if="activeTab === 'services'" class="panel">
+          <header class="panel-header">
+            <div>
+              <h1>{{ t('dashboard.services.title') }}</h1>
+              <p>{{ t('dashboard.services.subtitle') }}</p>
+            </div>
+            <router-link to="/services" class="primary-btn">{{ t('dashboard.services.browse') }}</router-link>
+          </header>
+
+          <p v-if="servicesLoading" class="muted">{{ t('dashboard.services.loading') }}</p>
+
+          <div v-else-if="!myServiceRequests.length" class="empty-card">
+            <h2>{{ t('dashboard.services.emptyTitle') }}</h2>
+            <p>{{ t('dashboard.services.emptyDesc') }}</p>
+            <router-link to="/services" class="primary-btn">{{ t('dashboard.services.browse') }}</router-link>
+          </div>
+
+          <div v-else class="card-list">
+            <article v-for="req in myServiceRequests" :key="req.id" class="data-card">
+              <div class="card-top">
+                <div>
+                  <span class="ticket">{{ req.id }}</span>
+                  <h3>{{ req.serviceTitle }}</h3>
+                  <small>{{ req.createdAt }} · {{ req.city || '—' }}</small>
+                </div>
+                <span class="status-pill" :class="req.status">{{ req.status }}</span>
+              </div>
+              <p class="muted">
+                {{ t('dashboard.services.operator') }}: {{ req.assignedOperatorName }}
+              </p>
+              <p class="phase-now">
+                {{ t('dashboard.services.currentStep') }}:
+                <strong>{{ getPhaseLabel(req) }}</strong>
+                <span>({{ req.currentPhase }}/5)</span>
+              </p>
+              <p class="hint">{{ getPhaseDesc(req) }}</p>
+
+              <ol class="service-phase-track">
+                <li
+                  v-for="step in getRequestSteps(req)"
+                  :key="step.step"
+                  :class="{
+                    done: req.currentPhase > step.step,
+                    current: req.currentPhase === step.step
+                  }"
+                >
+                  <span class="num">{{ step.step }}</span>
+                  <span class="meta">
+                    <strong>{{ step.title }}</strong>
+                    <em>{{ step.desc }}</em>
+                  </span>
+                </li>
+              </ol>
+
+              <div v-if="req.history?.length" class="service-history">
+                <h4>{{ t('dashboard.services.historyTitle') }}</h4>
+                <ul>
+                  <li v-for="(entry, idx) in req.history" :key="idx">
+                    <strong>{{ entry.date }}</strong>
+                    <span>{{ entry.actor }}</span>
+                    <p>{{ entry.text }}</p>
+                  </li>
+                </ul>
+              </div>
+
+              <p v-if="req.notes" class="hint">{{ req.notes }}</p>
+            </article>
+          </div>
+        </section>
+
+        <!-- Messages tab -->
+        <section v-else class="panel">
+          <header class="panel-header">
+            <div>
+              <h1>{{ t('dashboard.messages.title') }}</h1>
+              <p>{{ t('dashboard.messages.subtitle') }}</p>
+            </div>
+          </header>
+
+          <div v-if="!projects.length" class="empty-card">
+            <h2>{{ t('dashboard.followup.emptyTitle') }}</h2>
+            <p>{{ t('dashboard.messages.empty') }}</p>
+            <router-link to="/store" class="primary-btn">{{ t('dashboard.rfq.goStore') }}</router-link>
+          </div>
+
+          <div v-else class="messages-layout">
+            <aside class="project-rail">
+              <button
+                v-for="project in projects"
+                :key="project.id"
+                type="button"
+                class="project-pick"
+                :class="{ active: selectedId === project.id }"
+                @click="openProject(project)"
+              >
+                <strong>{{ project.name }}</strong>
+                <span>{{ project.location || '—' }}</span>
+              </button>
+            </aside>
+
+            <div v-if="selectedId" class="thread-panel">
+              <div class="thread">
+                <p v-if="!messages.length" class="muted">{{ t('dashboard.messages.empty') }}</p>
+                <article
+                  v-for="message in messages"
+                  :key="message.id"
+                  class="thread-item"
+                  :class="message.author"
+                >
+                  <header>
+                    <strong>
+                      {{
+                        message.author === 'client'
+                          ? (message.user?.name || t('admin.drawer.clientLabel'))
+                          : t('admin.drawer.teamLabel')
+                      }}
+                    </strong>
+                  </header>
+                  <p>{{ message.body }}</p>
+                </article>
+              </div>
+              <form class="compose" @submit.prevent="send">
+                <textarea
+                  v-model="draft"
+                  rows="3"
+                  :placeholder="t('dashboard.messages.placeholder')"
+                />
+                <button type="submit" :disabled="sending || !draft.trim()">
+                  {{ sending ? t('dashboard.messages.sending') : t('dashboard.messages.send') }}
+                </button>
+              </form>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
 </template>
 
@@ -215,12 +315,16 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import api, { getApiErrorMessage } from '../api/client'
 import { useAuth } from '../composables/useAuth'
+import { useServices } from '../composables/useServices'
+import AdminIcon from '../components/adminDashboard/AdminIcon.vue'
 import {
   formatDate,
   formatMoney,
   rfqItemLabel,
   rfqQuoteTotal,
-  rfqStatusLabel
+  rfqStatusLabel,
+  canDownloadRfqPdf,
+  rfqPdfErrorMessage
 } from '../utils/rfqQuote'
 import {
   getCurrentPhase,
@@ -241,6 +345,14 @@ const {
   confirmRfqQuote
 } = useAuth()
 
+const {
+  fetchServiceRequests,
+  getRequestsForClient,
+  getRequestSteps,
+  getPhaseLabel,
+  getPhaseDesc
+} = useServices()
+
 const activeTab = ref('rfq')
 const projects = ref([])
 const messages = ref([])
@@ -250,6 +362,35 @@ const sending = ref(false)
 const pageError = ref('')
 const confirmingId = ref(null)
 const rfqLoading = ref(false)
+const servicesLoading = ref(false)
+const pdfDownloadingId = ref(null)
+
+const myServiceRequests = computed(() => getRequestsForClient(user.value?.email))
+
+const userInitials = computed(() => {
+  const name = user.value?.name?.trim()
+  if (!name) return 'C'
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
+})
+
+function canDownloadPdf(rfq) {
+  return canDownloadRfqPdf(rfq)
+}
+
+async function downloadPdf(rfq) {
+  pdfDownloadingId.value = rfq.id
+  pageError.value = ''
+  try {
+    const { downloadRfqQuotePdf } = await import('../utils/rfqPdf')
+    await downloadRfqQuotePdf(rfq)
+  } catch (err) {
+    pageError.value = rfqPdfErrorMessage(err)
+  } finally {
+    pdfDownloadingId.value = null
+  }
+}
 
 const workflowSteps = computed(() => {
   locale.value
@@ -259,9 +400,10 @@ const workflowSteps = computed(() => {
 const tabs = computed(() => {
   locale.value
   return [
-    { id: 'rfq', label: t('dashboard.tabs.rfq'), count: rfqTickets.value.length },
-    { id: 'followup', label: t('dashboard.tabs.followup'), count: projects.value.length },
-    { id: 'messages', label: t('dashboard.tabs.messages'), count: null }
+    { id: 'rfq', label: t('dashboard.tabs.rfq'), icon: 'orders', count: rfqTickets.value.length || null },
+    { id: 'services', label: t('dashboard.tabs.services'), icon: 'services', count: myServiceRequests.value.length || null },
+    { id: 'followup', label: t('dashboard.tabs.followup'), icon: 'projects', count: projects.value.length || null },
+    { id: 'messages', label: t('dashboard.tabs.messages'), icon: 'messages', count: null }
   ]
 })
 
@@ -359,16 +501,32 @@ watch(activeTab, async (tab) => {
   if (tab === 'messages' && projects.value.length && !selectedId.value) {
     await openProject(projects.value[0])
   }
+  if (tab === 'services') {
+    await loadServiceRequests()
+  }
 })
+
+async function loadServiceRequests() {
+  servicesLoading.value = true
+  try {
+    await fetchServiceRequests()
+  } catch (err) {
+    pageError.value = getApiErrorMessage(err, 'Could not load service requests.')
+  } finally {
+    servicesLoading.value = false
+  }
+}
 
 onMounted(async () => {
   const tab = typeof route.query.tab === 'string' ? route.query.tab : 'rfq'
-  if (['rfq', 'followup', 'messages'].includes(tab)) {
+  if (['rfq', 'services', 'followup', 'messages'].includes(tab)) {
     activeTab.value = tab
   }
 
   try {
-    await Promise.all([loadRfqs(), loadProjects()])
+    const jobs = [loadRfqs(), loadProjects()]
+    if (activeTab.value === 'services') jobs.push(loadServiceRequests())
+    await Promise.all(jobs)
   } catch (err) {
     pageError.value = getApiErrorMessage(err, 'Could not load dashboard.')
   }
@@ -376,39 +534,238 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.client-dashboard {
-  min-height: 100vh;
-  background: #f5f5f4;
+.client-page {
+  height: 100vh;
+  overflow: hidden;
+  background: #eef4f0;
   color: #1c1917;
   font-family: 'Outfit', sans-serif;
 }
 
-.bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  background: #fff;
-  border-bottom: 1px solid #e7e5e4;
+.client-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: 100%;
 }
 
-.bar-left,
-.bar-right {
+.client-sidebar {
+  background: #020d07;
+  color: #f0fdf4;
+  border-right: 1px solid rgba(74, 222, 128, 0.12);
+  padding: 1.15rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 0.35rem 0.55rem 1rem;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.12);
+}
+
+.brand-link {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-}
-
-.brand {
-  color: inherit;
-  font-weight: 700;
   text-decoration: none;
+  color: inherit;
 }
 
-.user-chip {
-  font-size: 0.82rem;
-  color: #78716c;
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4ade80;
+  flex-shrink: 0;
+}
+
+.brand-title {
+  display: block;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  font-size: 0.88rem;
+}
+
+.brand-sub {
+  display: block;
+  font-size: 0.68rem;
+  color: #4ade80;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(240, 253, 244, 0.72);
+  text-align: left;
+  text-decoration: none;
+  font-family: inherit;
+}
+
+.nav-btn:hover {
+  background: rgba(74, 222, 128, 0.08);
+  color: #f0fdf4;
+}
+
+.nav-btn.active {
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+}
+
+.nav-link {
+  margin-top: 0.35rem;
+  border-top: 1px solid rgba(74, 222, 128, 0.12);
+  border-radius: 0 0 10px 10px;
+  padding-top: 1rem;
+}
+
+.nav-icon {
+  display: inline-flex;
+  color: inherit;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(74, 222, 128, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(74, 222, 128, 0.16);
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.profile-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.user-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f0fdf4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-role {
+  font-size: 0.72rem;
+  color: rgba(240, 253, 244, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(240, 253, 244, 0.22);
+  color: #f0fdf4;
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.logout-btn:hover {
+  background: rgba(240, 253, 244, 0.08);
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+.client-main {
+  min-width: 0;
+  height: 100%;
+  padding: 1.15rem 1.5rem 1.5rem;
+  overflow: auto;
+}
+
+.client-page :deep(section),
+.client-page section {
+  padding-block: 0;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.panel-header h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #052e16;
+}
+
+.panel-header p,
+.muted {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.95rem;
 }
 
 .ghost,
@@ -425,13 +782,6 @@ onMounted(async () => {
 .compose button,
 .primary-btn {
   padding: 0.45rem 0.85rem;
-}
-
-.ghost.link {
-  text-decoration: none;
-  color: inherit;
-  display: inline-flex;
-  align-items: center;
 }
 
 .ghost.small {
@@ -451,6 +801,7 @@ onMounted(async () => {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .primary-btn.small {
@@ -463,74 +814,14 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 1.25rem 1.5rem 2.5rem;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.35rem;
-  margin-bottom: 1.25rem;
-  flex-wrap: wrap;
-}
-
-.tab {
-  border: 1px solid transparent;
-  background: transparent;
-  border-radius: 999px;
-  padding: 0.45rem 0.9rem;
-  font: inherit;
-  font-weight: 600;
-  color: #78716c;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.tab.active {
-  background: #fff;
-  border-color: #e7e5e4;
-  color: #1c1917;
-}
-
-.tab-count {
-  font-size: 0.75rem;
-  background: #e7e5e4;
-  border-radius: 999px;
-  padding: 0.1rem 0.45rem;
-}
-
-.section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.section-head h1 {
-  margin: 0 0 0.35rem;
-  font-size: 1.35rem;
-}
-
-.section-head p,
-.muted {
-  margin: 0;
-  color: #78716c;
-  font-size: 0.9rem;
-}
-
 .empty-card,
-.rfq-card,
-.followup-card,
-.panel {
+.data-card,
+.thread-panel {
   background: #fff;
   border: 1px solid #e7e5e4;
   border-radius: 16px;
   padding: 1.25rem 1.35rem;
+  box-shadow: 0 1px 0 rgba(28, 25, 23, 0.03);
 }
 
 .empty-card {
@@ -545,15 +836,13 @@ main {
   font-size: 1.1rem;
 }
 
-.rfq-list,
-.followup-list {
+.card-list {
   display: grid;
   gap: 0.9rem;
 }
 
-.rfq-top,
-.followup-top,
-.rfq-foot {
+.card-top,
+.card-foot {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -567,10 +856,10 @@ main {
   color: #166534;
 }
 
-.rfq-card h3,
-.followup-card h3 {
+.data-card h3 {
   margin: 0.2rem 0;
   font-size: 1.05rem;
+  color: #052e16;
 }
 
 .status-pill {
@@ -617,8 +906,9 @@ main {
   border-bottom: 1px solid #f5f5f4;
 }
 
-.rfq-foot {
+.card-foot {
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .confirmed {
@@ -670,7 +960,7 @@ main {
   margin: 0 0 0.85rem;
 }
 
-.layout {
+.messages-layout {
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 1rem;
@@ -688,7 +978,8 @@ main {
 }
 
 .project-pick.active {
-  border-color: #1c1917;
+  border-color: #166534;
+  background: #f0fdf4;
 }
 
 .project-pick span {
@@ -713,7 +1004,7 @@ main {
 
 .thread-item.client {
   margin-left: auto;
-  background: #1c1917;
+  background: #052e16;
   color: #fff;
 }
 
@@ -738,9 +1029,9 @@ main {
 
 .compose button {
   justify-self: end;
-  background: #1c1917;
+  background: #052e16;
   color: #fff;
-  border-color: #1c1917;
+  border-color: #052e16;
 }
 
 .compose button:disabled {
@@ -757,20 +1048,177 @@ main {
   font-size: 0.9rem;
 }
 
-@media (max-width: 720px) {
-  .layout,
+.phase-now {
+  margin: 0.35rem 0;
+  font-size: 0.9rem;
+  color: #44403c;
+}
+
+.service-phase-track {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.service-phase-track li {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  padding: 0.45rem 0.55rem;
+  border-radius: 10px;
+  border: 1px solid #e7e5e4;
+  background: #fafaf9;
+}
+
+.service-phase-track li.done {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.service-phase-track li.current {
+  border-color: #16a34a;
+  background: #dcfce7;
+}
+
+.service-phase-track .num {
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: #e7e5e4;
+  color: #44403c;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.service-phase-track li.done .num,
+.service-phase-track li.current .num {
+  background: #16a34a;
+  color: #fff;
+}
+
+.service-phase-track .meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.service-phase-track .meta strong {
+  font-size: 0.82rem;
+}
+
+.service-phase-track .meta em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #78716c;
+}
+
+.service-history {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e7e5e4;
+}
+
+.service-history h4 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.service-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.service-history li {
+  background: #fafaf9;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+.service-history li strong {
+  margin-right: 0.4rem;
+}
+
+.service-history li span {
+  color: #78716c;
+}
+
+.service-history li p {
+  margin: 0.2rem 0 0;
+  color: #44403c;
+}
+
+@media (max-width: 900px) {
+  .client-page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .client-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .client-sidebar {
+    height: auto;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid rgba(74, 222, 128, 0.12);
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    flex: none;
+  }
+
+  .nav-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .nav-link {
+    margin-top: 0;
+    border-top: none;
+    border-left: 1px solid rgba(74, 222, 128, 0.12);
+    border-radius: 10px;
+    padding-top: 0.75rem;
+  }
+
+  .sidebar-footer {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .logout-btn {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .client-main {
+    height: auto;
+    overflow: visible;
+    padding: 1rem;
+  }
+
+  .messages-layout,
   .phase-track {
     grid-template-columns: 1fr;
   }
 
-  .section-head,
-  .bar {
+  .panel-header {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .bar-right {
-    justify-content: space-between;
   }
 }
 </style>

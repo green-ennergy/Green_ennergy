@@ -110,4 +110,34 @@ class AuthenticationTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    public function test_user_cannot_register_with_incomplete_email(): void
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'salah eddine',
+            'company' => 'Green Energy Company',
+            'phone' => '+212 600 123 456',
+            'email' => 'aa@aa',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_user_cannot_register_with_aaa_at_aaa(): void
+    {
+        $response = $this->postJson('/api/auth/register', [
+            'name' => 'Test User',
+            'company' => 'Test Co',
+            'phone' => '+212 600 123 456',
+            'email' => 'aaa@aaa',
+            'password' => 'Password123',
+            'password_confirmation' => 'Password123',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['email']);
+    }
 }

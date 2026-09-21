@@ -1,3 +1,5 @@
+# Volume and build paths (./backend, ./frontend, ./docker/...) are relative to this file's directory (repo root).
+
 services:
 
   backend:
@@ -5,7 +7,7 @@ services:
       context: ./docker/php
       dockerfile: Dockerfile
 
-    working_dir: /var/www
+    working_dir: /var/www  # Laravel app root inside the container
 
     volumes:
       - ./backend:/var/www
@@ -39,7 +41,7 @@ services:
   frontend:
     image: node:22-alpine
 
-    working_dir: /app
+    working_dir: /app  # Vue app root inside the container
 
     volumes:
       - ./frontend:/app
