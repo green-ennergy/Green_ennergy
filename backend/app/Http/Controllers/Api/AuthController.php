@@ -127,10 +127,21 @@ class AuthController extends Controller
         ]);
     }
 
-    private function presentUser(User $user): User
+    private function presentUser(User $user): array
     {
-        $user->loadMissing('client');
+        $user->loadMissing(['client', 'operator']);
 
-        return $user->makeHidden(['client']);
+        return [
+            'id_user' => $user->id_user,
+            'name' => $user->name,
+            'company' => $user->company,
+            'email' => $user->email,
+            'phone' => $user->phone,
+            'email_verified_at' => $user->email_verified_at,
+            'creation_date' => $user->creation_date,
+            'role' => $user->role,
+            'id_client' => $user->client?->id_client,
+            'id_operator' => $user->operator?->id_operator,
+        ];
     }
 }

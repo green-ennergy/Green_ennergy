@@ -683,7 +683,14 @@ export default {
   },
   operator: {
     console: 'Console Opérateur Terrain',
-    resetDemo: 'Réinitialiser démo',
+    resetDemo: 'Actualiser',
+    refresh: 'Actualiser',
+    toast: {
+      refreshed: 'Missions actualisées',
+      statusUpdated: 'Statut mis à jour',
+      deliverySigned: 'Livraison signée',
+      incidentReported: 'Incident signalé'
+    },
     duty: {
       onDuty: 'En service (Actif)',
       onBreak: 'En pause',

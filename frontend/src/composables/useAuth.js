@@ -25,6 +25,24 @@ export function useAuth() {
     return 'dashboard'
   })
 
+  const refreshUser = async () => {
+    if (!token.value) return null
+    try {
+      const response = await api.get('/me')
+      user.value = response.data
+      localStorage.setItem('ea_user', JSON.stringify(response.data))
+      return response.data
+    } catch (err) {
+      if (err.response?.status === 401) {
+        user.value = null
+        token.value = null
+        localStorage.removeItem('ea_user')
+        localStorage.removeItem('ea_token')
+      }
+      return null
+    }
+  }
+
   const registerUser = async (name, company, phone, email, password) => {
     try {
       isLoading.value = true
@@ -206,6 +224,7 @@ export function useAuth() {
     registerUser,
     loginUser,
     logoutUser,
+    refreshUser,
     updateProfile,
     submitRfqTicket,
     updateTicketStatus,

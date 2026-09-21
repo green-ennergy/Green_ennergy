@@ -10,6 +10,8 @@ use App\Models\Client;
 use App\Models\Installation;
 use App\Models\Kit;
 use App\Models\Maintenance;
+use App\Models\Mission;
+use App\Models\MissionTrace;
 use App\Models\Operator;
 use App\Models\Order;
 use App\Models\Product;
@@ -18,6 +20,7 @@ use App\Models\QuoteRequest;
 use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Models\User;
+use App\Support\MissionTypeData;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -67,7 +70,13 @@ class DatabaseSeeder extends Seeder
 
         // --- Roles ---
         $admin = Administrator::create(['id_user' => $adminUser->id_user]);
-        $operator = Operator::create(['id_user' => $operatorUser->id_user]);
+        $operator = Operator::create([
+            'id_user' => $operatorUser->id_user,
+            'role' => 'Field operator',
+            'city' => 'Casablanca',
+            'duty_status' => 'on_duty',
+            'specialties' => ['installation', 'maintenance', 'delivery', 'study'],
+        ]);
         $client = Client::create(['id_user' => $clientUser->id_user]);
         $client2 = Client::create(['id_user' => $clientUser2->id_user]);
 
@@ -248,6 +257,126 @@ class DatabaseSeeder extends Seeder
             'id_operator' => $operator->id_operator,
         ]);
 
+        // --- Field missions for operator dashboard ---
+        $missionSeeds = [
+            [
+                'type' => 'installation',
+                'title' => 'Rooftop install — Casa Industrie',
+                'priority' => 'high',
+                'scheduled_date' => now()->toDateString(),
+                'time_slot' => '09:00 - 13:00',
+                'client_name' => 'Amine Client',
+                'client_phone' => '0611000003',
+                'client_email' => 'client@casa-industrie.ma',
+                'client_address' => 'Casa Industrie Rooftop',
+                'client_city' => 'Casablanca',
+                'admin_notes' => 'Commission 450W string on south roof. Confirm inverter S/N on site.',
+                'status' => 'assigned',
+                'type_data' => [
+                    'equipmentList' => [
+                        ['name' => 'Solar Panel 450W', 'qty' => 6, 'checked' => false],
+                        ['name' => 'Hybrid Inverter 5kW', 'qty' => 1, 'checked' => false],
+                        ['name' => 'Mounting kit', 'qty' => 1, 'checked' => false],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'maintenance',
+                'title' => 'Inverter fault check — AgriSolar',
+                'priority' => 'urgent',
+                'scheduled_date' => now()->toDateString(),
+                'time_slot' => '14:00 - 17:00',
+                'client_name' => 'Fatima Zahra',
+                'client_phone' => '0611000004',
+                'client_email' => 'fatima@agrisolar.ma',
+                'client_address' => 'Route de l’Ourika',
+                'client_city' => 'Marrakech',
+                'admin_notes' => 'Client reports intermittent inverter alarms since last week.',
+                'status' => 'assigned',
+                'type_data' => [
+                    'systemAge' => '3 years',
+                    'inverterModel' => 'INV-5KW',
+                    'systemCapacity' => '5 kWp',
+                    'lastServiceDate' => now()->subMonths(6)->toDateString(),
+                    'reportedFault' => 'Intermittent inverter fault code / production drop',
+                    'replacedParts' => [
+                        ['name' => 'DC fuse set', 'qty' => 2, 'used' => false],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'delivery',
+                'title' => 'Panel delivery — Casablanca depot run',
+                'priority' => 'medium',
+                'scheduled_date' => now()->addDay()->toDateString(),
+                'time_slot' => '08:30 - 11:30',
+                'client_name' => 'Amine Client',
+                'client_phone' => '0611000003',
+                'client_email' => 'client@casa-industrie.ma',
+                'client_address' => 'Warehouse receiving dock',
+                'client_city' => 'Casablanca',
+                'admin_notes' => 'Unload at dock B. Get recipient signature.',
+                'status' => 'assigned',
+                'type_data' => [
+                    'orderNumber' => 'ORD-SEED01',
+                    'stagingBay' => 'Bay B',
+                    'items' => [
+                        ['sku' => 'PV-450W', 'name' => 'Solar Panel 450W', 'qty' => 10],
+                        ['sku' => 'BAT-5KWH', 'name' => 'Lithium Battery 5kWh', 'qty' => 2],
+                    ],
+                ],
+            ],
+            [
+                'type' => 'study',
+                'title' => 'Home solar feasibility audit',
+                'priority' => 'medium',
+                'scheduled_date' => now()->addDays(2)->toDateString(),
+                'time_slot' => '10:30 - 12:30',
+                'client_name' => 'Fatima Zahra',
+                'client_phone' => '0611000004',
+                'client_email' => 'fatima@agrisolar.ma',
+                'client_address' => 'Villa Ourika',
+                'client_city' => 'Marrakech',
+                'admin_notes' => 'Collect bill + roof measurements for sizing.',
+                'status' => 'assigned',
+                'type_data' => [
+                    'monthlyBillMAD' => 1800,
+                    'estimatedKWhMonthly' => 620,
+                    'roofAreaM2' => 55,
+                ],
+            ],
+        ];
+
+        foreach ($missionSeeds as $seed) {
+            $type = $seed['type'];
+            $mission = Mission::create([
+                'code' => 'TSK-'.strtoupper(substr($type, 0, 4)).'-'.random_int(100, 999),
+                'type' => $type,
+                'title' => $seed['title'],
+                'status' => $seed['status'],
+                'priority' => $seed['priority'],
+                'scheduled_date' => $seed['scheduled_date'],
+                'time_slot' => $seed['time_slot'],
+                'client_name' => $seed['client_name'],
+                'client_phone' => $seed['client_phone'],
+                'client_email' => $seed['client_email'],
+                'client_address' => $seed['client_address'],
+                'client_city' => $seed['client_city'],
+                'admin_notes' => $seed['admin_notes'],
+                'operator_notes' => null,
+                'type_data' => MissionTypeData::forType($type, $seed['type_data']),
+                'id_operator' => $operator->id_operator,
+                'id_project' => $project->id_project ?? null,
+            ]);
+
+            MissionTrace::create([
+                'id_mission' => $mission->id,
+                'actor' => 'Admin',
+                'action' => 'Created and assigned to '.$operatorUser->name,
+                'created_at' => now(),
+            ]);
+        }
+
         // --- AI stock alert (low stock inverter) ---
         AiStockAlert::create([
             'risk_level' => 'high',
@@ -264,7 +393,7 @@ class DatabaseSeeder extends Seeder
 
         $installService = Service::where('slug', 'installation')->first();
         if ($installService) {
-            ServiceRequest::create([
+            $serviceRequest = ServiceRequest::create([
                 'number' => 'SRV-2026-DEMO',
                 'id_service' => $installService->id_service,
                 'id_client' => $client->id_client,
@@ -292,6 +421,12 @@ class DatabaseSeeder extends Seeder
                 ],
                 'creation_date' => now()->subDays(2),
             ]);
+
+            \App\Support\ServiceRequestMissionSync::syncFromAssignment(
+                $serviceRequest,
+                $operator->load('user'),
+                'Admin'
+            );
         }
     }
 }

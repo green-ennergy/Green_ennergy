@@ -7,6 +7,8 @@ use App\Models\Mission;
 use App\Models\MissionTrace;
 use App\Models\Operator;
 use App\Models\Project;
+use App\Support\MissionTypeData;
+use App\Support\ServiceRequestMissionSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -30,6 +32,7 @@ class MissionController extends Controller
         if ($request->user()?->role === 'operator') {
             $operatorId = $request->user()->operator?->id_operator;
             $query->where('id_operator', $operatorId ?? 0);
+            ServiceRequestMissionSync::backfillMissing();
         }
 
         if ($status = $request->query('status')) {
@@ -56,6 +59,10 @@ class MissionController extends Controller
 
         $mission = DB::transaction(function () use ($validated, $request) {
             $operator = Operator::with('user')->findOrFail($validated['operatorId']);
+            $typeData = MissionTypeData::forType(
+                $validated['type'],
+                is_array($validated['typeData'] ?? null) ? $validated['typeData'] : []
+            );
 
             $mission = Mission::create([
                 'code' => $this->nextCode($validated['type']),
@@ -72,7 +79,7 @@ class MissionController extends Controller
                 'client_city' => $validated['clientCity'] ?? null,
                 'admin_notes' => $validated['adminNotes'] ?? null,
                 'operator_notes' => null,
-                'type_data' => $validated['typeData'] ?? [],
+                'type_data' => $typeData,
                 'id_operator' => $operator->id_operator,
                 'id_project' => $validated['projectId'] ?? null,
             ]);
@@ -155,8 +162,14 @@ class MissionController extends Controller
         if (array_key_exists('operatorNotes', $validated)) {
             $mission->operator_notes = $validated['operatorNotes'];
         }
-        if (isset($validated['typeData'])) {
-            $mission->type_data = $validated['typeData'];
+        if (isset($validated['typeData']) && is_array($validated['typeData'])) {
+            $mission->type_data = MissionTypeData::forType(
+                $mission->type,
+                array_replace_recursive(
+                    is_array($mission->type_data) ? $mission->type_data : [],
+                    $validated['typeData']
+                )
+            );
         }
         $mission->save();
 
@@ -166,6 +179,8 @@ class MissionController extends Controller
                 ? 'Status updated to '.str_replace('_', ' ', strtoupper($validated['status']))
                 : 'Field notes updated');
         $this->trace($mission, $actor, $action);
+
+        ServiceRequestMissionSync::syncServiceRequestFromMission($mission);
 
         $mission->load(['operator.user', 'project', 'traces']);
 
@@ -229,6 +244,14 @@ class MissionController extends Controller
 
         foreach ($map as $input => $column) {
             if (array_key_exists($input, $validated)) {
+                if ($input === 'typeData') {
+                    $type = $validated['type'] ?? $mission->type;
+                    $mission->type_data = MissionTypeData::forType(
+                        $type,
+                        is_array($validated['typeData']) ? $validated['typeData'] : []
+                    );
+                    continue;
+                }
                 $mission->{$column} = $validated[$input];
             }
         }
@@ -323,6 +346,10 @@ class MissionController extends Controller
             'operatorName' => $mission->operator?->user?->name ?? 'Unassigned',
             'projectId' => $mission->id_project,
             'projectName' => $project?->name,
+            'serviceRequestId' => $mission->id_service_request,
+            'serviceRequestNumber' => is_array($mission->type_data)
+                ? ($mission->type_data['serviceRequestNumber'] ?? null)
+                : null,
             'status' => $mission->status,
             'priority' => $mission->priority,
             'scheduledDate' => optional($mission->scheduled_date)->toDateString(),
@@ -336,7 +363,10 @@ class MissionController extends Controller
             ],
             'adminNotes' => $mission->admin_notes,
             'operatorNotes' => $mission->operator_notes,
-            'typeData' => $mission->type_data ?? [],
+            'typeData' => MissionTypeData::forType(
+                $mission->type,
+                is_array($mission->type_data) ? $mission->type_data : []
+            ),
             'traces' => $mission->traces->map(fn (MissionTrace $trace) => [
                 'date' => optional($trace->created_at)->format('Y-m-d H:i'),
                 'user' => $trace->actor,

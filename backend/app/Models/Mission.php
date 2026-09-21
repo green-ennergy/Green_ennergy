@@ -26,6 +26,7 @@ class Mission extends Model
         'type_data',
         'id_operator',
         'id_project',
+        'id_service_request',
     ];
 
     protected $casts = [
@@ -41,6 +42,11 @@ class Mission extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class, 'id_project', 'id_project');
+    }
+
+    public function serviceRequest(): BelongsTo
+    {
+        return $this->belongsTo(ServiceRequest::class, 'id_service_request', 'id_service_request');
     }
 
     public function traces(): HasMany

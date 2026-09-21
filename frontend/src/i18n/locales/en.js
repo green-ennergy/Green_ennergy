@@ -682,7 +682,14 @@ export default {
   },
   operator: {
     console: 'Operator Field Console',
-    resetDemo: 'Reset Demo',
+    resetDemo: 'Refresh',
+    refresh: 'Refresh',
+    toast: {
+      refreshed: 'Missions refreshed',
+      statusUpdated: 'Status updated',
+      deliverySigned: 'Delivery signed off',
+      incidentReported: 'Incident reported'
+    },
     duty: {
       onDuty: 'On Duty (Active)',
       onBreak: 'On Break',

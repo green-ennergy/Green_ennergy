@@ -15,6 +15,25 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const url = String(error.config?.url || '')
+      const isAuthCall = url.includes('/auth/login') || url.includes('/auth/register')
+      if (!isAuthCall && typeof window !== 'undefined') {
+        localStorage.removeItem('ea_token')
+        localStorage.removeItem('ea_user')
+        if (!window.location.pathname.startsWith('/login')) {
+          const redirect = encodeURIComponent(window.location.pathname + window.location.search)
+          window.location.assign(`/login?redirect=${redirect}`)
+        }
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export function getApiErrorMessage(err, fallback) {
   const data = err.response?.data
   if (!data) return fallback

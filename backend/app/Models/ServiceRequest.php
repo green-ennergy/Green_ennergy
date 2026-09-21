@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ServiceRequest extends Model
 {
@@ -56,5 +57,10 @@ class ServiceRequest extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(Operator::class, 'id_operator', 'id_operator');
+    }
+
+    public function mission(): HasOne
+    {
+        return $this->hasOne(Mission::class, 'id_service_request', 'id_service_request');
     }
 }

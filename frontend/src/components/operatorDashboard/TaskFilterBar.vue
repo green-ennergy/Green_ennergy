@@ -147,8 +147,7 @@ const statusOptions = computed(() => [
   { id: 'all', label: t('operator.statuses.all') || 'All Statuses' },
   { id: 'assigned', label: t('operator.statuses.assigned') || 'Assigned' },
   { id: 'in_progress', label: t('operator.statuses.inProgress') || 'In Progress' },
-  { id: 'on_hold', label: t('operator.statuses.onHold') || 'On Hold' },
-  { id: 'completed', label: t('operator.statuses.completed') || 'Completed' }
+  { id: 'on_hold', label: t('operator.statuses.onHold') || 'On Hold' }
 ])
 </script>
 

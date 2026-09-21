@@ -683,7 +683,14 @@ export default {
   },
   operator: {
     console: 'لوحة تحكم التقني الميداني',
-    resetDemo: 'إعادة ضبط البيانات التجريبية',
+    resetDemo: 'تحديث',
+    refresh: 'تحديث',
+    toast: {
+      refreshed: 'تم تحديث المهام',
+      statusUpdated: 'تم تحديث الحالة',
+      deliverySigned: 'تم توقيع التسليم',
+      incidentReported: 'تم الإبلاغ عن الحادث'
+    },
     duty: {
       onDuty: 'في الخدمة (نشط)',
       onBreak: 'في استراحة',

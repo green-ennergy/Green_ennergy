@@ -1,79 +1,77 @@
 <template>
   <div class="operator-page">
-    <!-- Top Header -->
-    <header class="operator-header animate-fade-in">
-      <div class="header-brand">
-        <router-link to="/" class="brand-link">
-          <div class="brand-icon">
-            <OperatorIcon name="bolt" :size="18" />
-          </div>
-          <div>
-            <span class="brand-title">ENERGY AGENCY</span>
-            <span class="brand-sub">{{ t('operator.console') || 'Operator Field Console' }}</span>
-          </div>
-        </router-link>
-      </div>
+    <div class="operator-layout">
+      <aside class="operator-sidebar">
+        <div class="sidebar-brand">
+          <router-link to="/" class="brand-link">
+            <div class="brand-icon">
+              <OperatorIcon name="bolt" :size="18" />
+            </div>
+            <div>
+              <span class="brand-title">ENERGY AGENCY</span>
+              <span class="brand-sub">{{ t('operator.console') || 'Operator Field Console' }}</span>
+            </div>
+          </router-link>
+        </div>
 
-      <!-- Right Meta: Duty status toggle, Operator name, Sign Out -->
-      <div class="header-meta">
-        <!-- Duty Status Switcher -->
-        <div class="duty-pill" :class="dutyStatus">
-          <span class="duty-dot"></span>
-          <select
-            :value="dutyStatus"
-            @change="setDutyStatus($event.target.value)"
-            class="duty-select"
+        <nav class="sidebar-nav">
+          <button
+            v-for="tab in mainTabs"
+            :key="tab.id"
+            type="button"
+            class="nav-btn"
+            :class="{ active: currentTab === tab.id }"
+            @click="currentTab = tab.id"
           >
-            <option value="on_duty">{{ t('operator.duty.onDuty') || 'On Duty (Active)' }}</option>
-            <option value="on_break">{{ t('operator.duty.onBreak') || 'On Break' }}</option>
-            <option value="off_duty">{{ t('operator.duty.offDuty') || 'Off Duty' }}</option>
-          </select>
-        </div>
+            <span class="nav-icon"><OperatorIcon :name="tab.icon" :size="18" /></span>
+            <span>{{ tab.label }}</span>
+            <span v-if="tab.badge" class="nav-badge">{{ tab.badge }}</span>
+          </button>
+        </nav>
 
-        <div class="operator-profile">
-          <span class="operator-avatar">
-            <OperatorIcon name="user" :size="15" />
-          </span>
-          <span class="operator-name">{{ user?.name || 'Operator (Field)' }}</span>
-        </div>
+        <div class="sidebar-footer">
+          <div class="duty-pill" :class="dutyStatus">
+            <span class="duty-dot"></span>
+            <select
+              :value="dutyStatus"
+              @change="handleSetDutyStatus($event.target.value)"
+              class="duty-select"
+            >
+              <option value="on_duty">{{ t('operator.duty.onDuty') || 'On Duty (Active)' }}</option>
+              <option value="on_break">{{ t('operator.duty.onBreak') || 'On Break' }}</option>
+              <option value="off_duty">{{ t('operator.duty.offDuty') || 'Off Duty' }}</option>
+            </select>
+          </div>
 
-        <button @click="handleLogout" class="logout-btn">
-          {{ t('common.signOut') || 'Sign out' }}
-        </button>
-      </div>
-    </header>
+          <div class="sidebar-profile">
+            <div class="profile-avatar" aria-hidden="true">{{ userInitials }}</div>
+            <div class="profile-meta">
+              <span class="operator-name">{{ displayName }}</span>
+              <span class="operator-role">{{ user?.email || t('operator.console') }}</span>
+            </div>
+          </div>
 
-    <!-- Sub-Navbar Navigation Tabs -->
-    <nav class="sub-nav animate-fade-in">
-      <div class="sub-nav-container">
-        <button
-          v-for="tab in mainTabs"
-          :key="tab.id"
-          class="sub-tab-btn"
-          :class="{ active: currentTab === tab.id }"
-          @click="currentTab = tab.id"
-        >
-          <OperatorIcon :name="tab.icon" :size="17" />
-          <span>{{ tab.label }}</span>
-          <span v-if="tab.badge" class="tab-badge">{{ tab.badge }}</span>
-        </button>
-
-        <div class="sub-nav-actions">
-          <button @click="resetToDemoTasks" class="reset-demo-btn" :title="t('operator.resetDemo') || 'Reset initial task samples'">
-            <OperatorIcon name="refresh" :size="14" />
-            <span>{{ t('operator.resetDemo') || 'Reset Demo' }}</span>
+          <button type="button" @click="handleLogout" class="logout-btn">
+            {{ t('common.signOut') || 'Sign out' }}
           </button>
         </div>
-      </div>
-    </nav>
+      </aside>
 
-    <!-- Main Container Layout -->
-    <main class="operator-main container animate-fade-in">
+      <main class="operator-main">
       <!-- Off-duty Warning Banner if applicable -->
       <div v-if="dutyStatus === 'off_duty'" class="status-warning-banner">
         <OperatorIcon name="alert" :size="18" />
         <span>{{ t('operator.duty.offDutyNotice') || 'You are currently marked as Off Duty. Set status to "On Duty" when ready to receive new dispatch updates.' }}</span>
       </div>
+
+      <div v-if="missionsError" class="status-warning-banner error">
+        <OperatorIcon name="alert" :size="18" />
+        <span>{{ missionsError }}</span>
+        <button type="button" class="clear-filters-btn" @click="handleRefreshMissions">
+          {{ t('operator.refresh') || 'Retry' }}
+        </button>
+      </div>
+
       <!-- TAB 1: TASKS HUB -->
       <section v-if="currentTab === 'tasks'" class="panel">
         <header class="panel-header">
@@ -81,7 +79,17 @@
             <h1>{{ t('operator.tabs.tasksTitle') || 'Assigned Field Tasks' }}</h1>
             <p>{{ t('operator.tabs.tasksSub') || 'Installation, maintenance, delivery, and energy feasibility studies dispatched by Admin.' }}</p>
           </div>
+          <button
+            type="button"
+            class="refresh-btn"
+            :disabled="missionsLoading"
+            @click="handleRefreshMissions"
+          >
+            {{ missionsLoading ? (t('common.loading') || 'Loading…') : (t('operator.refresh') || 'Refresh') }}
+          </button>
         </header>
+
+        <OperatorKpiGrid :stats="stats" />
 
         <!-- Filter & Search Controls -->
         <TaskFilterBar
@@ -92,8 +100,12 @@
           :typeCounts="stats.byType"
         />
 
+        <div v-if="missionsLoading && !tasks.length" class="empty-state">
+          <p>{{ t('common.loading') || 'Loading missions…' }}</p>
+        </div>
+
         <!-- Empty State -->
-        <div v-if="filteredTasks.length === 0" class="empty-state">
+        <div v-else-if="filteredTasks.length === 0" class="empty-state">
           <div class="empty-icon-wrap">
             <OperatorIcon name="search" :size="32" />
           </div>
@@ -116,7 +128,7 @@
             :task="task"
             :viewMode="viewMode"
             @openDetails="openTaskDrawer"
-            @updateStatus="updateTaskStatus"
+            @updateStatus="handleCardStatusUpdate"
             @reportIncident="openIncidentModal"
           />
         </div>
@@ -146,7 +158,7 @@
 
             <div class="agenda-main-col">
               <div class="agenda-head">
-                <span class="task-id">{{ task.id }}</span>
+                <span class="task-id">{{ task.code || task.id }}</span>
                 <span class="type-tag" :class="task.type">{{ task.type.toUpperCase() }}</span>
                 <h3 class="agenda-title">{{ task.title }}</h3>
               </div>
@@ -154,13 +166,13 @@
               <div class="agenda-details">
                 <div class="det-item">
                   <OperatorIcon name="user" :size="14" />
-                  <strong>{{ task.client.name }}</strong>
+                  <strong>{{ task.client?.name || '—' }}</strong>
                 </div>
                 <div class="det-item">
                   <OperatorIcon name="map-pin" :size="14" />
-                  <span>{{ task.client.address }}, {{ task.client.city }}</span>
+                  <span>{{ task.client?.address || '—' }}, {{ task.client?.city || '—' }}</span>
                 </div>
-                <div class="det-item" v-if="task.client.phone">
+                <div class="det-item" v-if="task.client?.phone">
                   <OperatorIcon name="phone" :size="14" />
                   <a :href="`tel:${task.client.phone}`" class="agenda-phone">{{ task.client.phone }}</a>
                 </div>
@@ -174,7 +186,7 @@
                 <button
                   v-if="task.status === 'assigned'"
                   class="btn-agenda-action start"
-                  @click="updateTaskStatus(task.id, 'in_progress')"
+                  @click="handleCardStatusUpdate(task.id, 'in_progress')"
                 >
                   <OperatorIcon name="bolt" :size="15" />
                   <span>Start Assignment</span>
@@ -192,71 +204,7 @@
         </div>
       </section>
 
-      <!-- TAB 2: SERVICES REALIZATION PROGRESS -->
-      <section v-else-if="currentTab === 'services'" class="panel">
-        <header class="panel-header">
-          <div>
-            <h1>{{ t('operator.services.title') }}</h1>
-            <p>{{ t('operator.services.subtitle') }}</p>
-          </div>
-        </header>
-
-        <div v-if="operatorServiceRequests.length === 0" class="empty-state">
-          <p>{{ t('operator.services.empty') }}</p>
-        </div>
-
-        <div v-else class="services-op-list">
-          <div v-for="req in operatorServiceRequests" :key="req.id" class="op-service-card">
-            <div class="card-head">
-              <div>
-                <span class="req-id"><code>{{ req.id }}</code></span>
-                <h3>{{ req.serviceTitle }}</h3>
-                <p class="req-client">📍 {{ req.clientName }} — {{ req.city }} ({{ req.address }}) · 📞 {{ req.clientPhone }}</p>
-              </div>
-
-              <div class="phase-current-badge">
-                {{ t('operator.services.currentStep') }}:
-                <strong>{{ getPhaseLabel(req) }}</strong>
-                <span class="phase-frac">({{ req.currentPhase }}/5)</span>
-              </div>
-            </div>
-
-            <p class="phase-current-desc">{{ getPhaseDesc(req) }}</p>
-
-            <div class="phase-update-box">
-              <span>{{ t('operator.services.setProgress') }}</span>
-              <div class="phase-buttons labeled">
-                <button
-                  v-for="step in getRequestSteps(req)"
-                  :key="step.step"
-                  type="button"
-                  :class="[
-                    'phase-step-chip',
-                    {
-                      active: req.currentPhase === step.step,
-                      done: req.currentPhase > step.step
-                    }
-                  ]"
-                  :title="step.desc"
-                  @click="handleOperatorPhaseUpdate(req, step)"
-                >
-                  <span class="phase-num">{{ step.step }}</span>
-                  <span class="phase-text">
-                    <strong>{{ step.title }}</strong>
-                    <em>{{ step.desc }}</em>
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            <div class="req-notes">
-              <strong>{{ t('operator.services.clientNotes') }}:</strong> {{ req.notes || t('operator.services.noNotes') }}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- TAB 3: COMPLETED ARCHIVE -->
+      <!-- ARCHIVE -->
       <section v-else-if="currentTab === 'archive'" class="panel">
         <header class="panel-header">
           <div>
@@ -280,11 +228,12 @@
             :task="task"
             viewMode="grid"
             @openDetails="openTaskDrawer"
-            @updateStatus="updateTaskStatus"
+            @updateStatus="handleCardStatusUpdate"
           />
         </div>
       </section>
     </main>
+    </div>
 
     <!-- Task Detail Drawer -->
     <TaskDetailDrawer
@@ -292,9 +241,10 @@
       :task="selectedTask"
       @close="closeTaskDrawer"
       @updateStatus="handleDrawerStatusUpdate"
-      @updateNotes="updateTaskNotes"
-      @toggleChecklist="toggleChecklistItem"
-      @updateStudyData="updateStudyData"
+      @updateNotes="handleNotesUpdate"
+      @toggleChecklist="handleChecklistToggle"
+      @updateStudyData="handleStudyUpdate"
+      @updateInstallationMeta="handleInstallationMeta"
       @confirmDelivery="handleDeliveryConfirm"
       @reportIncident="openIncidentModal"
     />
@@ -310,12 +260,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
 import { useOperator } from '../composables/useOperator'
-import { useServices } from '../composables/useServices'
 import { useToast } from '../composables/useToast'
 import OperatorIcon from '../components/operatorDashboard/OperatorIcon.vue'
 import OperatorKpiGrid from '../components/operatorDashboard/OperatorKpiGrid.vue'
@@ -324,25 +273,17 @@ import TaskCard from '../components/operatorDashboard/TaskCard.vue'
 import TaskDetailDrawer from '../components/operatorDashboard/TaskDetailDrawer.vue'
 import IncidentReportModal from '../components/operatorDashboard/IncidentReportModal.vue'
 
-const {
-  serviceRequests,
-  updateRequestPhase,
-  fetchServiceRequests,
-  getRequestSteps,
-  getPhaseLabel,
-  getPhaseDesc
-} = useServices()
-
-const operatorServiceRequests = computed(() => serviceRequests.value)
-
 const router = useRouter()
 const { t } = useI18n()
 const toast = useToast()
-const { user, logoutUser } = useAuth()
+const { user, logoutUser, refreshUser } = useAuth()
 
 const {
   tasks,
   dutyStatus,
+  operatorProfile,
+  isLoading: missionsLoading,
+  error: missionsError,
   stats,
   loadMissions,
   setDutyStatus,
@@ -351,9 +292,22 @@ const {
   toggleChecklistItem,
   updateStudyData,
   updateDeliveryProof,
+  updateInstallationMeta,
   reportIncident,
-  resetToDemoTasks
+  refreshMissions
 } = useOperator()
+
+const displayName = computed(
+  () => operatorProfile.value?.name || user.value?.name || 'Operator'
+)
+
+const userInitials = computed(() => {
+  const name = displayName.value || ''
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return 'OP'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[1][0]).toUpperCase()
+})
 
 // Navigation & Filters
 const currentTab = ref('tasks') // tasks | agenda | archive
@@ -367,14 +321,16 @@ const selectedTask = ref(null)
 const incidentTask = ref(null)
 
 const mainTabs = computed(() => [
-  { id: 'tasks', label: t('operator.tabs.tasks') || 'Tasks Hub', icon: 'bolt', badge: stats.value.assigned + stats.value.inProgress },
-  { id: 'services', label: t('operator.tabs.services') || 'Service Realization', icon: 'refresh', badge: operatorServiceRequests.value.length },
+  { id: 'tasks', label: t('operator.tabs.tasks') || 'Tasks Hub', icon: 'bolt', badge: (stats.value.assigned + stats.value.inProgress) || null },
   { id: 'agenda', label: t('operator.tabs.agenda') || "Today's Agenda", icon: 'calendar', badge: stats.value.todayPending || null },
-  { id: 'archive', label: t('operator.tabs.archive') || 'Completed Archive', icon: 'check-circle' }
+  { id: 'archive', label: t('operator.tabs.archive') || 'Completed Archive', icon: 'check-circle', badge: stats.value.completed || null }
 ])
 
 const filteredTasks = computed(() => {
   return tasks.value.filter(task => {
+    // Completed work lives only in Archive
+    if (task.status === 'completed') return false
+
     // Type filter
     if (activeType.value !== 'all' && task.type !== activeType.value) {
       return false
@@ -389,10 +345,10 @@ const filteredTasks = computed(() => {
     if (searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase().trim()
       const matchId = String(task.code || task.id).toLowerCase().includes(q)
-      const matchTitle = task.title.toLowerCase().includes(q)
-      const matchClient = task.client.name.toLowerCase().includes(q)
-      const matchCity = task.client.city.toLowerCase().includes(q)
-      const matchAddress = task.client.address.toLowerCase().includes(q)
+      const matchTitle = (task.title || '').toLowerCase().includes(q)
+      const matchClient = (task.client?.name || '').toLowerCase().includes(q)
+      const matchCity = (task.client?.city || '').toLowerCase().includes(q)
+      const matchAddress = (task.client?.address || '').toLowerCase().includes(q)
       if (!matchId && !matchTitle && !matchClient && !matchCity && !matchAddress) {
         return false
       }
@@ -403,14 +359,29 @@ const filteredTasks = computed(() => {
 })
 
 const todayTasks = computed(() => {
-  return tasks.value.filter(task => {
-    return task.scheduledDate === '2026-09-15' || task.status === 'in_progress'
-  })
+  const today = new Date()
+  const y = today.getFullYear()
+  const m = String(today.getMonth() + 1).padStart(2, '0')
+  const d = String(today.getDate()).padStart(2, '0')
+  const todayDate = `${y}-${m}-${d}`
+  return tasks.value
+    .filter((task) =>
+      task.status !== 'completed' &&
+      (task.scheduledDate === todayDate || task.status === 'in_progress')
+    )
+    .sort((a, b) => String(a.timeSlot).localeCompare(String(b.timeSlot)))
 })
 
 const completedTasks = computed(() => {
   return tasks.value.filter(task => task.status === 'completed')
 })
+
+function moveCompletedToArchive(taskId) {
+  if (selectedTask.value?.id === taskId) {
+    selectedTask.value = null
+  }
+  currentTab.value = 'archive'
+}
 
 const clearFilters = () => {
   activeType.value = 'all'
@@ -419,24 +390,98 @@ const clearFilters = () => {
 }
 
 const openTaskDrawer = (task) => {
-  selectedTask.value = task
+  const fresh = tasks.value.find((t) => t.id === task.id) || task
+  selectedTask.value = { ...fresh }
 }
 
 const closeTaskDrawer = () => {
   selectedTask.value = null
 }
 
+// Keep the open drawer in sync when API responses replace a task in the list
+watch(tasks, (list) => {
+  if (!selectedTask.value) return
+  const fresh = list.find((t) => t.id === selectedTask.value.id)
+  if (fresh) selectedTask.value = { ...fresh }
+})
+
 const handleDrawerStatusUpdate = async (taskId, status) => {
-  const updated = await updateTaskStatus(taskId, status)
-  if (updated && selectedTask.value?.id === taskId) {
-    selectedTask.value = { ...updated }
+  try {
+    const updated = await updateTaskStatus(taskId, status)
+    if (status === 'completed') {
+      moveCompletedToArchive(taskId)
+    } else if (updated && selectedTask.value?.id === taskId) {
+      selectedTask.value = { ...updated }
+    }
+    toast.success(t('operator.toast.statusUpdated') || 'Status updated')
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not update status.')
   }
 }
 
 const handleDeliveryConfirm = async (taskId, recipientName, notes) => {
-  const updated = await updateDeliveryProof(taskId, recipientName, notes)
-  if (updated && selectedTask.value?.id === taskId) {
-    selectedTask.value = { ...updated }
+  try {
+    await updateDeliveryProof(taskId, recipientName, notes)
+    moveCompletedToArchive(taskId)
+    toast.success(t('operator.toast.deliverySigned') || 'Delivery signed off')
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not confirm delivery.')
+  }
+}
+
+const handleNotesUpdate = async (taskId, notes) => {
+  try {
+    const updated = await updateTaskNotes(taskId, notes)
+    if (updated && selectedTask.value?.id === taskId) {
+      selectedTask.value = { ...updated }
+    }
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not save notes.')
+  }
+}
+
+const handleChecklistToggle = async (taskId, listKey, itemIndex) => {
+  try {
+    const updated = await toggleChecklistItem(taskId, listKey, itemIndex)
+    if (updated && selectedTask.value?.id === taskId) {
+      selectedTask.value = { ...updated }
+    }
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not update checklist.')
+  }
+}
+
+const handleStudyUpdate = async (taskId, data) => {
+  try {
+    const updated = await updateStudyData(taskId, data)
+    if (updated && selectedTask.value?.id === taskId) {
+      selectedTask.value = { ...updated }
+    }
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not save study data.')
+  }
+}
+
+const handleInstallationMeta = async (taskId, meta) => {
+  try {
+    const updated = await updateInstallationMeta(taskId, meta)
+    if (updated && selectedTask.value?.id === taskId) {
+      selectedTask.value = { ...updated }
+    }
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not save commissioning data.')
+  }
+}
+
+const handleCardStatusUpdate = async (taskId, status) => {
+  try {
+    await updateTaskStatus(taskId, status)
+    if (status === 'completed') {
+      moveCompletedToArchive(taskId)
+    }
+    toast.success(t('operator.toast.statusUpdated') || 'Status updated')
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not update status.')
   }
 }
 
@@ -449,9 +494,14 @@ const closeIncidentModal = () => {
 }
 
 const handleIncidentSubmit = async (taskId, data) => {
-  const updated = await reportIncident(taskId, data)
-  if (updated && selectedTask.value?.id === taskId) {
-    selectedTask.value = { ...updated }
+  try {
+    const updated = await reportIncident(taskId, data)
+    if (updated && selectedTask.value?.id === taskId) {
+      selectedTask.value = { ...updated }
+    }
+    toast.success(t('operator.toast.incidentReported') || 'Incident reported')
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not report incident.')
   }
   closeIncidentModal()
 }
@@ -461,39 +511,64 @@ const handleLogout = async () => {
   router.push('/login')
 }
 
-async function handleOperatorPhaseUpdate(req, step) {
-  const updated = await updateRequestPhase(req.id, step.step, `Updated to: ${step.title}`)
-  if (updated) toast.success(`Phase: ${step.title}`)
-  else toast.error('Phase update failed')
+async function handleSetDutyStatus(status) {
+  try {
+    await setDutyStatus(status)
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not update duty status.')
+  }
 }
 
-onMounted(() => {
-  loadMissions().catch(() => {})
-  fetchServiceRequests().catch(() => {})
+async function handleRefreshMissions() {
+  try {
+    await loadMissions()
+    toast.success(t('operator.toast.refreshed') || 'Missions refreshed')
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not load missions.')
+  }
+}
+
+onMounted(async () => {
+  await refreshUser()
+  try {
+    await loadMissions()
+  } catch (_) {
+    toast.error(missionsError.value || 'Could not load missions.')
+  }
 })
 </script>
 
 <style scoped>
 .operator-page {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background-color: #f8faf9;
   color: #111827;
   font-family: 'Outfit', sans-serif;
 }
 
-/* Header matching Admin Dashboard design */
-.operator-header {
+.operator-layout {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  height: 100%;
+}
+
+.operator-sidebar {
   background: #020d07;
   color: #f0fdf4;
-  padding: 0.95rem 2rem;
+  border-right: 1px solid rgba(74, 222, 128, 0.12);
+  padding: 1.15rem 0.9rem;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(74, 222, 128, 0.15);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  flex-direction: column;
+  gap: 1.25rem;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 0.35rem 0.55rem 1rem;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.12);
 }
 
 .brand-link {
@@ -514,6 +589,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   color: #4ade80;
+  flex-shrink: 0;
 }
 
 .brand-title {
@@ -521,35 +597,150 @@ onMounted(() => {
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 800;
   letter-spacing: 1.5px;
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .brand-sub {
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #4ade80;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.header-meta {
+.sidebar-nav {
   display: flex;
-  align-items: center;
-  gap: 1.25rem;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
 }
 
-/* Duty Switcher */
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(240, 253, 244, 0.72);
+  text-align: left;
+}
+
+.nav-btn:hover {
+  background: rgba(74, 222, 128, 0.08);
+  color: #f0fdf4;
+}
+
+.nav-btn.active {
+  background: rgba(74, 222, 128, 0.14);
+  color: #4ade80;
+}
+
+.nav-icon {
+  display: flex;
+  align-items: center;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+.nav-badge {
+  margin-left: auto;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(74, 222, 128, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar-profile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.35rem 0.45rem;
+}
+
+.profile-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(74, 222, 128, 0.16);
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.profile-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.operator-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.operator-role {
+  font-size: 0.72rem;
+  color: rgba(240, 253, 244, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-btn {
+  width: 100%;
+  background: transparent;
+  border: 1px solid rgba(240, 253, 244, 0.22);
+  color: #f0fdf4;
+  padding: 0.55rem 0.9rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.logout-btn:hover {
+  background: rgba(240, 253, 244, 0.08);
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
 .duty-pill {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
   font-size: 0.8rem;
   font-weight: 700;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 .duty-pill.on_duty {
@@ -587,6 +778,7 @@ onMounted(() => {
   width: 8px;
   height: 8px;
   border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .duty-select {
@@ -597,6 +789,8 @@ onMounted(() => {
   font-weight: 700;
   outline: none;
   cursor: pointer;
+  width: 100%;
+  min-width: 0;
 }
 
 .duty-select option {
@@ -604,129 +798,37 @@ onMounted(() => {
   color: #f0fdf4;
 }
 
-.operator-profile {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+.operator-main {
+  min-width: 0;
+  height: 100%;
+  padding: 1.15rem 1.5rem 1.5rem;
+  overflow: auto;
 }
 
-.operator-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #4ade80;
+.operator-main > .panel {
+  padding: 0;
 }
 
-.operator-name {
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
-.logout-btn {
-  background: transparent;
-  border: 1px solid rgba(240, 253, 244, 0.25);
-  color: #f0fdf4;
-  padding: 0.45rem 0.9rem;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
-}
-
-.logout-btn:hover {
-  background: rgba(240, 253, 244, 0.08);
-  border-color: rgba(74, 222, 128, 0.5);
-}
-
-/* Sub-nav Tabs */
-.sub-nav {
+.refresh-btn {
   background: #ffffff;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-}
-
-.sub-nav-container {
-  max-width: 1360px;
-  margin: 0 auto;
-  padding: 0 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  overflow-x: auto;
-}
-
-.sub-tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.95rem 1.15rem;
-  border: none;
-  background: transparent;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #4b5563;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 0.5rem 0.95rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 650;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.2s ease;
   white-space: nowrap;
 }
 
-.sub-tab-btn:hover {
-  color: #052e16;
-}
-
-.sub-tab-btn.active {
+.refresh-btn:hover:not(:disabled) {
+  border-color: #16a34a;
   color: #15803d;
-  border-bottom-color: #16a34a;
-  font-weight: 700;
 }
 
-.tab-badge {
-  background: #16a34a;
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 0.12rem 0.45rem;
-  border-radius: 999px;
-}
-
-.sub-nav-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-}
-
-.reset-demo-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.75rem;
-  border-radius: 8px;
-  background: #f9fafb;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.reset-demo-btn:hover {
-  background: #f3f4f6;
-  color: #111827;
-}
-
-/* Operator Main */
-.panel{
-  padding-top: 0px;
-}
-
-.operator-main {
-  padding: 2rem 2.5rem;
+.refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .status-warning-banner {
@@ -743,10 +845,18 @@ onMounted(() => {
   margin-bottom: 1.5rem;
 }
 
+.status-warning-banner.error {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #9a3412;
+  flex-wrap: wrap;
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 
@@ -762,7 +872,6 @@ onMounted(() => {
   font-size: 0.92rem;
 }
 
-/* Tasks Container */
 .tasks-container {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -775,7 +884,6 @@ onMounted(() => {
   gap: 0.85rem;
 }
 
-/* Empty State */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -823,6 +931,53 @@ onMounted(() => {
   cursor: pointer;
 }
 
+@media (max-width: 900px) {
+  .operator-page {
+    height: auto;
+    overflow: visible;
+  }
+
+  .operator-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .operator-sidebar {
+    height: auto;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid rgba(74, 222, 128, 0.12);
+  }
+
+  .sidebar-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    flex: none;
+  }
+
+  .nav-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .sidebar-footer {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 0;
+  }
+
+  .logout-btn {
+    width: auto;
+    flex-shrink: 0;
+  }
+
+  .operator-main {
+    height: auto;
+    overflow: visible;
+    padding: 1rem;
+  }
+}
 /* Agenda Timeline */
 .agenda-timeline {
   display: flex;
@@ -996,174 +1151,4 @@ onMounted(() => {
   }
 }
 
-/* Service Realization Styles for Operator */
-.services-op-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.op-service-card {
-  background: #ffffff;
-  border: 1px solid rgba(5, 46, 22, 0.08);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.op-service-card .card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1.25rem;
-}
-
-.req-id {
-  font-size: 0.78rem;
-  color: #16a34a;
-  font-weight: 800;
-}
-
-.op-service-card h3 {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #052e16;
-  margin: 0.25rem 0;
-}
-
-.req-client {
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.phase-current-badge {
-  background: #dcfce7;
-  color: #15803d;
-  padding: 0.35rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.phase-update-box {
-  background: #f8fafc;
-  padding: 1rem;
-  border-radius: 12px;
-  margin-bottom: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.phase-update-box span {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #334155;
-}
-
-.phase-buttons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.phase-buttons.labeled {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  width: 100%;
-}
-
-.phase-current-desc {
-  margin: 0.35rem 0 0.75rem;
-  font-size: 0.88rem;
-  color: #64748b;
-}
-
-.phase-frac {
-  font-weight: 600;
-  opacity: 0.7;
-  margin-left: 0.25rem;
-}
-
-.phase-step-chip {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5rem;
-  text-align: left;
-  padding: 0.55rem 0.65rem;
-  border-radius: 10px;
-  border: 1px solid #e2e8f0;
-  background: #fff;
-  cursor: pointer;
-}
-
-.phase-step-chip.done {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
-}
-
-.phase-step-chip.active {
-  border-color: #16a34a;
-  background: #dcfce7;
-}
-
-.phase-num {
-  flex-shrink: 0;
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  background: #e2e8f0;
-  color: #334155;
-  font-size: 0.75rem;
-  font-weight: 800;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.phase-step-chip.active .phase-num,
-.phase-step-chip.done .phase-num {
-  background: #16a34a;
-  color: #fff;
-}
-
-.phase-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-}
-
-.phase-text strong {
-  font-size: 0.8rem;
-  color: #0f172a;
-}
-
-.phase-text em {
-  font-style: normal;
-  font-size: 0.7rem;
-  color: #64748b;
-}
-
-.phase-btn {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  color: #334155;
-  padding: 0.4rem 0.85rem;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.phase-btn.active {
-  background: #052e16;
-  color: #4ade80;
-  border-color: #052e16;
-}
-
-.req-notes {
-  font-size: 0.85rem;
-  color: #475569;
-}
 </style>

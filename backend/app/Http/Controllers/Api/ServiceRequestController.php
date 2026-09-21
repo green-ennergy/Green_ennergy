@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Operator;
 use App\Models\Service;
 use App\Models\ServiceRequest;
+use App\Support\ServiceRequestMissionSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -168,17 +169,32 @@ class ServiceRequestController extends Controller
         $operatorId = $validated['id_operator']
             ?? (isset($validated['operator_id']) ? (int) $validated['operator_id'] : null);
 
+        if ($operatorId !== null) {
+            $operatorId = (int) $operatorId;
+        }
+
         if (array_key_exists('id_operator', $validated) || array_key_exists('operator_id', $validated)) {
             if ($operatorId) {
                 $operator = Operator::with('user')->find($operatorId);
                 $row->id_operator = $operatorId;
                 $row->status = $validated['status'] ?? 'accepted';
-                $row->current_phase = max((int) $row->current_phase, 2);
+                $row->current_phase = max((int) $row->current_phase, 3);
                 $history[] = [
                     'date' => now()->format('Y-m-d H:i'),
                     'actor' => 'Admin',
                     'text' => 'Request accepted and assigned to '.($operator?->user?->name ?? 'operator').'.',
                 ];
+                $row->history = $history;
+                $row->save();
+
+                if ($operator) {
+                    ServiceRequestMissionSync::syncFromAssignment($row->fresh(['service']), $operator, 'Admin');
+                }
+
+                return response()->json([
+                    'request' => $this->present($row->fresh(['service', 'operator.user'])),
+                    'message' => 'Service request updated',
+                ]);
             } else {
                 $row->id_operator = null;
             }
@@ -210,6 +226,14 @@ class ServiceRequestController extends Controller
 
         $row->history = $history;
         $row->save();
+
+        // If an operator is already linked, ensure a field mission exists
+        if ($row->id_operator && $row->status !== 'rejected') {
+            $operator = Operator::with('user')->find($row->id_operator);
+            if ($operator && ! $row->mission()->exists()) {
+                ServiceRequestMissionSync::syncFromAssignment($row->fresh(['service']), $operator, 'Admin');
+            }
+        }
 
         return response()->json([
             'request' => $this->present($row->fresh(['service', 'operator.user'])),
