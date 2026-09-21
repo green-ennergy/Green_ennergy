@@ -25,6 +25,7 @@ class Mission extends Model
         'operator_notes',
         'type_data',
         'id_operator',
+        'id_project',
     ];
 
     protected $casts = [
@@ -35,6 +36,11 @@ class Mission extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(Operator::class, 'id_operator', 'id_operator');
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'id_project', 'id_project');
     }
 
     public function traces(): HasMany

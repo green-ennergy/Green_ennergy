@@ -10,10 +10,36 @@
         <Bot :size="16" :color="TOKENS.teal" />
         <span class="muted-text">Dernière analyse</span>
         <!-- <span class="mono">09:45</span> -->
-        <span class="mono">{{ lastAnalysis }}</span>
+        <span class="mono">{{ isLoading ? '…' : (lastAnalysis || '—') }}</span>
       </div>
     </div>
 
+    <!-- Loading -->
+    <div v-if="isLoading" class="ai-state ai-loading" aria-busy="true" aria-live="polite">
+      <div class="ai-loader">
+        <div class="ai-loader-ring" aria-hidden="true" />
+        <Bot :size="28" :color="TOKENS.teal" class="ai-loader-icon" />
+      </div>
+      <h2>Analyse en cours</h2>
+      <p>L’IA calcule la demande et les risques de stock…</p>
+      <div class="ai-skeleton-grid">
+        <div class="ai-skel skel-card" v-for="n in 3" :key="`s-${n}`" />
+        <div class="ai-skel skel-block" />
+        <div class="ai-skel skel-block tall" />
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div v-else-if="loadError || !products.length" class="ai-state ai-empty">
+      <AlertTriangle :size="28" :color="TOKENS.danger" />
+      <h2>{{ loadError ? 'Analyse indisponible' : 'Aucune donnée' }}</h2>
+      <p>{{ loadError || 'Aucun produit à analyser pour le moment.' }}</p>
+      <button type="button" class="btn" :disabled="isLoading" @click="loadAIData">
+        Réessayer
+      </button>
+    </div>
+
+    <template v-else>
     <!-- Stat cards -->
     <div class="stat-row">
       <StatCard :icon="Package" label="Produits analysés" :value="stats.total" :accent="TOKENS.teal" />
@@ -26,7 +52,7 @@
       <div class="col-left">
 
         <!-- Recommendations -->
-        <section style="padding: 0px;">
+        <section v-if="recommendations.length" style="padding: 0px;">
           <h2 class="section-title">RECOMMANDATIONS IA</h2>
           <div class="rec-list">
             <div class="rec-card" v-for="p in recommendations" :key="p.id">
@@ -87,14 +113,14 @@
         <!-- Trend chart -->
         <section style="padding: 0px; margin-top: 0px;">
           <h2 class="section-title">TENDANCE DE LA DEMANDE</h2>
-          <div class="chart-card">
-            <!-- <TrendChart :data="TREND" :tokens="TOKENS" /> -->
+          <div v-if="trends.length" class="chart-card">
             <TrendChart :data="trends" :tokens="TOKENS" />
             <div class="legend">
               <span><span :style="{ color: TOKENS.teal }">●</span> Réel</span>
               <span><span :style="{ color: TOKENS.gold }">●</span> Prévu par l'IA</span>
             </div>
           </div>
+          <div v-else class="empty-inline">Pas encore de tendance disponible.</div>
         </section>
       </div>
 
@@ -138,6 +164,7 @@
         </section>
       </div>
     </div>
+    </template>
 
     <!-- Product detail slide-over -->
     <div v-if="selected" class="overlay" @click="selected = null">
@@ -335,48 +362,42 @@ const mapProductIcon = (item) => {
   return ICON_MAP[item.icon_type] || Sun;
 };
 
-// Reactive state initialized with fallback data (no deletion of original data)
-const products = ref(PRODUCTS.map((p) => ({ ...p, icon: mapProductIcon(p) })));
-const trends = ref([...TREND]);
-const lastAnalysis = ref("09:45");
-const assistantTime = ref("Généré aujourd'hui à 09:45");
-const assistantInsights = ref([
-  "Demande des panneaux solaires en hausse de 35%",
-  "Ventes de batteries en croissance",
-  "Demande des chargeurs en baisse"
-]);
-const isLoading = ref(false);
+const products = ref([]);
+const trends = ref([]);
+const lastAnalysis = ref('');
+const assistantTime = ref('');
+const assistantInsights = ref([]);
+const isLoading = ref(true);
+const loadError = ref('');
 const isOrdering = ref(false);
 const toast = useToast();
 
 const loadAIData = async () => {
   try {
     isLoading.value = true;
-    const response = await api.get("/admin/ai/overview");
-    if (response.data) {
-      const data = response.data;
-      if (data.products && data.products.length) {
-        products.value = data.products.map((p) => ({
-          ...p,
-          icon: mapProductIcon(p)
-        }));
-      }
-      if (data.trends && data.trends.length) {
-        trends.value = data.trends;
-      }
-      if (data.last_analysis) {
-        lastAnalysis.value = data.last_analysis;
-      }
-      if (data.assistant_insights && data.assistant_insights.length) {
-        assistantInsights.value = data.assistant_insights;
-      }
-      if (data.assistant_time) {
-        assistantTime.value = data.assistant_time;
-      }
+    loadError.value = '';
+    selected.value = null;
+    const response = await api.get('/admin/ai/overview');
+    const data = response.data || {};
+    products.value = (data.products || []).map((p) => ({
+      ...p,
+      icon: mapProductIcon(p)
+    }));
+    trends.value = data.trends || [];
+    lastAnalysis.value = data.last_analysis || '';
+    assistantInsights.value = data.assistant_insights || [];
+    assistantTime.value = data.assistant_time || '';
+    if (!products.value.length) {
+      loadError.value = 'Aucun produit à analyser pour le moment.';
     }
   } catch (err) {
-    console.warn("AI overview unavailable via Laravel, using local fallback:", err.message);
-    toast.error(getApiErrorMessage(err, "Impossible de charger l'analyse IA."));
+    products.value = [];
+    trends.value = [];
+    lastAnalysis.value = '';
+    assistantInsights.value = [];
+    assistantTime.value = '';
+    loadError.value = getApiErrorMessage(err, "Impossible de charger l'analyse IA.");
+    toast.error(loadError.value);
   } finally {
     isLoading.value = false;
   }
@@ -536,7 +557,7 @@ const TrendChart = {
     const stepX = width / (n - 1);
 
     const values = props.data.flatMap((d) => [d.reel, d.prevu]).filter((v) => v !== null && v !== undefined);
-    const maxVal = Math.max(...values) * 1.08;
+    const maxVal = Math.max(...(values.length ? values : [1])) * 1.08;
 
     const xAt = (i) => i * stepX;
     const yAt = (v) => padTop + chartH - (v / maxVal) * chartH;
@@ -800,6 +821,90 @@ const TrendChart = {
 
 .justif-title { font-size: 12px; color: #6b7280; margin-bottom: 8px; font-weight: 600; }
 .justif-list { margin: 0 0 20px; padding: 0 0 0 16px; font-size: 12.5px; line-height: 1.8; color: #374151; }
+
+
+.ai-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.55rem;
+  padding: 2.5rem 1.25rem 2rem;
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+}
+.ai-state h2 {
+  margin: 0.35rem 0 0;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #052e16;
+}
+.ai-state p {
+  margin: 0;
+  max-width: 360px;
+  color: #6b7280;
+  font-size: 0.92rem;
+}
+.ai-loader {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.35rem;
+}
+.ai-loader-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid rgba(34, 197, 94, 0.15);
+  border-top-color: #22c55e;
+  animation: ai-spin 0.85s linear infinite;
+}
+.ai-loader-icon {
+  animation: ai-pulse 1.4s ease-in-out infinite;
+}
+.ai-skeleton-grid {
+  width: min(720px, 100%);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+.ai-skel {
+  border-radius: 12px;
+  background: linear-gradient(90deg, #eef4f0 25%, #f8faf9 50%, #eef4f0 75%);
+  background-size: 200% 100%;
+  animation: ai-shimmer 1.2s ease-in-out infinite;
+}
+.skel-card { height: 88px; }
+.skel-block {
+  grid-column: 1 / -1;
+  height: 120px;
+}
+.skel-block.tall { height: 160px; }
+.empty-inline {
+  background: #fff;
+  border: 1px dashed rgba(0,0,0,0.1);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+@keyframes ai-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes ai-pulse {
+  0%, 100% { opacity: 0.55; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1); }
+}
+@keyframes ai-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 @media (max-width: 900px) {
   .col-right { width: 100%; }

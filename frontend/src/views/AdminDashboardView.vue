@@ -145,102 +145,172 @@
         </section>
 
         <!-- Orders / RFQ -->
-        <section v-if="activeTab === 'orders'" class="panel">
-          <header class="panel-header">
+        <section v-if="activeTab === 'orders'" class="panel orders-panel">
+          <header class="panel-header orders-header">
             <div>
               <h1>{{ t('admin.orders.title') }}</h1>
               <p>{{ t('admin.orders.subtitle') }}</p>
             </div>
-            <select v-model="rfqFilter" @change="loadOrders" class="filter-select">
-              <option value="">{{ t('admin.filters.allStatuses') }}</option>
-              <option value="review">{{ t('admin.filters.review') }}</option>
-              <option value="engineering">{{ t('admin.filters.engineering') }}</option>
-              <option value="issued">{{ t('admin.filters.issued') }}</option>
-              <option value="dispatched">{{ t('admin.filters.dispatched') }}</option>
-            </select>
+            <div class="orders-header-tools">
+              <div class="orders-view-tabs" role="tablist">
+                <button
+                  type="button"
+                  class="orders-view-tab"
+                  :class="{ active: ordersView === 'new' }"
+                  @click="ordersView = 'new'"
+                >
+                  {{ t('admin.orders.newSection') }}
+                  <span v-if="newRfqs.length" class="orders-count">{{ newRfqs.length }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="orders-view-tab"
+                  :class="{ active: ordersView === 'active' }"
+                  @click="ordersView = 'active'"
+                >
+                  {{ t('admin.orders.activeSection') }}
+                  <span v-if="activeRfqs.length" class="orders-count muted">{{ activeRfqs.length }}</span>
+                </button>
+                <button
+                  type="button"
+                  class="orders-view-tab"
+                  :class="{ active: ordersView === 'all' }"
+                  @click="ordersView = 'all'"
+                >
+                  {{ t('admin.orders.allSection') }}
+                </button>
+              </div>
+              <select v-model="rfqFilter" @change="loadOrders" class="filter-select">
+                <option value="">{{ t('admin.filters.allStatuses') }}</option>
+                <option value="review">{{ t('admin.filters.review') }}</option>
+                <option value="engineering">{{ t('admin.filters.engineering') }}</option>
+                <option value="issued">{{ t('admin.filters.issued') }}</option>
+                <option value="dispatched">{{ t('admin.filters.dispatched') }}</option>
+              </select>
+            </div>
           </header>
 
-          <div v-if="!rfqs.length && !isLoading" class="empty-state">
-            <p>{{ t('admin.orders.empty') }}</p>
+          <div class="orders-summary">
+            <div class="orders-stat new">
+              <strong>{{ newRfqs.length }}</strong>
+              <span>{{ t('admin.orders.statNew') }}</span>
+            </div>
+            <div class="orders-stat">
+              <strong>{{ activeRfqs.length }}</strong>
+              <span>{{ t('admin.orders.statActive') }}</span>
+            </div>
+            <div class="orders-stat">
+              <strong>{{ rfqs.length }}</strong>
+              <span>{{ t('admin.orders.statTotal') }}</span>
+            </div>
           </div>
 
-          <div v-else class="rfq-list">
-            <article v-for="rfq in rfqs" :key="rfq.id" class="rfq-card">
-              <div class="rfq-card-top">
-                <div>
-                  <span class="rfq-id">{{ rfq.ticket_number }}</span>
-                  <h3>{{ rfq.company_name }}</h3>
-                  <p>{{ rfq.email }}<span v-if="rfq.user?.phone"> · {{ rfq.user.phone }}</span></p>
-                  <small>{{ formatDate(rfq.created_at) }}</small>
-                </div>
-                <select
-                  class="status-select"
-                  :value="rfq.status"
-                  @change="handleRfqStatusChange(rfq, $event.target.value)"
-                >
-                  <option value="review">{{ t('admin.filters.review') }}</option>
-                  <option value="engineering">{{ t('admin.filters.engineering') }}</option>
-                  <option value="issued">{{ t('admin.filters.issued') }}</option>
-                  <option value="dispatched">{{ t('admin.filters.dispatched') }}</option>
-                </select>
-              </div>
-
-              <div class="rfq-pipeline">
-                <span
-                  v-for="step in rfqSteps"
-                  :key="step.key"
-                  class="rfq-step"
-                  :class="{ done: isRfqStepDone(rfq.status, step.key), current: rfq.status === step.key }"
-                >
-                  {{ step.label }}
-                </span>
-              </div>
-
-              <table class="rfq-mini-table">
-                <thead>
-                  <tr>
-                    <th>{{ t('rfq.table.line') }}</th>
-                    <th>{{ t('common.quantity') }}</th>
-                    <th>{{ t('common.unit') }}</th>
-                    <th>{{ t('common.total') }}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in rfq.items" :key="item.id">
-                    <td>{{ rfqItemLabel(item) }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.unit_price != null ? formatMoney(item.unit_price) : '—' }}</td>
-                    <td>{{ item.unit_price != null ? formatMoney(rfqLineTotal(item)) : '—' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <div v-if="rfq.quoted_total" class="quote-summary">
-                <strong>{{ t('rfq.table.totalLabel') }} {{ formatMoney(rfqQuoteTotal(rfq)) }}</strong>
-                <span v-if="rfq.client_confirmed" class="confirmed-tag">{{ t('admin.orders.clientConfirmed') }}</span>
-              </div>
-
-              <div class="rfq-actions">
-                <button
-                  v-if="canEditQuote(rfq)"
-                  type="button"
-                  class="primary-btn small"
-                  @click="openQuoteDrawer(rfq)"
-                >
-                  {{ rfq.quoted_total ? t('admin.orders.editQuote') : t('admin.orders.prepareQuote') }}
-                </button>
-                <button
-                  v-if="canDownloadRfqPdf(rfq)"
-                  type="button"
-                  class="ghost-btn small"
-                  :disabled="pdfDownloadingId === rfq.id"
-                  @click="handleDownloadQuotePdf(rfq)"
-                >
-                  {{ pdfDownloadingId === rfq.id ? t('common.generatingPdf') : t('common.downloadPdf') }}
-                </button>
-              </div>
-            </article>
+          <div v-if="!visibleOrdersRfqs.length && !isLoading" class="empty-state orders-empty">
+            <p>{{ ordersEmptyMessage }}</p>
           </div>
+
+          <template v-else>
+            <div
+              v-for="section in ordersDisplaySections"
+              :key="section.id"
+              class="orders-section"
+            >
+              <header v-if="section.showHead" class="orders-section-head">
+                <h2>{{ section.title }}</h2>
+                <span>{{ section.hint }}</span>
+              </header>
+
+              <div class="rfq-list">
+                <article
+                  v-for="rfq in section.items"
+                  :key="section.id + '-' + rfq.id"
+                  class="rfq-card"
+                  :class="{ 'rfq-card--new': rfq.status === 'review' }"
+                >
+                  <div class="rfq-card-top">
+                    <div class="rfq-card-identity">
+                      <div class="rfq-id-row">
+                        <span class="rfq-id">{{ rfq.ticket_number }}</span>
+                        <span v-if="rfq.status === 'review'" class="rfq-new-badge">{{ t('admin.orders.newBadge') }}</span>
+                      </div>
+                      <h3>{{ rfq.company_name }}</h3>
+                      <p>{{ rfq.email }}<span v-if="rfq.user?.phone"> · {{ rfq.user.phone }}</span></p>
+                      <small>{{ formatDate(rfq.created_at) }}</small>
+                    </div>
+                    <select
+                      class="status-select"
+                      :value="rfq.status"
+                      @change="handleRfqStatusChange(rfq, $event.target.value)"
+                    >
+                      <option value="review">{{ t('admin.filters.review') }}</option>
+                      <option value="engineering">{{ t('admin.filters.engineering') }}</option>
+                      <option value="issued">{{ t('admin.filters.issued') }}</option>
+                      <option value="dispatched">{{ t('admin.filters.dispatched') }}</option>
+                    </select>
+                  </div>
+
+                  <div class="rfq-pipeline">
+                    <span
+                      v-for="step in rfqSteps"
+                      :key="step.key"
+                      class="rfq-step"
+                      :class="{ done: isRfqStepDone(rfq.status, step.key), current: rfq.status === step.key }"
+                    >
+                      {{ step.label }}
+                    </span>
+                  </div>
+
+                  <div class="rfq-card-meta">
+                    <span>{{ t('admin.orders.linesCount', { n: rfq.items?.length || 0 }) }}</span>
+                    <span v-if="rfq.quoted_total">{{ formatMoney(rfqQuoteTotal(rfq)) }}</span>
+                    <span v-if="rfq.client_confirmed" class="confirmed-tag">{{ t('admin.orders.clientConfirmed') }}</span>
+                  </div>
+
+                  <details class="rfq-details">
+                    <summary>{{ t('admin.orders.showLines') }}</summary>
+                    <table class="rfq-mini-table">
+                      <thead>
+                        <tr>
+                          <th>{{ t('rfq.table.line') }}</th>
+                          <th>{{ t('common.quantity') }}</th>
+                          <th>{{ t('common.unit') }}</th>
+                          <th>{{ t('common.total') }}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr v-for="item in rfq.items" :key="item.id">
+                          <td>{{ rfqItemLabel(item) }}</td>
+                          <td>{{ item.quantity }}</td>
+                          <td>{{ item.unit_price != null ? formatMoney(item.unit_price) : '—' }}</td>
+                          <td>{{ item.unit_price != null ? formatMoney(rfqLineTotal(item)) : '—' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </details>
+
+                  <div class="rfq-actions">
+                    <button
+                      v-if="canEditQuote(rfq)"
+                      type="button"
+                      class="primary-btn small"
+                      @click="openQuoteDrawer(rfq)"
+                    >
+                      {{ rfq.quoted_total ? t('admin.orders.editQuote') : t('admin.orders.prepareQuote') }}
+                    </button>
+                    <button
+                      v-if="canDownloadRfqPdf(rfq)"
+                      type="button"
+                      class="ghost-btn small"
+                      :disabled="pdfDownloadingId === rfq.id"
+                      @click="handleDownloadQuotePdf(rfq)"
+                    >
+                      {{ pdfDownloadingId === rfq.id ? t('common.generatingPdf') : t('common.downloadPdf') }}
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </template>
 
           <p v-if="pdfError" class="form-error rfq-pdf-error">{{ pdfError }}</p>
 
@@ -1257,6 +1327,651 @@
           </div>
         </section>
 
+        <!-- Services Management -->
+        <section v-if="activeTab === 'services'" class="panel">
+          <header class="panel-header">
+            <div>
+              <h1>Gestion des Services</h1>
+              <p>Ajouter, supprimer et personnaliser le catalogue. Traiter les demandes clients.</p>
+            </div>
+            <button type="button" class="primary-btn" @click="openCreateServiceModal">
+              <AdminIcon name="plus" size="16" />
+              <span>Ajouter un service</span>
+            </button>
+          </header>
+
+          <div class="ops-services-config-view">
+            <div v-if="!servicesConfig.length" class="empty-state">
+              <p>Aucun service. Créez le premier pour le catalogue public.</p>
+            </div>
+            <div v-else class="config-grid">
+              <div
+                v-for="srv in servicesConfig"
+                :key="srv.id"
+                :class="['service-config-card', { disabled: !srv.enabled }]"
+              >
+                <div class="card-head">
+                  <div>
+                    <span class="cat-tag">{{ srv.category }}</span>
+                    <h3>{{ srv.title }}</h3>
+                  </div>
+
+                  <div class="toggle-switch-wrap">
+                    <label class="switch">
+                      <input
+                        type="checkbox"
+                        :checked="srv.enabled"
+                        @change="handleToggleService(srv)"
+                      />
+                      <span class="slider round"></span>
+                    </label>
+                    <span :class="['toggle-lbl', srv.enabled ? 'enabled' : 'disabled']">
+                      {{ srv.enabled ? 'Actif' : 'Désactivé' }}
+                    </span>
+                  </div>
+                </div>
+
+                <p class="config-desc">{{ srv.desc }}</p>
+
+                <div class="config-meta">
+                  <span>Durée: <strong>{{ srv.estimatedDuration || '—' }}</strong></span>
+                  <span>Tarif: <strong>{{ srv.startingPrice || '—' }}</strong></span>
+                </div>
+
+                <div class="card-footer-actions service-card-actions">
+                  <button type="button" class="edit-service-btn" @click="openEditServiceModal(srv)">
+                    <AdminIcon name="edit" size="14" />
+                    <span>Modifier</span>
+                  </button>
+                  <button type="button" class="danger-service-btn" @click="handleDeleteService(srv)">
+                    <AdminIcon name="trash" size="14" />
+                    <span>Supprimer</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="service-requests-block">
+              <header class="subpanel-header">
+                <div>
+                  <h2>Demandes de services</h2>
+                  <p>Accepter et assigner un opérateur pour démarrer la réalisation.</p>
+                </div>
+              </header>
+
+              <div v-if="!serviceRequests.length" class="empty-state compact">
+                <p>Aucune demande pour le moment.</p>
+              </div>
+
+              <div v-else class="service-req-list">
+                <article v-for="req in serviceRequests" :key="req.id" class="service-req-card">
+                  <div class="req-top">
+                    <div>
+                      <code>{{ req.id }}</code>
+                      <h3>{{ req.serviceTitle }}</h3>
+                      <p>{{ req.clientName }} · {{ req.clientEmail }} · {{ req.city || '—' }}</p>
+                      <small>
+                        {{ req.createdAt }} ·
+                        {{ getPhaseLabel(req) }} ({{ req.currentPhase }}/5)
+                      </small>
+                    </div>
+                    <span class="status-pill" :class="req.status">{{ req.status }}</span>
+                  </div>
+                  <p v-if="req.notes" class="req-notes">{{ req.notes }}</p>
+
+                  <div class="phase-track-labeled">
+                    <p class="phase-track-hint">Avancement de la réalisation — cliquez une étape pour la définir :</p>
+                    <div class="phase-steps-row">
+                      <button
+                        v-for="step in getRequestSteps(req)"
+                        :key="step.step"
+                        type="button"
+                        :class="[
+                          'phase-step-chip',
+                          {
+                            active: req.currentPhase === step.step,
+                            done: req.currentPhase > step.step
+                          }
+                        ]"
+                        :title="step.desc"
+                        @click="handleUpdateServicePhase(req, step.step)"
+                      >
+                        <span class="phase-num">{{ step.step }}</span>
+                        <span class="phase-text">
+                          <strong>{{ step.title }}</strong>
+                          <em>{{ step.desc }}</em>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="req-assign-row">
+                    <select v-model="assignOperatorMap[req.id]" class="filter-select">
+                      <option value="">Choisir un opérateur…</option>
+                      <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
+                    </select>
+                    <button
+                      type="button"
+                      class="primary-btn small"
+                      :disabled="!assignOperatorMap[req.id] || req.status === 'completed' || req.status === 'rejected'"
+                      @click="handleAssignServiceRequest(req)"
+                    >
+                      Assigner
+                    </button>
+                    <button
+                      type="button"
+                      class="ghost-btn small"
+                      :disabled="req.status === 'completed' || req.status === 'rejected'"
+                      @click="handleRejectServiceRequest(req)"
+                    >
+                      Rejeter
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="showServiceModal" class="modal-overlay service-edit-overlay" @click.self="showServiceModal = false">
+            <div class="ops-modal ops-modal-sm" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <div>
+                  <h3>{{ editingService ? 'Modifier le service' : 'Nouveau service' }}</h3>
+                </div>
+                <button type="button" class="close-btn" @click="showServiceModal = false">×</button>
+              </header>
+              <form class="task-form" @submit.prevent="submitServiceForm">
+                <div class="modal-body">
+                  <div class="form-grid">
+                    <label class="span-2">
+                      <span>Titre</span>
+                      <input v-model="serviceForm.title" type="text" required />
+                    </label>
+                    <label>
+                      <span>Catégorie</span>
+                      <input v-model="serviceForm.category" type="text" />
+                    </label>
+                    <label>
+                      <span>Tarif de départ</span>
+                      <input v-model="serviceForm.startingPrice" type="text" placeholder="4,500 MAD" />
+                    </label>
+                    <label>
+                      <span>Durée estimée</span>
+                      <input v-model="serviceForm.estimatedDuration" type="text" placeholder="1-3 Days" />
+                    </label>
+                    <label class="span-2">
+                      <span>Description</span>
+                      <textarea v-model="serviceForm.desc" rows="3"></textarea>
+                    </label>
+                    <label class="span-2">
+                      <span>Points clés (un par ligne)</span>
+                      <textarea v-model="serviceForm.bulletsText" rows="3" placeholder="Site audit&#10;Panel mounting"></textarea>
+                    </label>
+                    <label class="checkbox-row span-2">
+                      <input v-model="serviceForm.enabled" type="checkbox" />
+                      <span>Service actif (visible clients)</span>
+                    </label>
+                  </div>
+                </div>
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showServiceModal = false">Annuler</button>
+                  <button type="submit" class="primary-btn">{{ editingService ? 'Enregistrer' : 'Créer' }}</button>
+                </footer>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <!-- Liste des Opérateurs -->
+        <section v-if="activeTab === 'operators'" class="panel operators-panel">
+          <header class="panel-header">
+            <div>
+              <h1>Liste des Opérateurs</h1>
+              <p>Gestion de la flotte des techniciens de terrain et affectation rapide des missions.</p>
+            </div>
+            <button class="primary-btn" @click="openCreateOperatorModal()">
+              <AdminIcon name="plus" size="16" />
+              <span>Ajouter un opérateur</span>
+            </button>
+          </header>
+
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Opérateur</th>
+                  <th>Région / Ville</th>
+                  <th>Téléphone</th>
+                  <th>Statut de Service</th>
+                  <th>Missions Actives</th>
+                  <th class="col-actions">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="op in opsOperators" :key="op.id">
+                  <td>
+                    <div class="op-table-profile">
+                      <div class="op-mini-avatar" :style="{ backgroundColor: op.avatarColor }">
+                        {{ op.name.substring(0, 2).toUpperCase() }}
+                      </div>
+                      <div>
+                        <strong>{{ op.name }}</strong><br />
+                        <small class="text-muted">{{ op.role }}</small>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{{ op.city }}</td>
+                  <td>{{ op.phone }}</td>
+                  <td>
+                    <button
+                      type="button"
+                      :class="['duty-badge', getDutyStatusClass(op.dutyStatus)]"
+                      @click="toggleOperatorDuty(op.id)"
+                      title="Cliquer pour changer le statut"
+                      style="border: none; cursor: pointer;"
+                    >
+                      ● {{ getDutyStatusLabel(op.dutyStatus) }}
+                    </button>
+                  </td>
+                  <td>
+                    <span class="workload-tag">{{ getOperatorActiveTaskCount(op.id) }} Actives</span>
+                  </td>
+                  <td class="col-actions">
+                    <div class="row-actions">
+                      <button type="button" class="action-btn" @click="openCreateTaskModal(op.id)" title="Assigner Tâche">
+                        <AdminIcon name="plus" size="15" />
+                      </button>
+                      <button type="button" class="action-btn" @click="openEditOperatorModal(op)" title="Modifier l'opérateur">
+                        <AdminIcon name="edit" size="15" />
+                      </button>
+                      <button type="button" class="action-btn danger" @click="handleDeleteOperator(op.id)" title="Supprimer l'opérateur">
+                        <AdminIcon name="trash" size="15" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Operations Dispatch -->
+        <section v-if="activeTab === 'operations'" class="panel ops-panel">
+          <header class="panel-header ops-header">
+            <div>
+              <h1>{{ opsSection === 'operators' ? t('admin.operations.operatorsTitle') : t('admin.operations.title') }}</h1>
+              <p>{{ opsSection === 'operators' ? t('admin.operations.operatorsSubtitle') : t('admin.operations.subtitle') }}</p>
+            </div>
+            <div class="panel-actions" v-if="opsSection === 'jobs'">
+              <button class="primary-btn" @click="openCreateTaskModal()">
+                <AdminIcon name="plus" size="16" />
+                <span>{{ t('admin.operations.assignTaskBtn') }}</span>
+              </button>
+            </div>
+            <div class="panel-actions" v-else>
+              <button type="button" class="primary-btn" @click="openCreateOperatorModal">
+                <AdminIcon name="plus" size="16" />
+                <span>{{ t('admin.operations.addOperatorBtn') }}</span>
+              </button>
+            </div>
+          </header>
+
+          <template v-if="opsSection === 'jobs'">
+            <div class="queue-toolbar ops-simple-toolbar">
+              <div class="search-wrap">
+                <AdminIcon name="search" size="16" />
+                <input v-model="opsSearch" type="search" :placeholder="t('admin.operations.list.search')" />
+              </div>
+              <div class="filter-group">
+                <select v-model="opsFilterPerson">
+                  <option value="all">{{ t('admin.operations.list.allPeople') }}</option>
+                  <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
+                </select>
+                <input v-model="opsFilterDate" type="date" />
+                <select v-model="opsFilterType">
+                  <option value="all">{{ t('admin.operations.list.allTypes') }}</option>
+                  <option value="installation">{{ t('admin.operations.types.installation') }}</option>
+                  <option value="maintenance">{{ t('admin.operations.types.maintenance') }}</option>
+                  <option value="delivery">{{ t('admin.operations.types.delivery') }}</option>
+                  <option value="study">{{ t('admin.operations.types.study') }}</option>
+                </select>
+                <select v-model="opsFilterStatus">
+                  <option value="all">{{ t('admin.operations.list.allStatuses') }}</option>
+                  <option value="assigned">{{ t('admin.operations.list.assigned') }}</option>
+                  <option value="in_progress">{{ t('admin.operations.list.inProgress') }}</option>
+                  <option value="on_hold">{{ t('admin.operations.list.onHold') }}</option>
+                  <option value="completed">{{ t('admin.operations.list.completed') }}</option>
+                </select>
+              </div>
+            </div>
+
+            <div v-if="!filteredOpsTasks.length" class="ops-empty">
+              {{ t('admin.operations.list.empty') }}
+            </div>
+            <div v-else class="job-grid">
+              <article v-for="job in filteredOpsTasks" :key="job.id" class="job-card">
+                <div class="job-card-top">
+                  <span class="ops-chip">{{ getOpsTypeLabel(job.type) }}</span>
+                  <span class="ops-chip">{{ opsStatusLabel(job.status) }}</span>
+                </div>
+                <h3>{{ job.title }}</h3>
+                <p class="job-client">{{ job.client.name }} · {{ job.client.city }}</p>
+                <p v-if="job.projectName" class="job-project">{{ job.projectName }}</p>
+                <div class="job-meta">
+                  <span>{{ job.operatorName }}</span>
+                  <span>{{ job.scheduledDate }} · {{ job.timeSlot }}</span>
+                </div>
+                <div class="job-countdown" :class="missionCountdownTone(job)">
+                  {{ formatMissionCountdown(job) }}
+                </div>
+                <footer class="job-card-actions">
+                  <span class="ops-quiet">{{ opsPriorityLabel(job.priority) }}</span>
+                  <div class="action-btns">
+                    <button type="button" class="ghost-btn small" @click="openEditTaskModal(job)">
+                      <AdminIcon name="edit" size="14" />
+                    </button>
+                    <button type="button" class="ghost-btn small danger" @click="handleDeleteTask(job.id)">
+                      <AdminIcon name="trash" size="14" />
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            </div>
+          </template>
+
+          <div v-else>
+            <div v-if="!opsOperators.length" class="ops-empty">{{ t('admin.operations.operatorsEmpty') }}</div>
+            <div v-else class="op-manage-grid">
+              <article
+                v-for="op in opsOperators"
+                :key="op.id"
+                class="op-manage-card op-manage-card--clickable"
+                role="button"
+                tabindex="0"
+                @click="openOperatorSchedule(op)"
+                @keydown.enter.prevent="openOperatorSchedule(op)"
+              >
+                <div class="op-manage-head">
+                  <div class="op-avatar">
+                    {{ operatorInitials(op.name) }}
+                  </div>
+                  <div>
+                    <h3>{{ op.name }}</h3>
+                    <p>{{ op.role }}</p>
+                  </div>
+                </div>
+                <ul class="op-manage-facts">
+                  <li>{{ op.phone || '—' }}</li>
+                  <li>{{ op.city || '—' }}</li>
+                  <li>{{ op.email || '—' }}</li>
+                </ul>
+                <footer class="op-manage-foot">
+                  <span>{{ t('admin.operations.list.activeJobs', { n: getOperatorActiveTaskCount(op.id) }) }}</span>
+                  <div class="action-btns" @click.stop>
+                    <button type="button" class="ghost-btn small" @click="openEditOperatorModal(op)">
+                      <AdminIcon name="edit" size="14" />
+                    </button>
+                    <button type="button" class="ghost-btn small danger" @click="handleDeleteOperator(op.id)">
+                      <AdminIcon name="trash" size="14" />
+                    </button>
+                  </div>
+                </footer>
+              </article>
+            </div>
+          </div>
+
+          <!-- TASK ASSIGNMENT & EDIT MODAL -->
+          <div v-if="showTaskModal" class="modal-overlay modal-overlay--stack-top" @click.self="showTaskModal = false">
+            <div class="ops-modal" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <div>
+                  <p class="modal-kicker">{{ t('admin.operations.title') }}</p>
+                  <h3>{{ editingTask ? t('admin.operations.modal.editTitle') : t('admin.operations.modal.createTitle') }}</h3>
+                </div>
+                <button type="button" class="close-btn" :aria-label="t('common.close')" @click="showTaskModal = false">×</button>
+              </header>
+
+              <form class="task-form" @submit.prevent="submitTaskForm">
+                <div class="modal-body">
+                  <section class="modal-group">
+                    <h4>{{ t('admin.operations.modal.jobSection') }}</h4>
+                    <div class="form-grid">
+                      <label>
+                        <span>{{ t('admin.operations.modal.taskType') }}</span>
+                        <select v-model="taskForm.type" required>
+                          <option value="installation">{{ t('admin.operations.types.installation') }}</option>
+                          <option value="maintenance">{{ t('admin.operations.types.maintenance') }}</option>
+                          <option value="delivery">{{ t('admin.operations.types.delivery') }}</option>
+                          <option value="study">{{ t('admin.operations.types.study') }}</option>
+                        </select>
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.selectOperator') }}</span>
+                        <select v-model="taskForm.operatorId" required>
+                          <option v-for="op in opsOperators" :key="op.id" :value="op.id">{{ op.name }}</option>
+                        </select>
+                      </label>
+                      <label class="span-2">
+                        <span>{{ t('admin.operations.modal.taskTitle') }}</span>
+                        <input v-model="taskForm.title" type="text" required />
+                      </label>
+                      <label class="span-2">
+                        <span>{{ t('admin.operations.modal.projectOptional') }}</span>
+                        <select v-model="taskForm.projectId">
+                          <option value="">{{ t('admin.operations.modal.noProject') }}</option>
+                          <option v-for="project in projects" :key="project.id" :value="project.id">
+                            {{ project.name }}
+                          </option>
+                        </select>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section class="modal-group">
+                    <h4>{{ t('admin.operations.modal.whenSection') }}</h4>
+                    <div class="form-grid">
+                      <label>
+                        <span>{{ t('admin.operations.modal.scheduledDate') }}</span>
+                        <input v-model="taskForm.scheduledDate" type="date" :min="todayDate" required />
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.timeSlot') }}</span>
+                        <select v-model="taskForm.timeSlot">
+                          <option
+                            v-for="item in availableTaskSlots"
+                            :key="item.slot"
+                            :value="item.slot"
+                            :disabled="item.busy"
+                          >
+                            {{ item.slot }}{{ item.busy ? ` (${t('admin.operations.modal.slotBusy')})` : '' }}
+                          </option>
+                        </select>
+                      </label>
+                    </div>
+                    <p v-if="scheduleConflictWarning" class="ops-conflict-warning">{{ scheduleConflictWarning }}</p>
+                    <div class="priority-row">
+                      <span>{{ t('admin.operations.modal.priority') }}</span>
+                      <div class="priority-pills">
+                        <button
+                          v-for="level in ['low', 'medium', 'high', 'urgent']"
+                          :key="level"
+                          type="button"
+                          class="priority-pill"
+                          :class="[level, { active: taskForm.priority === level }]"
+                          @click="taskForm.priority = level"
+                        >
+                          {{ t(`admin.operations.modal.priority${level.charAt(0).toUpperCase()}${level.slice(1)}`) }}
+                        </button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="modal-group">
+                    <h4>{{ t('admin.operations.modal.clientSection') }}</h4>
+                    <div class="form-grid">
+                      <label>
+                        <span>{{ t('admin.operations.modal.clientName') }}</span>
+                        <input v-model="taskForm.clientName" type="text" required />
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.clientPhone') }}</span>
+                        <input v-model="taskForm.clientPhone" type="tel" />
+                      </label>
+                      <label class="span-2">
+                        <span>{{ t('admin.operations.modal.clientAddress') }}</span>
+                        <input v-model="taskForm.clientAddress" type="text" />
+                      </label>
+                      <label>
+                        <span>{{ t('admin.operations.modal.clientCity') }}</span>
+                        <input v-model="taskForm.clientCity" type="text" />
+                      </label>
+                      <label class="span-2">
+                        <span>{{ t('admin.operations.modal.adminNotes') }}</span>
+                        <textarea v-model="taskForm.adminNotes" rows="3"></textarea>
+                      </label>
+                    </div>
+                  </section>
+                </div>
+
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showTaskModal = false">{{ t('common.cancel') }}</button>
+                  <button type="submit" class="primary-btn">
+                    {{ editingTask ? t('admin.operations.modal.submitUpdate') : t('admin.operations.modal.submitCreate') }}
+                  </button>
+                </footer>
+              </form>
+            </div>
+          </div>
+
+          <div v-if="showOperatorModal" class="modal-overlay modal-overlay--stack-top" @click.self="showOperatorModal = false">
+            <div class="ops-modal ops-modal-sm" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <div>
+                  <p class="modal-kicker">{{ t('admin.operations.title') }}</p>
+                  <h3>{{ editingOperator ? t('admin.operations.operatorForm.editTitle') : t('admin.operations.operatorForm.title') }}</h3>
+                </div>
+                <button type="button" class="close-btn" :aria-label="t('common.close')" @click="showOperatorModal = false">×</button>
+              </header>
+              <form class="task-form" @submit.prevent="submitOperatorForm">
+                <div class="modal-body">
+                  <div class="form-grid">
+                    <label class="span-2">
+                      <span>{{ t('admin.operations.operatorForm.name') }}</span>
+                      <input v-model="operatorForm.name" type="text" required />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.role') }}</span>
+                      <input v-model="operatorForm.role" type="text" />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.city') }}</span>
+                      <input v-model="operatorForm.city" type="text" />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.phone') }}</span>
+                      <input v-model="operatorForm.phone" type="tel" required />
+                    </label>
+                    <label>
+                      <span>{{ t('admin.operations.operatorForm.email') }}</span>
+                      <input v-model="operatorForm.email" type="email" required maxlength="50" />
+                    </label>
+                    <label v-if="!editingOperator" class="span-2">
+                      <span>{{ t('admin.operations.operatorForm.password') }}</span>
+                      <input v-model="operatorForm.password" type="text" :placeholder="t('admin.operations.operatorForm.passwordHint')" />
+                    </label>
+                  </div>
+                </div>
+                <footer class="modal-footer">
+                  <button type="button" class="ghost-btn" @click="showOperatorModal = false">{{ t('common.cancel') }}</button>
+                  <button type="submit" class="primary-btn">
+                    {{ editingOperator ? t('admin.operations.operatorForm.saveChanges') : t('admin.operations.operatorForm.save') }}
+                  </button>
+                </footer>
+              </form>
+            </div>
+          </div>
+
+          <!-- Operator schedule calendar -->
+          <div
+            v-if="showOperatorSchedule && scheduleOperator"
+            class="modal-overlay"
+            @click.self="closeOperatorSchedule"
+          >
+            <div class="ops-modal ops-schedule-modal" role="dialog" aria-modal="true">
+              <header class="modal-header">
+                <div>
+                  <p class="modal-kicker">{{ t('admin.operations.schedule.kicker') }}</p>
+                  <h3>{{ scheduleOperator.name }}</h3>
+                  <p class="ops-quiet">{{ scheduleOperator.role }} · {{ scheduleOperator.city || '—' }}</p>
+                </div>
+                <button type="button" class="close-btn" :aria-label="t('common.close')" @click="closeOperatorSchedule">×</button>
+              </header>
+
+              <div class="modal-body ops-schedule-body">
+                <div class="ops-cal-toolbar">
+                  <button type="button" class="ghost-btn small" @click="shiftScheduleMonth(-1)">‹</button>
+                  <strong>{{ scheduleMonthLabel }}</strong>
+                  <button type="button" class="ghost-btn small" @click="shiftScheduleMonth(1)">›</button>
+                  <button
+                    type="button"
+                    class="primary-btn small"
+                    @click="openCreateTaskModal(scheduleOperator.id)"
+                  >
+                    {{ t('admin.operations.assignTaskBtn') }}
+                  </button>
+                </div>
+
+                <div class="ops-cal-weekdays">
+                  <span v-for="d in ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']" :key="d">{{ d }}</span>
+                </div>
+                <div class="ops-cal-grid">
+                  <button
+                    v-for="(cell, idx) in scheduleMonthCells"
+                    :key="idx"
+                    type="button"
+                    class="ops-cal-cell"
+                    :class="{
+                      empty: !cell,
+                      selected: cell && cell.date === scheduleSelectedDate,
+                      hasTasks: cell && scheduleTaskDates.has(cell.date)
+                    }"
+                    :disabled="!cell"
+                    @click="cell && selectScheduleDate(cell.date)"
+                  >
+                    <template v-if="cell">
+                      <span class="ops-cal-day">{{ cell.day }}</span>
+                      <span v-if="tasksOnScheduleDate(cell.date).length" class="ops-cal-dot">
+                        {{ tasksOnScheduleDate(cell.date).length }}
+                      </span>
+                    </template>
+                  </button>
+                </div>
+
+                <div class="ops-cal-day-panel">
+                  <h4>{{ t('admin.operations.schedule.dayTitle', { date: scheduleSelectedDate }) }}</h4>
+                  <div v-if="!scheduleTasksForSelectedDay.length" class="ops-empty">
+                    {{ t('admin.operations.schedule.noTasks') }}
+                  </div>
+                  <ul v-else class="ops-cal-task-list">
+                    <li v-for="job in scheduleTasksForSelectedDay" :key="job.id">
+                      <div>
+                        <strong>{{ job.title }}</strong>
+                        <span>{{ job.timeSlot }} · {{ getOpsTypeLabel(job.type) }}</span>
+                        <span class="job-countdown" :class="missionCountdownTone(job)">
+                          {{ formatMissionCountdown(job) }}
+                        </span>
+                      </div>
+                      <button type="button" class="ghost-btn small" @click="openEditTaskModal(job)">
+                        <AdminIcon name="edit" size="14" />
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- AI-Analysis -->
         <section v-if="activeTab === 'ai-analysis'">
           <Aianalysispanel />
@@ -1268,7 +1983,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../composables/useAuth'
@@ -1281,6 +1996,8 @@ import AdminIcon from '../components/AdminIcon.vue'
 // import LanguageSwitcher from '../components/LanguageSwitcher.vue'
 import FollowupCard from '../components/FollowupCard.vue'
 import ProjectTimeline from '../components/ProjectTimeline.vue'
+import ProjectCatalogPicker from '../components/adminDashboard/ProjectCatalogPicker.vue'
+import { getApiErrorMessage } from '../api/client'
 import { resolveProductImage } from '../utils/productImage'
 import RfqQuoteEditor from '../components/RfqQuoteEditor.vue'
 import {
@@ -1307,6 +2024,12 @@ import {
   phaseToCompletedSteps,
   projectStatusLabel
 } from '../utils/projectSteps'
+import {
+  TASK_TIME_SLOTS,
+  findOperatorSlotConflicts,
+  missionCountdown,
+  buildMonthGrid
+} from '../utils/missionSchedule'
 import Aianalysispanel from '@/components/AIPart/Aianalysispanel.vue'
 
 const router = useRouter()
@@ -1373,6 +2096,62 @@ const removedLineIds = ref([])
 const pdfDownloadingId = ref(null)
 const pdfError = ref('')
 const rfqFilter = ref('')
+const ordersView = ref('new')
+
+const newRfqs = computed(() =>
+  rfqs.value.filter((rfq) => rfq.status === 'review')
+)
+
+const activeRfqs = computed(() =>
+  rfqs.value.filter((rfq) => rfq.status !== 'review')
+)
+
+const visibleOrdersRfqs = computed(() => {
+  if (ordersView.value === 'new') return newRfqs.value
+  if (ordersView.value === 'active') return activeRfqs.value
+  return rfqs.value
+})
+
+const ordersEmptyMessage = computed(() => {
+  locale.value
+  if (ordersView.value === 'new') return t('admin.orders.emptyNew')
+  if (ordersView.value === 'active') return t('admin.orders.emptyActive')
+  return t('admin.orders.empty')
+})
+
+const ordersDisplaySections = computed(() => {
+  locale.value
+  if (ordersView.value === 'new') {
+    return newRfqs.value.length
+      ? [{ id: 'new', items: newRfqs.value, showHead: false, title: '', hint: '' }]
+      : []
+  }
+  if (ordersView.value === 'active') {
+    return activeRfqs.value.length
+      ? [{ id: 'active', items: activeRfqs.value, showHead: false, title: '', hint: '' }]
+      : []
+  }
+  const sections = []
+  if (newRfqs.value.length) {
+    sections.push({
+      id: 'new',
+      items: newRfqs.value,
+      showHead: true,
+      title: t('admin.orders.newSection'),
+      hint: t('admin.orders.newHint')
+    })
+  }
+  if (activeRfqs.value.length) {
+    sections.push({
+      id: 'active',
+      items: activeRfqs.value,
+      showHead: true,
+      title: t('admin.orders.activeSection'),
+      hint: t('admin.orders.activeHint')
+    })
+  }
+  return sections
+})
 const projectFilter = ref('')
 const showProjectDrawer = ref(false)
 const editingProject = ref(null)
@@ -1621,20 +2400,44 @@ const {
 } = useOperatorAdmin()
 
 const opsSection = ref('jobs')
-const selectedCalendarDate = ref('2026-09-15')
+const selectedCalendarDate = ref(new Date().toISOString().slice(0, 10))
 const showTaskModal = ref(false)
 const showOperatorModal = ref(false)
 const editingOperator = ref(null)
 const operatorForm = ref({ name: '', role: '', phone: '', email: '', city: '', password: '' })
 const editingTask = ref(null)
+const scheduleConflictWarning = ref('')
+const nowTick = ref(Date.now())
+let nowTickTimer = null
+
+const showOperatorSchedule = ref(false)
+const scheduleOperator = ref(null)
+const scheduleMonth = ref(new Date().getMonth())
+const scheduleYear = ref(new Date().getFullYear())
+const scheduleSelectedDate = ref(new Date().toISOString().slice(0, 10))
+
+const todayDate = computed(() => {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+})
+
+function clampToTodayOrLater(dateStr) {
+  const today = todayDate.value
+  if (!dateStr || dateStr < today) return today
+  return dateStr
+}
 
 const taskForm = ref({
   type: 'installation',
   title: '',
   operatorId: '',
+  projectId: '',
   priority: 'medium',
-  scheduledDate: '2026-09-15',
-  timeSlot: '09:00 - 12:00',
+  scheduledDate: new Date().toISOString().slice(0, 10),
+  timeSlot: '09:00 - 13:00',
   clientName: '',
   clientPhone: '',
   clientEmail: '',
@@ -1679,6 +2482,104 @@ const filteredOpsTasks = computed(() => {
     return matchType && matchStatus && matchPerson && matchDate && matchSearch
   })
 })
+
+const availableTaskSlots = computed(() => {
+  const { operatorId, scheduledDate } = taskForm.value
+  const excludeId = editingTask.value?.id ?? null
+  return TASK_TIME_SLOTS.map((slot) => {
+    const conflicts = findOperatorSlotConflicts(opsTasks.value, {
+      operatorId,
+      scheduledDate,
+      timeSlot: slot,
+      excludeId
+    })
+    return { slot, busy: conflicts.length > 0, conflictTitle: conflicts[0]?.title || '' }
+  })
+})
+
+const scheduleMonthLabel = computed(() => {
+  locale.value
+  return new Date(scheduleYear.value, scheduleMonth.value, 1).toLocaleDateString(undefined, {
+    month: 'long',
+    year: 'numeric'
+  })
+})
+
+const scheduleMonthCells = computed(() => buildMonthGrid(scheduleYear.value, scheduleMonth.value))
+
+const scheduleOperatorTasks = computed(() => {
+  if (!scheduleOperator.value) return []
+  return opsTasks.value
+    .filter((task) => String(task.operatorId) === String(scheduleOperator.value.id))
+    .sort((a, b) => String(a.scheduledDate).localeCompare(String(b.scheduledDate)) || String(a.timeSlot).localeCompare(String(b.timeSlot)))
+})
+
+const scheduleTasksForSelectedDay = computed(() =>
+  scheduleOperatorTasks.value.filter((task) => task.scheduledDate === scheduleSelectedDate.value)
+)
+
+const scheduleTaskDates = computed(() => {
+  const set = new Set(scheduleOperatorTasks.value.map((task) => task.scheduledDate))
+  return set
+})
+
+function formatMissionCountdown(task) {
+  nowTick.value
+  locale.value
+  const info = missionCountdown(task, new Date(nowTick.value))
+  if (info.tone === 'done') return t('admin.operations.countdown.done')
+  if (info.minutesLeft == null) return '—'
+  if (info.tone === 'overdue') {
+    if (info.overdueDays >= 1) {
+      return t('admin.operations.countdown.overdueDays', {
+        d: info.overdueDays,
+        h: info.overdueHours
+      })
+    }
+    if (info.overdueHours > 0) {
+      return t('admin.operations.countdown.overdueHours', {
+        h: info.overdueHours,
+        m: info.overdueRemainMin
+      })
+    }
+    return t('admin.operations.countdown.overdueMins', { m: info.overdueMin })
+  }
+  if (info.days >= 1) {
+    return t('admin.operations.countdown.inDays', { d: info.days, h: info.hours })
+  }
+  if (info.hours > 0) {
+    return t('admin.operations.countdown.inHours', { h: info.hours, m: info.mins })
+  }
+  return t('admin.operations.countdown.inMins', { m: info.mins })
+}
+
+function missionCountdownTone(task) {
+  nowTick.value
+  return missionCountdown(task, new Date(nowTick.value)).tone
+}
+
+function refreshScheduleConflict() {
+  const conflicts = findOperatorSlotConflicts(opsTasks.value, {
+    operatorId: taskForm.value.operatorId,
+    scheduledDate: taskForm.value.scheduledDate,
+    timeSlot: taskForm.value.timeSlot,
+    excludeId: editingTask.value?.id ?? null
+  })
+  scheduleConflictWarning.value = conflicts.length
+    ? t('admin.operations.modal.conflictWarning', {
+        title: conflicts[0].title,
+        slot: conflicts[0].timeSlot
+      })
+    : ''
+}
+
+watch(
+  () => [taskForm.value.operatorId, taskForm.value.scheduledDate, taskForm.value.timeSlot, showTaskModal.value],
+  () => {
+    if (showTaskModal.value) refreshScheduleConflict()
+    else scheduleConflictWarning.value = ''
+  }
+)
 
 function openCreateOperatorModal() {
   editingOperator.value = null
@@ -1739,13 +2640,26 @@ async function handleDeleteOperator(operatorId) {
 
 function openCreateTaskModal(opId = null) {
   editingTask.value = null
+  const today = todayDate.value
+  const operatorId = opId || (opsOperators.value[0]?.id || '')
+  const scheduledDate = clampToTodayOrLater(selectedCalendarDate.value || today)
+  const freeSlot =
+    TASK_TIME_SLOTS.find(
+      (slot) =>
+        !findOperatorSlotConflicts(opsTasks.value, {
+          operatorId,
+          scheduledDate,
+          timeSlot: slot
+        }).length
+    ) || TASK_TIME_SLOTS[0]
   taskForm.value = {
     type: 'installation',
     title: '',
-    operatorId: opId || (opsOperators.value[0]?.id || ''),
+    operatorId,
+    projectId: '',
     priority: 'medium',
-    scheduledDate: selectedCalendarDate.value || '2026-09-15',
-    timeSlot: '09:00 - 12:00',
+    scheduledDate,
+    timeSlot: freeSlot,
     clientName: '',
     clientPhone: '',
     clientEmail: '',
@@ -1753,7 +2667,9 @@ function openCreateTaskModal(opId = null) {
     clientCity: 'Casablanca',
     adminNotes: ''
   }
+  if (!projects.value.length) fetchProjects().catch(() => {})
   showTaskModal.value = true
+  refreshScheduleConflict()
 }
 
 function openEditTaskModal(task) {
@@ -1762,8 +2678,9 @@ function openEditTaskModal(task) {
     type: task.type,
     title: task.title,
     operatorId: task.operatorId,
+    projectId: task.projectId || '',
     priority: task.priority,
-    scheduledDate: task.scheduledDate,
+    scheduledDate: clampToTodayOrLater(task.scheduledDate),
     timeSlot: task.timeSlot,
     clientName: task.client.name,
     clientPhone: task.client.phone,
@@ -1772,21 +2689,81 @@ function openEditTaskModal(task) {
     clientCity: task.client.city,
     adminNotes: task.adminNotes
   }
+  if (!projects.value.length) fetchProjects().catch(() => {})
   showTaskModal.value = true
+  refreshScheduleConflict()
+}
+
+function buildTaskPayload() {
+  const form = taskForm.value
+  return {
+    ...form,
+    operatorId: Number(form.operatorId),
+    projectId: form.projectId ? Number(form.projectId) : null,
+    scheduledDate: clampToTodayOrLater(form.scheduledDate)
+  }
 }
 
 async function submitTaskForm() {
   if (!taskForm.value.title || !taskForm.value.operatorId) return
+  if (taskForm.value.scheduledDate < todayDate.value) {
+    toast.error(t('admin.operations.modal.pastDateError'))
+    taskForm.value.scheduledDate = todayDate.value
+    return
+  }
+  refreshScheduleConflict()
+  if (scheduleConflictWarning.value) {
+    toast.error(scheduleConflictWarning.value)
+    return
+  }
   try {
+    const payload = buildTaskPayload()
     if (editingTask.value) {
-      await updateOpsTask(editingTask.value.id, taskForm.value)
+      await updateOpsTask(editingTask.value.id, payload)
     } else {
-      await createOpsTask(taskForm.value)
+      await createOpsTask(payload)
     }
     showTaskModal.value = false
+    toast.success(t('admin.operations.modal.saved'))
   } catch (err) {
     toast.error(getApiErrorMessage(err, 'Could not save job.'))
   }
+}
+
+function openOperatorSchedule(operator) {
+  scheduleOperator.value = operator
+  const now = new Date()
+  scheduleMonth.value = now.getMonth()
+  scheduleYear.value = now.getFullYear()
+  scheduleSelectedDate.value = now.toISOString().slice(0, 10)
+  showOperatorSchedule.value = true
+}
+
+function closeOperatorSchedule() {
+  showOperatorSchedule.value = false
+  scheduleOperator.value = null
+}
+
+function shiftScheduleMonth(delta) {
+  let month = scheduleMonth.value + delta
+  let year = scheduleYear.value
+  if (month < 0) {
+    month = 11
+    year -= 1
+  } else if (month > 11) {
+    month = 0
+    year += 1
+  }
+  scheduleMonth.value = month
+  scheduleYear.value = year
+}
+
+function tasksOnScheduleDate(date) {
+  return scheduleOperatorTasks.value.filter((task) => task.scheduledDate === date)
+}
+
+function selectScheduleDate(date) {
+  scheduleSelectedDate.value = date
 }
 
 async function handleDeleteTask(taskId) {
@@ -2008,7 +2985,18 @@ const tabs = computed(() => {
     { id: 'orders', label: t('admin.tabs.orders'), icon: 'orders', badge: ordersBadge || null },
     { id: 'marketplace', label: t('admin.tabs.marketplace'), icon: 'marketplace', badge: stats.value?.totals?.low_stock_count || null },
     { id: 'projects', label: t('admin.tabs.projects'), icon: 'projects' },
+    { id: 'services', label: t('admin.tabs.services') || 'Services', icon: 'services', badge: pendingServiceRequestCount.value || null },
     { id: 'clients', label: t('admin.tabs.clients'), icon: 'clients' },
+    {
+      id: 'operations',
+      label: t('admin.tabs.operations'),
+      icon: 'operations',
+      badge: opsStats.value?.inProgress || null,
+      children: [
+        { id: 'jobs', label: t('admin.operations.menu.jobs') },
+        { id: 'operators', label: t('admin.operations.menu.operators') }
+      ]
+    },
     { id: 'ai-analysis', label: t('admin.tabs.aiAnalysis'), icon: 'ai' }
   ]
 })
@@ -2076,9 +3064,16 @@ const filteredCatalogProducts = computed(() => {
 onMounted(async () => {
   await loadOverview()
   await reloadServices({ admin: true, withRequests: true }).catch(() => {})
+  nowTickTimer = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 30000)
   window.addEventListener('focus', () => {
     if (activeTab.value === 'services') loadServicesTab()
   })
+})
+
+onUnmounted(() => {
+  if (nowTickTimer) clearInterval(nowTickTimer)
 })
 
 //
@@ -2100,7 +3095,39 @@ const switchTab = async (tabId) => {
   if (tabId === 'marketplace') await loadMarketplace()
   if (tabId === 'projects') await loadProjects()
   if (tabId === 'clients') await loadClients()
-  if (tabId === 'ai-analysis') await loadAiAnalysis()
+  if (tabId === 'services') await loadServicesTab()
+  if (tabId === 'operations') {
+    await loadOperations()
+    if (!projects.value.length) await fetchProjects().catch(() => {})
+  }
+  // AI panel loads its own data via Aianalysispanel on mount
+}
+
+const toggleMissionMenu = async () => {
+  if (activeTab.value !== 'operations') {
+    missionMenuOpen.value = true
+    await switchTab('operations')
+    missionMenuOpen.value = true
+    return
+  }
+  missionMenuOpen.value = !missionMenuOpen.value
+}
+
+const openOpsSection = async (section) => {
+  opsSection.value = section
+  if (activeTab.value !== 'operations') {
+    await switchTab('operations')
+    return
+  }
+  await loadOperations()
+}
+
+const loadOperations = async () => {
+  try {
+    await reloadOperations()
+  } catch (err) {
+    toast.error(getApiErrorMessage(err, 'Could not load missions.'))
+  }
 }
 
 const loadOverview = async () => {
@@ -3053,15 +4080,157 @@ const handleStockChange = async (product, stock) => {
 .rfq-list {
   display: flex;
   flex-direction: column;
+  gap: 0.85rem;
+}
+
+.orders-panel {
+  gap: 1.1rem;
+}
+
+.orders-header {
+  align-items: flex-start;
+  flex-wrap: wrap;
   gap: 1rem;
+}
+
+.orders-header-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.orders-view-tabs {
+  display: inline-flex;
+  padding: 0.18rem;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  gap: 0.1rem;
+}
+
+.orders-view-tab {
+  border: none;
+  background: transparent;
+  color: #71717a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.42rem 0.7rem;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.orders-view-tab.active {
+  background: #fff;
+  color: #18181b;
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.08);
+}
+
+.orders-count {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #27272a;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.orders-count.muted {
+  background: #a1a1aa;
+}
+
+.orders-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1.25rem;
+}
+
+.orders-stat {
+  background: #fff;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.orders-stat strong {
+  font-size: 1.25rem;
+  color: #18181b;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.orders-stat span {
+  font-size: 0.76rem;
+  color: #71717a;
+  font-weight: 500;
+}
+
+.orders-stat.new {
+  border-color: #e4e4e7;
+  background: #fff;
+}
+
+.orders-stat.new strong {
+  color: #18181b;
+}
+
+.orders-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.orders-section + .orders-section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e4e4e7;
+}
+
+.orders-section-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.orders-section-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.orders-section-head span {
+  font-size: 0.8rem;
+  color: #71717a;
+}
+
+.orders-empty {
+  margin-top: 0.5rem;
 }
 
 .rfq-card {
   background: #fff;
-  border: 1px solid rgba(5, 46, 22, 0.08);
-  border-radius: 18px;
-  padding: 1.15rem 1.25rem;
-  box-shadow: 0 12px 32px rgba(5, 46, 22, 0.05);
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  padding: 1.1rem 1.15rem;
+  box-shadow: none;
+}
+
+.rfq-card--new {
+  border-color: #d4d4d8;
+  background: #fafafa;
 }
 
 .rfq-card-top {
@@ -3069,62 +4238,145 @@ const handleStockChange = async (product, stock) => {
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.rfq-id-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rfq-new-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #3f3f46;
+  background: #e4e4e7;
+  border-radius: 6px;
+  padding: 0.18rem 0.45rem;
 }
 
 .rfq-card-top h3 {
-  margin: 0.45rem 0 0;
-  font-size: 1.05rem;
-  color: #052e16;
+  margin: 0.4rem 0 0;
+  font-size: 1.02rem;
+  color: #18181b;
+  font-weight: 650;
 }
 
 .rfq-card-top p {
   margin: 0.2rem 0 0;
   font-size: 0.84rem;
-  color: #6b7280;
+  color: #71717a;
 }
 
 .rfq-card-top small {
-  color: #9ca3af;
-  font-size: 0.78rem;
+  color: #a1a1aa;
+  font-size: 0.76rem;
 }
 
 .rfq-id {
   display: inline-block;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.05em;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #166534;
-  background: #ecfdf5;
-  border: 1px solid #bbf7d0;
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
+  color: #52525b;
+  background: #f4f4f5;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  padding: 0.18rem 0.45rem;
+}
+
+.rfq-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.8rem;
+  align-items: center;
+  margin: 0.3rem 0 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #52525b;
+}
+
+.rfq-details {
+  margin-bottom: 0.75rem;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.rfq-details summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #3f3f46;
+}
+
+.rfq-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.rfq-details[open] summary {
+  border-bottom: 1px solid #e4e4e7;
+}
+
+.rfq-details .rfq-mini-table {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .rfq-pipeline {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.85rem;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .orders-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .orders-header-tools {
+    width: 100%;
+  }
+
+  .orders-view-tabs {
+    width: 100%;
+  }
+
+  .orders-view-tab {
+    flex: 1;
+    justify-content: center;
+  }
 }
 
 .rfq-step {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
-  background: #f3f4f6;
-  color: #9ca3af;
+  font-size: 0.66rem;
+  font-weight: 600;
+  padding: 0.22rem 0.48rem;
+  border-radius: 6px;
+  background: #f4f4f5;
+  color: #a1a1aa;
 }
 
 .rfq-step.done {
-  background: #ecfdf5;
-  color: #15803d;
+  background: #f4f4f5;
+  color: #52525b;
 }
 
 .rfq-step.current {
-  background: #052e16;
+  background: #18181b;
   color: #fff;
 }
 
@@ -6599,6 +7851,179 @@ const handleStockChange = async (product, stock) => {
   padding: 1.35rem 1.4rem;
 }
 
+.op-manage-card--clickable {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.op-manage-card--clickable:hover {
+  border-color: #a8a29e;
+  box-shadow: 0 8px 20px rgba(28, 25, 23, 0.06);
+}
+
+.job-project {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #57534e;
+}
+
+.job-countdown {
+  margin-top: 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+.job-countdown.soon {
+  color: #b45309;
+}
+
+.job-countdown.overdue {
+  color: #b91c1c;
+}
+
+.job-countdown.done {
+  color: #78716c;
+  font-weight: 500;
+}
+
+.ops-conflict-warning {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 0.82rem;
+}
+
+.ops-schedule-modal {
+  width: min(720px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+}
+
+.ops-schedule-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ops-cal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.ops-cal-toolbar strong {
+  min-width: 9rem;
+  text-align: center;
+  text-transform: capitalize;
+}
+
+.ops-cal-toolbar .primary-btn.small {
+  margin-inline-start: auto;
+}
+
+.ops-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #78716c;
+  text-align: center;
+}
+
+.ops-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.35rem;
+}
+
+.ops-cal-cell {
+  min-height: 3.25rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fafaf9;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 0.35rem 0.4rem;
+  cursor: pointer;
+}
+
+.ops-cal-cell.empty,
+.ops-cal-cell:disabled {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.ops-cal-cell.hasTasks {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+
+.ops-cal-cell.selected {
+  border-color: #166534;
+  box-shadow: inset 0 0 0 1px #166534;
+}
+
+.ops-cal-day {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #292524;
+}
+
+.ops-cal-dot {
+  align-self: flex-end;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #166534;
+  background: #d1fae5;
+  border-radius: 999px;
+  padding: 0.05rem 0.35rem;
+}
+
+.ops-cal-day-panel h4 {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.ops-cal-task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.ops-cal-task-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #e7e5e4;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ops-cal-task-list li div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ops-cal-task-list li span {
+  font-size: 0.8rem;
+  color: #78716c;
+}
+
 .ops-chip {
   font-size: 0.72rem;
   font-weight: 600;
@@ -6731,6 +8156,10 @@ const handleStockChange = async (product, stock) => {
 
 .service-edit-overlay {
   z-index: 1400;
+}
+
+.modal-overlay--stack-top {
+  z-index: 1600;
 }
 
 .ops-modal {
@@ -6916,17 +8345,6 @@ const handleStockChange = async (product, stock) => {
 }
 
 /* Service Admin Controls & Realization Progress CSS */
-.ops-assign-hint {
-  margin: 0 0 1rem;
-  padding: 0.75rem 1rem;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-  border-radius: 10px;
-  color: #166534;
-  font-size: 0.88rem;
-  line-height: 1.45;
-}
-
 .ops-services-config-view .config-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -7383,6 +8801,10 @@ input:checked + .slider:before {
   justify-content: center;
   z-index: 1200;
   padding: 1.25rem;
+}
+
+.modal-overlay.modal-overlay--stack-top {
+  z-index: 1600;
 }
 
 .modal-card {

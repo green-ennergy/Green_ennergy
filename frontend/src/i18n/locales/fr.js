@@ -135,7 +135,8 @@ export default {
       services: 'Services',
       clients: 'Clients',
       operators: 'Opérateurs',
-      operations: 'Missions'
+      operations: 'Missions',
+      aiAnalysis: 'Analyse IA'
     },
     overview: {
       title: 'Vue d’ensemble',
@@ -149,6 +150,19 @@ export default {
       title: 'Commandes & RFQ',
       subtitle: 'Tarifer le catalogue et ajouter des lignes manuelles. Télécharger les devis PDF.',
       empty: 'Aucune commande RFQ ne correspond aux filtres.',
+      emptyNew: 'Aucune nouvelle demande RFQ en attente.',
+      emptyActive: 'Aucune RFQ en cours ou déjà traitée.',
+      newSection: 'Nouvelles demandes',
+      activeSection: 'En cours & anciennes',
+      allSection: 'Toutes',
+      newHint: 'Venant d’arriver — à tarifer ou à mettre à jour.',
+      activeHint: 'Déjà examinées, devisées ou expédiées.',
+      newBadge: 'Nouveau',
+      statNew: 'Nouvelles',
+      statActive: 'Traitées',
+      statTotal: 'Total',
+      linesCount: '{n} lignes',
+      showLines: 'Voir les lignes catalogue',
       editQuote: 'Modifier le devis',
       prepareQuote: 'Préparer le devis',
       quoteBuilder: 'Éditeur de devis',
@@ -239,6 +253,20 @@ export default {
       operatorsSubtitle: 'Ajouter, modifier ou retirer un opérateur.',
       operatorsEmpty: 'Aucun opérateur.',
       deleteOperatorConfirm: 'Retirer cet opérateur ?',
+      countdown: {
+        done: 'Terminée',
+        inMins: 'Reste {m} min',
+        inHours: 'Reste {h}h {m}m',
+        inDays: 'Reste {d}j {h}h',
+        overdueMins: 'En retard de {m} min',
+        overdueHours: 'En retard de {h}h {m}m',
+        overdueDays: 'En retard de {d}j {h}h'
+      },
+      schedule: {
+        kicker: 'Planning opérateur',
+        dayTitle: 'Missions du {date}',
+        noTasks: 'Aucune mission ce jour.'
+      },
       menu: {
         jobs: 'Tâches',
         operators: 'Opérateurs'
@@ -322,7 +350,13 @@ export default {
         clientCity: 'Ville',
         adminNotes: 'Notes',
         submitCreate: 'Enregistrer',
-        submitUpdate: 'Enregistrer'
+        submitUpdate: 'Enregistrer',
+        projectOptional: 'Projet (optionnel)',
+        noProject: 'Aucun projet',
+        slotBusy: 'occupé',
+        conflictWarning: 'Cet opérateur a déjà « {title} » sur {slot}.',
+        pastDateError: 'Impossible de planifier une mission dans le passé. Choisissez aujourd’hui ou une date future.',
+        saved: 'Mission enregistrée.'
       },
       calendarView: {
         selectDay: 'Planning du jour sélectionné',

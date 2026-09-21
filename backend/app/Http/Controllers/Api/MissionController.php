@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Mission;
 use App\Models\MissionTrace;
 use App\Models\Operator;
+use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class MissionController extends Controller
 {
@@ -21,7 +23,9 @@ class MissionController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $query = Mission::with(['operator.user', 'traces'])->orderByDesc('scheduled_date')->orderByDesc('id');
+        $query = Mission::with(['operator.user', 'project', 'traces'])
+            ->orderByDesc('scheduled_date')
+            ->orderByDesc('id');
 
         if ($request->user()?->role === 'operator') {
             $operatorId = $request->user()->operator?->id_operator;
@@ -44,6 +48,11 @@ class MissionController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $this->validateMission($request);
+        $this->assertNoScheduleConflict(
+            (int) $validated['operatorId'],
+            $validated['scheduledDate'],
+            $validated['timeSlot']
+        );
 
         $mission = DB::transaction(function () use ($validated, $request) {
             $operator = Operator::with('user')->findOrFail($validated['operatorId']);
@@ -65,6 +74,7 @@ class MissionController extends Controller
                 'operator_notes' => null,
                 'type_data' => $validated['typeData'] ?? [],
                 'id_operator' => $operator->id_operator,
+                'id_project' => $validated['projectId'] ?? null,
             ]);
 
             $this->trace($mission, $request->user()?->name ?: 'Admin', 'Created and assigned to '.$operator->user?->name);
@@ -72,7 +82,7 @@ class MissionController extends Controller
             return $mission;
         });
 
-        $mission->load(['operator.user', 'traces']);
+        $mission->load(['operator.user', 'project', 'traces']);
 
         return response()->json([
             'mission' => $this->present($mission),
@@ -89,11 +99,26 @@ class MissionController extends Controller
         $operatorChanged = false;
         $operatorName = $mission->operator?->user?->name;
 
+        $nextOperatorId = isset($validated['operatorId'])
+            ? (int) $validated['operatorId']
+            : (int) $mission->id_operator;
+        $nextDate = $validated['scheduledDate'] ?? optional($mission->scheduled_date)->toDateString();
+        $nextSlot = $validated['timeSlot'] ?? $mission->time_slot;
+        $nextStatus = $validated['status'] ?? $mission->status;
+
+        if ($nextStatus !== 'completed') {
+            $this->assertNoScheduleConflict($nextOperatorId, $nextDate, $nextSlot, $mission->id);
+        }
+
         if (isset($validated['operatorId']) && (int) $validated['operatorId'] !== (int) $mission->id_operator) {
             $operator = Operator::with('user')->findOrFail($validated['operatorId']);
             $mission->id_operator = $operator->id_operator;
             $operatorChanged = true;
             $operatorName = $operator->user?->name;
+        }
+
+        if (array_key_exists('projectId', $validated)) {
+            $mission->id_project = $validated['projectId'];
         }
 
         $this->fillMission($mission, $validated);
@@ -105,7 +130,7 @@ class MissionController extends Controller
             $this->trace($mission, $request->user()?->name ?: 'Admin', 'Mission details updated');
         }
 
-        $mission->load(['operator.user', 'traces']);
+        $mission->load(['operator.user', 'project', 'traces']);
 
         return response()->json([
             'mission' => $this->present($mission),
@@ -142,7 +167,7 @@ class MissionController extends Controller
                 : 'Field notes updated');
         $this->trace($mission, $actor, $action);
 
-        $mission->load(['operator.user', 'traces']);
+        $mission->load(['operator.user', 'project', 'traces']);
 
         return response()->json([
             'mission' => $this->present($mission),
@@ -161,6 +186,7 @@ class MissionController extends Controller
         $request->merge([
             'clientEmail' => $request->input('clientEmail') ?: null,
             'clientPhone' => $request->input('clientPhone') ?: null,
+            'projectId' => $request->input('projectId') ?: null,
         ]);
         $required = $partial ? 'sometimes' : 'required';
 
@@ -168,8 +194,9 @@ class MissionController extends Controller
             'type' => [$required, Rule::in(self::TYPES)],
             'title' => [$required, 'string', 'max:255'],
             'operatorId' => [$required, 'integer', 'exists:operators,id_operator'],
+            'projectId' => ['nullable', 'integer', 'exists:projects,id_project'],
             'priority' => ['nullable', Rule::in(self::PRIORITIES)],
-            'scheduledDate' => [$required, 'date'],
+            'scheduledDate' => [$required, 'date', 'after_or_equal:today'],
             'timeSlot' => [$required, 'string', 'max:32'],
             'clientName' => [$required, 'string', 'max:255'],
             'clientPhone' => ['nullable', 'string', 'max:50'],
@@ -207,6 +234,59 @@ class MissionController extends Controller
         }
     }
 
+    private function assertNoScheduleConflict(
+        int $operatorId,
+        string $scheduledDate,
+        string $timeSlot,
+        ?int $excludeMissionId = null
+    ): void {
+        $incoming = $this->parseTimeSlot($timeSlot);
+        if (! $incoming) {
+            throw ValidationException::withMessages([
+                'timeSlot' => ['Invalid time slot format.'],
+            ]);
+        }
+
+        $query = Mission::query()
+            ->where('id_operator', $operatorId)
+            ->whereDate('scheduled_date', $scheduledDate)
+            ->where('status', '!=', 'completed');
+
+        if ($excludeMissionId) {
+            $query->where('id', '!=', $excludeMissionId);
+        }
+
+        foreach ($query->get(['id', 'title', 'time_slot']) as $existing) {
+            $other = $this->parseTimeSlot($existing->time_slot);
+            if (! $other) {
+                continue;
+            }
+            if ($incoming['start'] < $other['end'] && $other['start'] < $incoming['end']) {
+                throw ValidationException::withMessages([
+                    'timeSlot' => [
+                        'This operator already has a task at this time: '.$existing->title.' ('.$existing->time_slot.').',
+                    ],
+                ]);
+            }
+        }
+    }
+
+    /**
+     * @return array{start:int,end:int}|null
+     */
+    private function parseTimeSlot(string $slot): ?array
+    {
+        $normalized = preg_replace('/[–—]/u', '-', $slot) ?? $slot;
+        if (! preg_match('/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/', $normalized, $m)) {
+            return null;
+        }
+
+        $start = ((int) $m[1]) * 60 + (int) $m[2];
+        $end = ((int) $m[3]) * 60 + (int) $m[4];
+
+        return $end > $start ? ['start' => $start, 'end' => $end] : null;
+    }
+
     private function nextCode(string $type): string
     {
         $prefix = 'TSK-'.strtoupper(substr($type, 0, 4));
@@ -230,6 +310,10 @@ class MissionController extends Controller
 
     private function present(Mission $mission): array
     {
+        $project = $mission->relationLoaded('project')
+            ? $mission->project
+            : ($mission->id_project ? Project::find($mission->id_project) : null);
+
         return [
             'id' => $mission->id,
             'code' => $mission->code,
@@ -237,6 +321,8 @@ class MissionController extends Controller
             'title' => $mission->title,
             'operatorId' => $mission->id_operator,
             'operatorName' => $mission->operator?->user?->name ?? 'Unassigned',
+            'projectId' => $mission->id_project,
+            'projectName' => $project?->name,
             'status' => $mission->status,
             'priority' => $mission->priority,
             'scheduledDate' => optional($mission->scheduled_date)->toDateString(),

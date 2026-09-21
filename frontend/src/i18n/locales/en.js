@@ -135,7 +135,8 @@ export default {
       services: 'Services',
       clients: 'Clients',
       operators: 'Operators',
-      operations: 'Missions'
+      operations: 'Missions',
+      aiAnalysis: 'AI Analysis'
     },
     overview: {
       title: 'Operations Overview',
@@ -149,6 +150,19 @@ export default {
       title: 'Orders & RFQ',
       subtitle: 'Price catalog products and add manual lines. Download PDF quotes for clients.',
       empty: 'No RFQ orders match your filters.',
+      emptyNew: 'No new RFQ requests waiting for review.',
+      emptyActive: 'No RFQs in progress or completed yet.',
+      newSection: 'New requests',
+      activeSection: 'In progress & older',
+      allSection: 'All',
+      newHint: 'Just arrived — waiting for pricing or status update.',
+      activeHint: 'Already reviewed, quoted, or dispatched.',
+      newBadge: 'New',
+      statNew: 'New',
+      statActive: 'Processed',
+      statTotal: 'Total',
+      linesCount: '{n} lines',
+      showLines: 'Show catalog lines',
       editQuote: 'Edit quote',
       prepareQuote: 'Prepare quote',
       quoteBuilder: 'Quote builder',
@@ -238,6 +252,20 @@ export default {
       operatorsSubtitle: 'Add, edit, or remove field operators.',
       operatorsEmpty: 'No operators yet.',
       deleteOperatorConfirm: 'Remove this operator?',
+      countdown: {
+        done: 'Completed',
+        inMins: 'Due in {m} min',
+        inHours: 'Due in {h}h {m}m',
+        inDays: 'Due in {d}d {h}h',
+        overdueMins: 'Overdue by {m} min',
+        overdueHours: 'Overdue by {h}h {m}m',
+        overdueDays: 'Overdue by {d}d {h}h'
+      },
+      schedule: {
+        kicker: 'Operator schedule',
+        dayTitle: 'Tasks on {date}',
+        noTasks: 'No tasks on this day.'
+      },
       menu: {
         jobs: 'Jobs',
         operators: 'Operators'
@@ -321,7 +349,13 @@ export default {
         clientCity: 'City',
         adminNotes: 'Notes',
         submitCreate: 'Save job',
-        submitUpdate: 'Save changes'
+        submitUpdate: 'Save changes',
+        projectOptional: 'Project (optional)',
+        noProject: 'No project',
+        slotBusy: 'busy',
+        conflictWarning: 'Operator already has “{title}” at {slot}.',
+        pastDateError: 'You cannot schedule a task in the past. Pick today or a future date.',
+        saved: 'Job saved.'
       },
       calendarView: {
         selectDay: 'Selected Day Agenda',

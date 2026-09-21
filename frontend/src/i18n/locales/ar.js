@@ -135,7 +135,8 @@ export default {
       services: 'الخدمات',
       clients: 'العملاء',
       operators: 'التقنيون',
-      operations: 'المهام'
+      operations: 'المهام',
+      aiAnalysis: 'تحليل الذكاء الاصطناعي'
     },
     overview: {
       title: 'نظرة عامة على العمليات',
@@ -149,6 +150,19 @@ export default {
       title: 'الطلبات و RFQ',
       subtitle: 'تسعير الكatalog وإضافة بنود يدوية. تحميل عروض PDF للعملاء.',
       empty: 'لا توجد طلبات RFQ تطابق الفلاتر.',
+      emptyNew: 'لا توجد طلبات RFQ جديدة بانتظار المراجعة.',
+      emptyActive: 'لا توجد طلبات RFQ قيد المعالجة أو مكتملة.',
+      newSection: 'طلبات جديدة',
+      activeSection: 'قيد المعالجة والقديمة',
+      allSection: 'الكل',
+      newHint: 'وصلت للتو — بانتظار التسعير أو تحديث الحالة.',
+      activeHint: 'تمت مراجعتها أو إصدار عرض أو إرسالها.',
+      newBadge: 'جديد',
+      statNew: 'جديدة',
+      statActive: 'معالجة',
+      statTotal: 'المجموع',
+      linesCount: '{n} بنود',
+      showLines: 'عرض بنود الكتالوج',
       editQuote: 'تعديل العرض',
       prepareQuote: 'إعداد العرض',
       quoteBuilder: 'محرر العروض',
@@ -239,6 +253,20 @@ export default {
       operatorsSubtitle: 'أضف أو عدّل أو احذف تقنياً.',
       operatorsEmpty: 'لا يوجد تقنيون.',
       deleteOperatorConfirm: 'إزالة هذا التقني؟',
+      countdown: {
+        done: 'مكتملة',
+        inMins: 'متبقي {m} د',
+        inHours: 'متبقي {h}س {m}د',
+        inDays: 'متبقي {d}ي {h}س',
+        overdueMins: 'متأخرة بـ {m} د',
+        overdueHours: 'متأخرة بـ {h}س {m}د',
+        overdueDays: 'متأخرة بـ {d}ي {h}س'
+      },
+      schedule: {
+        kicker: 'جدول التقني',
+        dayTitle: 'المهام في {date}',
+        noTasks: 'لا مهام في هذا اليوم.'
+      },
       menu: {
         jobs: 'المهام',
         operators: 'التقنيون'
@@ -322,7 +350,13 @@ export default {
         clientCity: 'المدينة',
         adminNotes: 'ملاحظات',
         submitCreate: 'حفظ',
-        submitUpdate: 'حفظ التعديلات'
+        submitUpdate: 'حفظ التعديلات',
+        projectOptional: 'المشروع (اختياري)',
+        noProject: 'بدون مشروع',
+        slotBusy: 'مشغول',
+        conflictWarning: 'هذا التقني لديه بالفعل « {title} » في {slot}.',
+        pastDateError: 'لا يمكن جدولة مهمة في الماضي. اختر اليوم أو تاريخاً لاحقاً.',
+        saved: 'تم حفظ المهمة.'
       },
       calendarView: {
         selectDay: 'جدول اليوم المحدد',
