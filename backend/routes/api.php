@@ -22,10 +22,7 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
-Route::get('/services', [ServiceController::class, 'index']);
-Route::get('/services/{service}', [ServiceController::class, 'show']);
-
-Route::post('/newsletter', [NewsletterController::class, 'store']);
+Route::get('/health', fn () => response()->json(['status' => 'ok']));
 
 Route::middleware('auth:sanctum')->group(function () {
 
