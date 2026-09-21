@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AiAnalyticsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\MissionController;
@@ -75,6 +76,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/admin/missions', [MissionController::class, 'store']);
         Route::patch('/admin/missions/{mission}', [MissionController::class, 'update']);
         Route::delete('/admin/missions/{mission}', [MissionController::class, 'destroy']);
+
+        Route::get('/admin/ai/overview', [AiAnalyticsController::class, 'overview']);
+        Route::get('/admin/ai/products', [AiAnalyticsController::class, 'products']);
+        Route::get('/admin/ai/products/{productId}', [AiAnalyticsController::class, 'showProduct'])
+            ->whereNumber('productId');
+        Route::get('/admin/ai/trends', [AiAnalyticsController::class, 'trends']);
+        Route::post('/admin/ai/restock-order', [AiAnalyticsController::class, 'restockOrder']);
     });
 
     Route::middleware('role:operator')->group(function () {
