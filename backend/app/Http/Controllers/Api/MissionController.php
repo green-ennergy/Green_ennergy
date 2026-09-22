@@ -250,6 +250,7 @@ class MissionController extends Controller
                         $type,
                         is_array($validated['typeData']) ? $validated['typeData'] : []
                     );
+
                     continue;
                 }
                 $mission->{$column} = $validated[$input];

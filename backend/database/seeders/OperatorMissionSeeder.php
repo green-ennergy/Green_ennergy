@@ -6,6 +6,7 @@ use App\Models\Mission;
 use App\Models\MissionTrace;
 use App\Models\Operator;
 use App\Support\MissionTypeData;
+use App\Support\ServiceRequestMissionSync;
 use Illuminate\Database\Seeder;
 
 /**
@@ -150,7 +151,7 @@ class OperatorMissionSeeder extends Seeder
 
         $this->command?->info('Seeded demo missions for operator #'.$operator->id_operator);
 
-        $backfilled = \App\Support\ServiceRequestMissionSync::backfillMissing();
+        $backfilled = ServiceRequestMissionSync::backfillMissing();
         if ($backfilled > 0) {
             $this->command?->info("Backfilled {$backfilled} mission(s) from assigned service requests.");
         }

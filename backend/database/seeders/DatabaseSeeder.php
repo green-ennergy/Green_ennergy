@@ -21,6 +21,7 @@ use App\Models\Service;
 use App\Models\ServiceRequest;
 use App\Models\User;
 use App\Support\MissionTypeData;
+use App\Support\ServiceRequestMissionSync;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -422,7 +423,7 @@ class DatabaseSeeder extends Seeder
                 'creation_date' => now()->subDays(2),
             ]);
 
-            \App\Support\ServiceRequestMissionSync::syncFromAssignment(
+            ServiceRequestMissionSync::syncFromAssignment(
                 $serviceRequest,
                 $operator->load('user'),
                 'Admin'
