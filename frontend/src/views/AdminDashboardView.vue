@@ -1999,6 +1999,7 @@ import ProjectTimeline from '../components/ProjectTimeline.vue'
 import ProjectCatalogPicker from '../components/adminDashboard/ProjectCatalogPicker.vue'
 import { getApiErrorMessage } from '../api/client'
 import { resolveProductImage } from '../utils/productImage'
+import { objectToLines, linesToObject } from '../utils/productDetails'
 import RfqQuoteEditor from '../components/RfqQuoteEditor.vue'
 import {
   buildQuoteLinesFromRfq,
