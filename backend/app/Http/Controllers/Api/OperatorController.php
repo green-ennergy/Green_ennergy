@@ -128,7 +128,11 @@ class OperatorController extends Controller
     {
         $operator = $request->user()->operator;
         abort_unless($operator, 404);
-        $operator->load('user');
+        $operator->load('user')->loadCount([
+            'missions as active_missions_count' => function ($query) {
+                $query->whereIn('status', ['assigned', 'in_progress']);
+            },
+        ]);
 
         return response()->json([
             'operator' => $this->present($operator),
@@ -145,9 +149,11 @@ class OperatorController extends Controller
         $operator = $request->user()->operator;
         abort_unless($operator, 404);
         $operator->update(['duty_status' => $validated['duty_status']]);
+        $operator->load('user');
 
         return response()->json([
             'duty_status' => $operator->duty_status,
+            'operator' => $this->present($operator),
         ]);
     }
 

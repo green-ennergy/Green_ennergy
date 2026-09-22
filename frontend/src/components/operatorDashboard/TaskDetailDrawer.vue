@@ -5,7 +5,7 @@
       <header class="drawer-header">
         <div class="drawer-title-group">
           <div class="header-badges">
-            <span class="task-id">{{ task.id }}</span>
+            <span class="task-id">{{ task.code || task.id }}</span>
             <span class="type-badge" :class="task.type">
               <OperatorIcon :name="task.type" :size="14" />
               <span>{{ typeLabel }}</span>
@@ -60,14 +60,14 @@
           <div class="info-grid">
             <div class="info-cell">
               <span class="cell-label">{{ t('operator.drawer.clientName') || 'Client / Contact' }}</span>
-              <span class="cell-val"><strong>{{ task.client.name }}</strong></span>
+              <span class="cell-val"><strong>{{ task.client?.name || '—' }}</strong></span>
             </div>
 
             <div class="info-cell">
               <span class="cell-label">{{ t('operator.drawer.phone') || 'Phone' }}</span>
-              <a :href="`tel:${task.client.phone}`" class="cell-link">
+              <a :href="`tel:${task.client?.phone || ''}`" class="cell-link">
                 <OperatorIcon name="phone" :size="14" />
-                <span>{{ task.client.phone }}</span>
+                <span>{{ task.client?.phone || '—' }}</span>
               </a>
             </div>
 
@@ -75,7 +75,7 @@
               <span class="cell-label">{{ t('operator.drawer.location') || 'Installation / Delivery Address' }}</span>
               <span class="cell-val">
                 <OperatorIcon name="map-pin" :size="14" />
-                <span>{{ task.client.address }}, <strong>{{ task.client.city }}</strong></span>
+                <span>{{ task.client?.address || '—' }}, <strong>{{ task.client?.city || '—' }}</strong></span>
               </span>
             </div>
 
@@ -87,7 +87,7 @@
               </span>
             </div>
 
-            <div class="info-cell" v-if="task.client.email">
+            <div class="info-cell" v-if="task.client?.email">
               <span class="cell-label">Email</span>
               <span class="cell-val">{{ task.client.email }}</span>
             </div>
@@ -120,7 +120,7 @@
             <h4 class="sub-title">1. Equipment Verified On-Site</h4>
             <div class="checklist">
               <label
-                v-for="(item, idx) in task.typeData.equipmentList"
+                v-for="(item, idx) in (task.typeData?.equipmentList || [])"
                 :key="idx"
                 class="check-row"
                 :class="{ done: item.checked }"
@@ -143,7 +143,7 @@
             <h4 class="sub-title">2. Installation Safety & Electrical Steps</h4>
             <div class="checklist">
               <label
-                v-for="(step, idx) in task.typeData.checklist"
+                v-for="(step, idx) in (task.typeData?.checklist || [])"
                 :key="idx"
                 class="check-row"
                 :class="{ done: step.done }"
@@ -205,26 +205,26 @@
           <div class="system-meta-grid">
             <div class="meta-item">
               <span class="meta-label">System Age</span>
-              <span class="meta-val">{{ task.typeData.systemAge }}</span>
+              <span class="meta-val">{{ task.typeData?.systemAge || '—' }}</span>
             </div>
             <div class="meta-item">
               <span class="meta-label">Inverter Model</span>
-              <span class="meta-val">{{ task.typeData.inverterModel }}</span>
+              <span class="meta-val">{{ task.typeData?.inverterModel || '—' }}</span>
             </div>
             <div class="meta-item">
               <span class="meta-label">Capacity</span>
-              <span class="meta-val">{{ task.typeData.systemCapacity }}</span>
+              <span class="meta-val">{{ task.typeData?.systemCapacity || '—' }}</span>
             </div>
             <div class="meta-item">
               <span class="meta-label">Last Serviced</span>
-              <span class="meta-val">{{ task.typeData.lastServiceDate }}</span>
+              <span class="meta-val">{{ task.typeData?.lastServiceDate || '—' }}</span>
             </div>
           </div>
 
           <!-- Reported Symptom Box -->
           <div class="fault-alert-box">
             <strong>Reported Issue:</strong>
-            <p>{{ task.typeData.reportedFault }}</p>
+            <p>{{ task.typeData?.reportedFault || '—' }}</p>
           </div>
 
           <!-- Diagnostic Steps -->
@@ -232,7 +232,7 @@
             <h4 class="sub-title">Diagnostics & Service Checklist</h4>
             <div class="checklist">
               <label
-                v-for="(step, idx) in task.typeData.diagnosticsChecklist"
+                v-for="(step, idx) in (task.typeData?.diagnosticsChecklist || [])"
                 :key="idx"
                 class="check-row"
                 :class="{ done: step.done }"
@@ -248,11 +248,11 @@
           </div>
 
           <!-- Spare Parts Replacement -->
-          <div class="sub-block" v-if="task.typeData.replacedParts?.length">
+          <div class="sub-block" v-if="task.typeData?.replacedParts?.length">
             <h4 class="sub-title">Replacement Parts Log</h4>
             <div class="parts-list">
               <label
-                v-for="(part, idx) in task.typeData.replacedParts"
+                v-for="(part, idx) in (task.typeData?.replacedParts || [])"
                 :key="idx"
                 class="part-item"
               >
@@ -281,8 +281,8 @@
           <!-- Order Summary banner -->
           <div class="order-banner">
             <div>
-              <span class="order-num">Order #{{ task.typeData.orderNumber }}</span>
-              <p class="order-bay">Pickup: <strong>{{ task.typeData.stagingBay }}</strong></p>
+              <span class="order-num">Order #{{ task.typeData?.orderNumber || '—' }}</span>
+              <p class="order-bay">Pickup: <strong>{{ task.typeData?.stagingBay || '—' }}</strong></p>
             </div>
             <span class="order-status-badge">Pre-checked at Depot</span>
           </div>
@@ -301,7 +301,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="item in task.typeData.items" :key="item.sku">
+                  <tr v-for="item in (task.typeData?.items || [])" :key="item.sku">
                     <td><code>{{ item.sku }}</code></td>
                     <td>{{ item.name }}</td>
                     <td><strong>{{ item.qty }}</strong></td>
@@ -317,7 +317,7 @@
             <h4 class="sub-title">Delivery Route Milestones</h4>
             <div class="checklist">
               <label
-                v-for="(step, idx) in task.typeData.deliverySteps"
+                v-for="(step, idx) in (task.typeData?.deliverySteps || [])"
                 :key="idx"
                 class="check-row"
                 :class="{ done: step.done }"
@@ -335,11 +335,11 @@
           <!-- Recipient Sign-off Box -->
           <div class="sub-block delivery-sign-box">
             <h4 class="sub-title">Proof of Delivery (Hand-off Signature)</h4>
-            <div v-if="task.typeData.recipientSignatureId" class="signed-confirmation">
+            <div v-if="task.typeData?.recipientSignatureId" class="signed-confirmation">
               <OperatorIcon name="check-circle" :size="20" />
               <div>
-                <strong>Signed & Accepted by: {{ task.typeData.recipientName }}</strong>
-                <small>Digital Receipt Ref: {{ task.typeData.recipientSignatureId }}</small>
+                <strong>Signed & Accepted by: {{ task.typeData?.recipientName }}</strong>
+                <small>Digital Receipt Ref: {{ task.typeData?.recipientSignatureId }}</small>
               </div>
             </div>
 
@@ -506,7 +506,7 @@
             <h4 class="sub-title">Audit Site Survey Checklist</h4>
             <div class="checklist">
               <label
-                v-for="(step, idx) in task.typeData.auditChecklist"
+                v-for="(step, idx) in (task.typeData?.auditChecklist || [])"
                 :key="idx"
                 class="check-row"
                 :class="{ done: step.done }"
@@ -621,6 +621,7 @@ const emit = defineEmits([
   'updateNotes',
   'toggleChecklist',
   'updateStudyData',
+  'updateInstallationMeta',
   'confirmDelivery',
   'reportIncident'
 ])
@@ -634,20 +635,20 @@ const localInverterSN = ref('')
 const localCommissioningKW = ref(0)
 const deliveryRecipientName = ref('')
 
-// Study calculator model
+// Study calculator — values come from live mission typeData
 const studyForm = ref({
-  monthlyBillMAD: 2500,
-  estimatedKWhMonthly: 1500,
-  roofAreaM2: 120,
+  monthlyBillMAD: 0,
+  estimatedKWhMonthly: 0,
+  roofAreaM2: 0,
   roofOrientation: 'South (180°)',
-  roofTiltDeg: 28,
+  roofTiltDeg: 30,
   shadingCondition: 'none',
-  recommendedKWp: 8.0,
-  estimatedYearlyKWh: 13600,
-  estimatedMonthlySavingsMAD: 2100,
-  batteryNeeded: true,
-  recommendedBatteryKWh: 10,
-  paybackYears: 4.1
+  recommendedKWp: 0,
+  estimatedYearlyKWh: 0,
+  estimatedMonthlySavingsMAD: 0,
+  batteryNeeded: false,
+  recommendedBatteryKWh: 0,
+  paybackYears: 0
 })
 
 watch(() => props.task, (newTask) => {
@@ -661,7 +662,21 @@ watch(() => props.task, (newTask) => {
   }
 
   if (newTask.type === 'study' && newTask.typeData) {
-    studyForm.value = { ...studyForm.value, ...newTask.typeData }
+    studyForm.value = {
+      monthlyBillMAD: 0,
+      estimatedKWhMonthly: 0,
+      roofAreaM2: 0,
+      roofOrientation: 'South (180°)',
+      roofTiltDeg: 30,
+      shadingCondition: 'none',
+      recommendedKWp: 0,
+      estimatedYearlyKWh: 0,
+      estimatedMonthlySavingsMAD: 0,
+      batteryNeeded: false,
+      recommendedBatteryKWh: 0,
+      paybackYears: 0,
+      ...newTask.typeData
+    }
   }
 
   if (newTask.type === 'delivery' && newTask.typeData) {
@@ -681,8 +696,8 @@ const typeLabel = computed(() => {
 })
 
 const priorityLabel = computed(() => {
-  if (!props.task) return ''
-  return props.task.priority.toUpperCase()
+  if (!props.task?.priority) return ''
+  return String(props.task.priority).toUpperCase()
 })
 
 const handleStatusChange = (status) => {
@@ -698,8 +713,10 @@ const saveOperatorNotes = () => {
 }
 
 const saveInstallationMeta = () => {
-  // Can be pushed via note or emit
-  emit('updateNotes', props.task.id, `${localNotes.value}\n[Commissioning: ${localCommissioningKW.value} kW | Inverter S/N: ${localInverterSN.value}]`.trim())
+  emit('updateInstallationMeta', props.task.id, {
+    inverterSN: localInverterSN.value,
+    commissioningKW: localCommissioningKW.value
+  })
 }
 
 const recalculateStudy = () => {

@@ -68,11 +68,12 @@ export function useServices() {
     }
   }
 
-  async function fetchServiceRequests() {
+  async function fetchServiceRequests(options = {}) {
     try {
       isLoading.value = true
       error.value = null
-      const response = await api.get('/service-requests')
+      const url = options.operator ? '/operator/service-requests' : '/service-requests'
+      const response = await api.get(url)
       serviceRequests.value = response.data.data || []
       return serviceRequests.value
     } catch (err) {
@@ -203,7 +204,7 @@ export function useServices() {
   async function acceptAndAssignRequest(requestId, operatorId) {
     try {
       const response = await api.patch(`/service-requests/${requestId}`, {
-        id_operator: operatorId,
+        id_operator: Number(operatorId),
         status: 'accepted',
       })
       const updated = response.data.request

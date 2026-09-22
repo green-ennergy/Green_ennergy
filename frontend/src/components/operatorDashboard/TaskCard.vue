@@ -11,7 +11,7 @@
     <!-- Card Top: ID, Type Badge, Priority -->
     <div class="card-head">
       <div class="head-left">
-        <span class="task-id">{{ task.id }}</span>
+        <span class="task-id">{{ task.code || task.id }}</span>
         <span class="type-badge" :class="task.type">
           <OperatorIcon :name="task.type" :size="13" />
           <span>{{ typeLabel }}</span>
@@ -32,12 +32,12 @@
       <div class="client-info">
         <div class="info-row client-name">
           <span class="info-icon"><OperatorIcon name="user" :size="14" /></span>
-          <strong>{{ task.client.name }}</strong>
+          <strong>{{ task.client?.name || '—' }}</strong>
         </div>
 
         <div class="info-row location">
           <span class="info-icon"><OperatorIcon name="map-pin" :size="14" /></span>
-          <span>{{ task.client.address }}, <strong>{{ task.client.city }}</strong></span>
+          <span>{{ task.client?.address || '—' }}, <strong>{{ task.client?.city || '—' }}</strong></span>
         </div>
 
         <div class="info-row time">
@@ -51,25 +51,25 @@
         <!-- Installation snippet -->
         <template v-if="task.type === 'installation'">
           <span class="hl-tag">Equipment</span>
-          <span class="hl-text">{{ task.typeData.equipmentList?.length || 0 }} items loaded · {{ task.typeData.inverterSN || 'Inverter Prep' }}</span>
+          <span class="hl-text">{{ task.typeData?.equipmentList?.length || 0 }} items loaded · {{ task.typeData?.inverterSN || 'Inverter Prep' }}</span>
         </template>
 
         <!-- Maintenance snippet -->
         <template v-else-if="task.type === 'maintenance'">
           <span class="hl-tag">Issue</span>
-          <span class="hl-text">{{ task.typeData.reportedFault || 'Diagnostic check required' }}</span>
+          <span class="hl-text">{{ task.typeData?.reportedFault || 'Diagnostic check required' }}</span>
         </template>
 
         <!-- Delivery snippet -->
         <template v-else-if="task.type === 'delivery'">
-          <span class="hl-tag">Order {{ task.typeData.orderNumber }}</span>
-          <span class="hl-text">{{ task.typeData.items?.length || 0 }} products · {{ task.typeData.stagingBay }}</span>
+          <span class="hl-tag">Order {{ task.typeData?.orderNumber || '—' }}</span>
+          <span class="hl-text">{{ task.typeData?.items?.length || 0 }} products · {{ task.typeData?.stagingBay || '—' }}</span>
         </template>
 
         <!-- Study snippet -->
         <template v-else-if="task.type === 'study'">
           <span class="hl-tag">Audit</span>
-          <span class="hl-text">{{ task.typeData.monthlyBillMAD }} MAD/mo · Roof: {{ task.typeData.roofAreaM2 }}m² ({{ task.typeData.recommendedKWp }} kWp est.)</span>
+          <span class="hl-text">{{ task.typeData?.monthlyBillMAD || 0 }} MAD/mo · Roof: {{ task.typeData?.roofAreaM2 || 0 }}m² ({{ task.typeData?.recommendedKWp || 0 }} kWp est.)</span>
         </template>
       </div>
     </div>

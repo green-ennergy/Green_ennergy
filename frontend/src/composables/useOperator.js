@@ -1,8 +1,11 @@
 import { computed, ref } from 'vue'
-import api from '../api/client'
+import api, { getApiErrorMessage } from '../api/client'
 
 const tasks = ref([])
 const dutyStatus = ref('on_duty')
+const operatorProfile = ref(null)
+const isLoading = ref(false)
+const error = ref(null)
 
 function replaceTask(updated) {
   if (!updated) return null
@@ -13,25 +16,52 @@ function replaceTask(updated) {
 
 export function useOperator() {
   const loadMissions = async () => {
-    const [profile, missions] = await Promise.all([
-      api.get('/operator/me'),
-      api.get('/operator/missions')
-    ])
-    dutyStatus.value = profile.data.duty_status || 'on_duty'
-    tasks.value = missions.data.data || []
+    try {
+      isLoading.value = true
+      error.value = null
+      const [profile, missions] = await Promise.all([
+        api.get('/operator/me'),
+        api.get('/operator/missions')
+      ])
+      dutyStatus.value = profile.data.duty_status || 'on_duty'
+      operatorProfile.value = profile.data.operator || null
+      tasks.value = missions.data.data || []
+      return tasks.value
+    } catch (err) {
+      error.value = getApiErrorMessage(err, 'Could not load operator missions.')
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   const setDutyStatus = async (status) => {
+    const previous = dutyStatus.value
     dutyStatus.value = status
-    const response = await api.patch('/operator/duty', { duty_status: status })
-    dutyStatus.value = response.data.duty_status
+    try {
+      const response = await api.patch('/operator/duty', { duty_status: status })
+      dutyStatus.value = response.data.duty_status
+      if (response.data.operator) {
+        operatorProfile.value = response.data.operator
+      }
+      return dutyStatus.value
+    } catch (err) {
+      dutyStatus.value = previous
+      error.value = getApiErrorMessage(err, 'Could not update duty status.')
+      throw err
+    }
   }
 
   const getTaskById = (id) => tasks.value.find((task) => task.id === id)
 
   const patchTask = async (taskId, payload) => {
-    const response = await api.patch(`/operator/missions/${taskId}`, payload)
-    return replaceTask(response.data.mission)
+    try {
+      const response = await api.patch(`/operator/missions/${taskId}`, payload)
+      return replaceTask(response.data.mission)
+    } catch (err) {
+      error.value = getApiErrorMessage(err, 'Could not update mission.')
+      throw err
+    }
   }
 
   const updateTaskStatus = (taskId, status) => patchTask(taskId, { status })
@@ -43,15 +73,15 @@ export function useOperator() {
 
   const toggleChecklistItem = async (taskId, listKey, itemIndex) => {
     const task = tasks.value.find((item) => item.id === taskId)
-    if (!task?.typeData) return
+    if (!task?.typeData) return null
     const typeData = structuredClone(task.typeData)
     const list = typeData[listKey]
-    if (!Array.isArray(list) || !list[itemIndex]) return
+    if (!Array.isArray(list) || !list[itemIndex]) return null
     const target = list[itemIndex]
     if (typeof target.done !== 'undefined') target.done = !target.done
     else if (typeof target.checked !== 'undefined') target.checked = !target.checked
     else if (typeof target.used !== 'undefined') target.used = !target.used
-    await patchTask(taskId, { typeData, traceAction: 'Updated checklist' })
+    return patchTask(taskId, { typeData, traceAction: 'Updated checklist' })
   }
 
   const updateStudyData = (taskId, newStudyData) => {
@@ -78,16 +108,36 @@ export function useOperator() {
     })
   }
 
+  const updateInstallationMeta = (taskId, { inverterSN, commissioningKW }) => {
+    const task = tasks.value.find((item) => item.id === taskId)
+    if (!task || task.type !== 'installation') return null
+    return patchTask(taskId, {
+      typeData: {
+        ...task.typeData,
+        inverterSN: inverterSN ?? task.typeData?.inverterSN ?? '',
+        commissioningKW: Number(commissioningKW) || 0
+      },
+      traceAction: 'Updated commissioning parameters'
+    })
+  }
+
   const reportIncident = (taskId, { issueType, notes, urgent }) => patchTask(taskId, {
     ...(urgent ? { status: 'on_hold' } : {}),
     traceAction: `Incident reported [${issueType}]: ${notes}`
   })
 
-  const resetToDemoTasks = () => loadMissions()
+  const refreshMissions = () => loadMissions()
+
+  // Drop any leftover client-side demo cache from the old operator template
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('ea_operator_tasks')
+    localStorage.removeItem('ea_operator_duty_status')
+  }
 
   const stats = computed(() => {
     const list = tasks.value
-    const todayDate = new Date().toISOString().slice(0, 10)
+    const now = new Date()
+    const todayDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
     const todayTasks = list.filter((task) => task.scheduledDate === todayDate)
 
     return {
@@ -111,6 +161,9 @@ export function useOperator() {
   return {
     tasks,
     dutyStatus,
+    operatorProfile,
+    isLoading,
+    error,
     stats,
     loadMissions,
     setDutyStatus,
@@ -120,7 +173,8 @@ export function useOperator() {
     toggleChecklistItem,
     updateStudyData,
     updateDeliveryProof,
+    updateInstallationMeta,
     reportIncident,
-    resetToDemoTasks
+    refreshMissions
   }
 }
