@@ -100,7 +100,6 @@ docker compose exec backend php artisan db:seed
 Open in your browser:
 
 - http://localhost:8000 → Laravel welcome page
-- http://localhost:8000/test → should show `BACKEND TEST 123`
 - http://localhost:5173 → Vue app
 - http://localhost:8001/docs → AI API Swagger
 
@@ -200,7 +199,7 @@ green_energy/
 │   └── php/          PHP-FPM Dockerfile
 ├── docker-compose.yml
 ├── .env.development  Docker Compose template (copy to `.env`)
-└── .env              Your local Docker config (do not commit)
+└── .env              Your local Docker config
 ```
 
 ### Docker services
